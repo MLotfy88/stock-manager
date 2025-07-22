@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -11,8 +11,8 @@ import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 
 // استيراد وظائف العمليات
 import { addConsumptionRecord } from '@/data/operations/consumptionOperations';
-// This will need to be updated to getInventoryItems and getProductDefinitions from Supabase
-import { getSupplies } from '@/data/operations/suppliesOperations'; 
+import { getInventoryItems } from '@/data/operations/suppliesOperations'; 
+import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 
 // استيراد المكونات المعاد هيكلتها
 import FormHeader from './FormHeader';
@@ -36,10 +36,33 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
 }) => {
   const { t, direction } = useLanguage();
   const { toast } = useToast();
+
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [inventoryData, defsData] = await Promise.all([
+          getInventoryItems(),
+          getProductDefinitions(),
+        ]);
+        setInventory(inventoryData);
+        setProductDefs(defsData);
+      } catch (error) {
+        console.error("Failed to fetch form data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
   
   const [date, setDate] = useState<Date | undefined>(initialData?.date ? new Date(initialData.date) : new Date());
   const [department, setDepartment] = useState(initialData?.department || '');
-  const [requestedBy, setRequestedBy] = useState(initialData?.requestedBy || '');
+  const [requestedBy, setRequestedBy] = useState(initialData?.requested_by || '');
   const [notes, setNotes] = useState(initialData?.notes || '');
   const [items, setItems] = useState<ConsumptionItem[]>(initialData?.items || []);
   const [purpose, setPurpose] = useState<'use' | 'expired' | 'damaged'>(initialData?.purpose || 'use');
@@ -55,13 +78,11 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
   
   // إضافة عنصر جديد
   const addItem = (foundItem: InventoryItem | null = null) => {
-    // MOCK: Get product definitions, replace with real data later
-    const productDefinitions: ProductDefinition[] = []; 
-    
+    const def = foundItem ? productDefs.find(p => p.id === foundItem.product_definition_id) : null;
     const newItem: ConsumptionItem = {
       id: `item_${Date.now()}`,
-      inventoryItemId: foundItem?.id || '',
-      itemName: foundItem ? `${productDefinitions.find(p => p.id === foundItem.productDefinitionId)?.name || 'Unknown'} - ${foundItem.variant}` : '',
+      inventory_item_id: foundItem?.id || '',
+      item_name: foundItem && def ? `${def.name} - ${foundItem.variant}` : '',
       quantity: 1,
       notes: ''
     };
@@ -75,18 +96,15 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
   
   // تحديث عنصر
   const updateItem = (itemId: string, field: keyof ConsumptionItem, value: any) => {
-    // MOCK: Get product definitions, replace with real data later
-    const productDefinitions: ProductDefinition[] = []; 
-
     setItems(items.map(item => {
       if (item.id === itemId) {
-        if (field === 'inventoryItemId' && value) {
-          const selectedItem = getSupplies().find(s => s.id === value); // Replace getSupplies with getInventoryItems
-          const definition = productDefinitions.find(p => p.id === selectedItem?.productDefinitionId);
+        if (field === 'inventory_item_id' && value) {
+          const selectedItem = inventory.find(s => s.id === value);
+          const definition = productDefs.find(p => p.id === selectedItem?.product_definition_id);
           return {
             ...item,
             [field]: value,
-            itemName: selectedItem ? `${definition?.name || 'Unknown'} - ${selectedItem.variant}` : ''
+            item_name: selectedItem && definition ? `${definition.name} - ${selectedItem.variant}` : ''
           };
         }
         return { ...item, [field]: value };
@@ -96,7 +114,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
   };
   
   // الحصول على المستلزمات المتاحة بناءً على الغرض
-  const availableSupplies = getSupplies().filter(s => {
+  const availableSupplies = inventory.filter(s => {
     if (purpose === 'expired') {
       return s.status === 'expired' && s.quantity > 0;
     } else if (purpose === 'damaged') {
@@ -124,12 +142,12 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
     
     // التحقق من العناصر
     for (const item of items) {
-      if (!item.inventoryItemId || item.quantity <= 0) {
+      if (!item.inventory_item_id || item.quantity <= 0) {
         return false;
       }
       
       // التحقق من توفر الكمية
-      const supply = getSupplies().find(s => s.id === item.inventoryItemId); // Replace with getInventoryItems
+      const supply = inventory.find(s => s.id === item.inventory_item_id);
       if (!supply || supply.quantity < item.quantity) {
         return false;
       }
@@ -154,7 +172,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
     const newRecord: Partial<ConsumptionRecord> = {
       date: date?.toISOString() || new Date().toISOString(),
       department,
-      requestedBy,
+      requested_by: requestedBy,
       notes,
       status: 'completed',
       purpose: purpose,
@@ -188,10 +206,9 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
       if (result) {
         const scannedSerial = result.getText();
         stopScan();
-        // Replace getSupplies with getInventoryItems
-        const foundItem = getSupplies().find(item => (item as any).serialNumber === scannedSerial);
+        const foundItem = inventory.find(item => (item as any).serialNumber === scannedSerial);
         if (foundItem) {
-          addItem(foundItem as any);
+          addItem(foundItem);
           toast({ title: "Item Found", description: `Added item with serial: ${scannedSerial}` });
         } else {
           toast({ title: "Not Found", description: `No item found with serial: ${scannedSerial}`, variant: 'destructive' });
