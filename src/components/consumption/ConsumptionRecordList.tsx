@@ -12,7 +12,7 @@ import {
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
-import { getConsumptionRecords } from '@/data/operations/consumptionOperations';
+import { getConsumptionRecords, deleteConsumptionRecord } from '@/data/operations/consumptionOperations';
 import { ConsumptionRecord } from '@/types';
 import { Search, Trash2, FileSpreadsheet, Calendar, Package, User, Building2 } from 'lucide-react';
 import { useEffect } from 'react';
@@ -83,20 +83,20 @@ const ConsumptionRecordList = () => {
   
   // حذف سجل
   const handleDelete = async (recordId: string) => {
-    // try {
-    //   await deleteConsumptionRecord(recordId);
-    //   toast({
-    //     title: t('success'),
-    //     description: t('record_deleted'),
-    //   });
-    //   loadRecords(); // Reload records after deletion
-    // } catch (error) {
-    //   toast({
-    //     title: t('error'),
-    //     description: t('delete_failed'),
-    //     variant: "destructive"
-    //   });
-    // }
+    try {
+      await deleteConsumptionRecord(recordId);
+      toast({
+        title: t('success'),
+        description: t('record_deleted'),
+      });
+      loadRecords(); // Reload records after deletion
+    } catch (error) {
+      toast({
+        title: t('error'),
+        description: t('delete_failed'),
+        variant: "destructive"
+      });
+    }
   };
   
   return (

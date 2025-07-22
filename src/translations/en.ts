@@ -9,7 +9,6 @@ export default {
   reports_overview: 'Generate and export reports',
   management: 'Management',
   admin: 'Administration',
-  settings: 'Settings',
   credentials: 'Credentials',
   logout: 'Logout',
   search_supplies: 'Search supplies...',
@@ -22,9 +21,12 @@ export default {
   inventory_management: 'Inventory',
   operations: 'Operations',
   analysis: 'Analysis',
+  settings: 'Settings',
   
   // Navigation
   dashboard_nav: 'Dashboard',
+  data_settings_nav: 'Data Settings',
+  management_settings_nav: 'System Management',
   supplies_nav: 'Supplies',
   add_supply_nav: 'Add Supply',
   calendar_nav: 'Calendar',

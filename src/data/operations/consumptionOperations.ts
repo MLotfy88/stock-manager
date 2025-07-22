@@ -1,86 +1,76 @@
+import { getSupabaseClient } from '@/lib/supabaseClient';
+import { ConsumptionRecord, ConsumptionItem, InventoryItem } from '@/types';
 
-import { ConsumptionRecord } from '@/types';
-import { saveData } from '../../utils/storageUtils';
-import { store } from '../store';
+/**
+ * Get all consumption records with their items
+ */
+export const getConsumptionRecords = async (): Promise<ConsumptionRecord[]> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('consumption_records')
+    .select(`
+      *,
+      items:consumption_record_items(*)
+    `)
+    .order('date', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching consumption records:', error);
+    throw error;
+  }
+  return data || [];
+};
 
 /**
  * Add a new consumption record
+ * This is a transaction to ensure data integrity
  */
-export const addConsumptionRecord = (record: ConsumptionRecord) => {
-  // Check if we have enough quantity for each item
-  for (const item of record.items) {
-    const supplyIndex = store.supplies.findIndex(s => s.id === item.supplyId);
-    if (supplyIndex === -1) return false;
-    
-    if (store.supplies[supplyIndex].quantity < item.quantity) {
-      return false;
-    }
-  }
-  
-  // Add the record
-  const newRecord = {
-    ...record,
-    id: `consumption_${Date.now()}`,
-    createdAt: new Date().toISOString()
-  };
-  
-  store.consumptionRecords.push(newRecord);
-  
-  // Update supplies quantities
-  for (const item of record.items) {
-    const supplyIndex = store.supplies.findIndex(s => s.id === item.supplyId);
-    if (supplyIndex !== -1) {
-      store.supplies[supplyIndex].quantity -= item.quantity;
-      
-      // Mark as empty if quantity is 0
-      if (store.supplies[supplyIndex].quantity <= 0) {
-        store.supplies[supplyIndex].status = 'empty';
-      }
-    }
-  }
-  
-  const saved = saveData({ 
-    manufacturers: store.manufacturers, 
-    supplies: store.supplies, 
-    consumptionRecords: store.consumptionRecords, 
-    suppliers: store.suppliers, 
-    supplyTypes: store.supplyTypes, 
-    adminSettings: store.adminSettings 
+export const addConsumptionRecord = async (record: Omit<ConsumptionRecord, 'id' | 'created_at' | 'items'> & { items: Omit<ConsumptionItem, 'id' | 'consumption_record_id'>[] }): Promise<ConsumptionRecord> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
+  // Use a Supabase function to handle the transaction
+  const { data, error } = await supabase.rpc('create_consumption_record', {
+    p_date: record.date,
+    p_department: record.department,
+    p_purpose: record.purpose,
+    p_requested_by: record.requested_by,
+    p_notes: record.notes,
+    p_items: record.items
   });
-  
-  return saved ? newRecord : false;
+
+  if (error) {
+    console.error('Error in create_consumption_record RPC:', error);
+    if (error.message.includes('check_inventory_quantity')) {
+      throw new Error('insufficient_quantity');
+    }
+    throw error;
+  }
+
+  // The RPC function should return the newly created record
+  return data;
 };
 
-/**
- * Get all consumption records
- */
-export const getConsumptionRecords = () => {
-  return store.consumptionRecords;
-};
 
 /**
- * Get a consumption record by ID
+ * Delete a consumption record
+ * This is a transaction to ensure data integrity
  */
-export const getConsumptionRecordById = (recordId: string) => {
-  return store.consumptionRecords.find(r => r.id === recordId);
-};
+export const deleteConsumptionRecord = async (recordId: string): Promise<{ success: boolean }> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
 
-/**
- * Get consumption records for a specific department
- */
-export const getConsumptionRecordsByDepartment = (department: string) => {
-  return store.consumptionRecords.filter(r => r.department === department);
-};
-
-/**
- * Get consumption records for a specific date range
- */
-export const getConsumptionRecordsByDateRange = (startDate: string, endDate: string) => {
-  return store.consumptionRecords.filter(r => {
-    const recordDate = new Date(r.date);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    return recordDate >= start && recordDate <= end;
+  // Use a Supabase function to handle the transaction
+  const { error } = await supabase.rpc('delete_consumption_record', {
+    p_record_id: recordId
   });
+
+  if (error) {
+    console.error('Error in delete_consumption_record RPC:', error);
+    throw error;
+  }
+
+  return { success: true };
 };

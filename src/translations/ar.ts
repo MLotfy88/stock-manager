@@ -9,7 +9,6 @@ export default {
   reports_overview: 'إنشاء وتصدير التقارير',
   management: 'إدارة',
   admin: 'الإدارة',
-  settings: 'الإعدادات',
   credentials: 'بيانات الدخول',
   logout: 'تسجيل الخروج',
   search_supplies: 'بحث عن مستلزمات...',
@@ -22,9 +21,12 @@ export default {
   inventory_management: 'إدارة المخزون',
   operations: 'العمليات',
   analysis: 'التحليل',
+  settings: 'الإعدادات',
   
   // Navigation
   dashboard_nav: 'لوحة التحكم',
+  data_settings_nav: 'إعدادات البيانات',
+  management_settings_nav: 'إدارة النظام',
   supplies_nav: 'المستلزمات',
   add_supply_nav: 'إضافة مستلزم',
   calendar_nav: 'التقويم',
