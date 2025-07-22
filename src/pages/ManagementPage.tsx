@@ -122,7 +122,42 @@ const ManagementPage = () => {
 
   const generateSqlScript = () => {
     const script = `
--- Create Manufacturer Table
+-- CathLab Stock Manager - Supabase Schema v2
+-- This script is designed to set up the complete database structure.
+-- It includes tables and a helper function to verify the connection.
+
+-- Helper Function to Get Table Names
+-- This function is used by the app to verify the connection and list existing tables.
+CREATE OR REPLACE FUNCTION get_public_tables()
+RETURNS TABLE(table_name TEXT) AS $$
+BEGIN
+  RETURN QUERY 
+  SELECT c.relname::text FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.relkind = 'r' AND n.nspname = 'public';
+END;
+$$ LANGUAGE plpgsql;
+
+-- 1. Create Stores Table
+-- Stores information about different physical locations for inventory.
+CREATE TABLE stores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  location TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. Create Supply Types Table
+-- Categories for product definitions (e.g., Catheter, Consumable).
+CREATE TABLE supply_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  name_en TEXT,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 3. Create Manufacturers Table
 CREATE TABLE manufacturers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -186,10 +221,15 @@ CREATE TABLE consumption_records (
 CREATE TABLE consumption_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   record_id UUID REFERENCES consumption_records(id) ON DELETE CASCADE,
-  supply_id UUID REFERENCES supplies(id),
-  quantity INT NOT NULL,
+  inventory_item_id UUID REFERENCES inventory_items(id) ON DELETE RESTRICT,
+  item_name TEXT, -- Denormalized for easier reporting
+  quantity INT NOT NULL CHECK (quantity > 0),
   notes TEXT
 );
+
+-- Add some comments to explain the schema
+COMMENT ON COLUMN product_definitions.variants IS 'Stores an array of objects, e.g., [{ "name": "2x10", "reorderPoint": 5 }]';
+COMMENT ON TABLE inventory_items IS 'Each row represents a specific batch of a product variant in a specific store.';
     `;
     navigator.clipboard.writeText(script.trim());
     toast({

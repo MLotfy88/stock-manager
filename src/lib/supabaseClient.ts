@@ -33,16 +33,16 @@ export const testSupabaseConnection = async (url: string, key: string): Promise<
   try {
     const testClient = createClient(url, key);
     
-    // Attempt to fetch tables from the public schema
-    const { data, error } = await testClient
-      .from('information_schema.tables')
-      .select('table_name')
-      .eq('table_schema', 'public');
+    // Call the RPC function to get table names
+    const { data, error } = await testClient.rpc('get_public_tables');
 
     if (error) {
       // Handle specific auth errors vs. general network errors
       if (error.message.includes('JWT') || error.message.includes('key')) {
         return { success: false, error: 'Invalid API Key.' };
+      }
+      if (error.message.includes('does not exist')) {
+        return { success: false, error: 'Function get_public_tables() not found. Please run the latest SQL script from the Management page.' };
       }
       return { success: false, error: error.message };
     }
