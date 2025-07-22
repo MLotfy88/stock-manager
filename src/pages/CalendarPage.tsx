@@ -10,10 +10,11 @@ import { Button } from '@/components/ui/button';
 import { 
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertTriangle, Package, CheckCircle
 } from 'lucide-react';
-import { supplies } from '@/data/mockData';
-import { MedicalSupply } from '@/types';
-import { supplyTypeTranslations } from '@/data/mockData';
+import { InventoryItem, ProductDefinition } from '@/types';
 import { format } from 'date-fns';
+import { getInventoryItems } from '@/data/operations/suppliesOperations';
+import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
+import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 // Helper function to classify expiry status
@@ -29,9 +30,41 @@ const getExpiryStatus = (date: Date) => {
 };
 
 const CalendarPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction, language } = useLanguage();
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
   
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [inventoryData, defsData] = await Promise.all([
+          getInventoryItems(),
+          getProductDefinitions(),
+        ]);
+        setInventory(inventoryData);
+        setProductDefs(defsData);
+      } catch (error) {
+        console.error("Failed to fetch calendar data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const currentDate = new Date();
   const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth());
   const [currentYear, setCurrentYear] = useState(currentDate.getFullYear());
@@ -53,10 +86,10 @@ const CalendarPage = () => {
   );
   
   // Group supplies by expiry date
-  const expiryDateMap: Record<string, MedicalSupply[]> = {};
+  const expiryDateMap: Record<string, InventoryItem[]> = {};
   
-  supplies.forEach((supply) => {
-    const expiryDate = new Date(supply.expiryDate);
+  inventory.forEach((item) => {
+    const expiryDate = new Date(item.expiry_date);
     const dateKey = expiryDate.toISOString().split('T')[0];
     
     // Only include dates in the current month and year
@@ -64,7 +97,7 @@ const CalendarPage = () => {
       if (!expiryDateMap[dateKey]) {
         expiryDateMap[dateKey] = [];
       }
-      expiryDateMap[dateKey].push(supply);
+      expiryDateMap[dateKey].push(item);
     }
   });
   
@@ -137,8 +170,8 @@ const CalendarPage = () => {
     // Find the most critical status for the day
     let mostCriticalStatus = 'ok';
     if (hasExpiries) {
-      suppliesForDay.forEach((supply) => {
-        const expiryDate = new Date(supply.expiryDate);
+      suppliesForDay.forEach((item) => {
+        const expiryDate = new Date(item.expiry_date);
         const status = getExpiryStatus(expiryDate);
         if (status === 'expired' && mostCriticalStatus !== 'expired') {
           mostCriticalStatus = 'expired';
@@ -186,15 +219,18 @@ const CalendarPage = () => {
         </div>
         
         {/* Show up to 2 expiring items */}
-        {hasExpiries && suppliesForDay.slice(0, 2).map((supply, index) => (
-          <div 
-            key={supply.id} 
-            className="text-xs truncate mt-1 p-1 rounded bg-white/80"
-            title={supply.name}
-          >
-            {supply.name}
-          </div>
-        ))}
+        {hasExpiries && suppliesForDay.slice(0, 2).map((item, index) => {
+          const def = productDefs.find(d => d.id === item.product_definition_id);
+          return (
+            <div 
+              key={item.id} 
+              className="text-xs truncate mt-1 p-1 rounded bg-white/80"
+              title={def?.name || ''}
+            >
+              {def?.name || 'N/A'}
+            </div>
+          );
+        })}
         
         {/* Show count of remaining items if more than 2 */}
         {hasExpiries && suppliesForDay.length > 2 && (
@@ -208,8 +244,12 @@ const CalendarPage = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
       
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-6xl mx-auto">
@@ -304,13 +344,14 @@ const CalendarPage = () => {
                   <>
                     {getSuppliesForSelectedDate().length > 0 ? (
                       <div className="space-y-4">
-                        {getSuppliesForSelectedDate().map((supply) => {
-                          const expiryDate = new Date(supply.expiryDate);
+                        {getSuppliesForSelectedDate().map((item) => {
+                          const expiryDate = new Date(item.expiry_date);
                           const status = getExpiryStatus(expiryDate);
+                          const def = productDefs.find(d => d.id === item.product_definition_id);
                           
                           return (
                             <div 
-                              key={supply.id} 
+                              key={item.id} 
                               className={cn({
                                 "p-3 rounded-md border": true,
                                 "bg-red-50 border-red-200": status === 'expired',
@@ -321,12 +362,12 @@ const CalendarPage = () => {
                             >
                               <div className="flex justify-between items-start">
                                 <div>
-                                  <h4 className="font-medium">{supply.name}</h4>
+                                  <h4 className="font-medium">{def?.name || 'N/A'}</h4>
                                   <p className="text-xs text-muted-foreground mt-1">
-                                    {t('batch')}: {supply.batchNumber}
+                                    {t('batch')}: {item.batch_number}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {t('type')}: {supplyTypeTranslations[supply.type] || supply.type}
+                                    {t('variant')}: {item.variant}
                                   </p>
                                 </div>
                                 {status === 'expired' ? (

@@ -1,18 +1,17 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { MedicalSupply } from '@/types';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { deleteSupply } from '@/data/mockData';
+import { deleteInventoryItem } from '@/data/operations/suppliesOperations';
 import { useToast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Clock, Calendar, Package2, Tag, Building2, Truck, Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface SupplyCardProps {
-  supply: MedicalSupply;
+  supply: any; // Using any because the parent component (SupplyList) is creating a synthetic object
   onDelete?: () => void;
 }
 
@@ -31,11 +30,9 @@ const SupplyCard: React.FC<SupplyCardProps> = ({ supply, onDelete }) => {
   const { t, direction } = useLanguage();
   const { toast } = useToast();
   
-  const handleDelete = () => {
-    // Fix: Remove the second argument here
-    const success = deleteSupply(supply.id);
-    
-    if (success) {
+  const handleDelete = async () => {
+    try {
+      await deleteInventoryItem(supply.id);
       toast({
         title: t('success'),
         description: t('item_deleted'),
@@ -44,10 +41,10 @@ const SupplyCard: React.FC<SupplyCardProps> = ({ supply, onDelete }) => {
       if (onDelete) {
         onDelete();
       }
-    } else {
+    } catch (error) {
       toast({
         title: t('error'),
-        description: t('error_deleting'),
+        description: t('error_deleting_item'),
         variant: "destructive",
       });
     }
@@ -68,15 +65,8 @@ const SupplyCard: React.FC<SupplyCardProps> = ({ supply, onDelete }) => {
             <div className="space-y-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Package2 className="h-4 w-4" />
-                <span>{t(supply.type)}</span>
+                <span>{supply.variant}</span>
               </div>
-              
-              {supply.size && (
-                <div className="flex items-center gap-2">
-                  <Tag className="h-4 w-4" />
-                  <span>{t('size')}: {supply.size}</span>
-                </div>
-              )}
               
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
@@ -92,13 +82,13 @@ const SupplyCard: React.FC<SupplyCardProps> = ({ supply, onDelete }) => {
               
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                <span>{t('batch')}: {supply.batchNumber}</span>
+                <span>{t('batch')}: {supply.batch_number}</span>
               </div>
               
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {t('expiry')}: {format(new Date(supply.expiryDate), 'yyyy-MM-dd')}
+                  {t('expiry')}: {format(new Date(supply.expiry_date), 'yyyy-MM-dd')}
                 </span>
               </div>
             </div>

@@ -12,9 +12,10 @@ import {
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
-import { consumptionRecords, deleteConsumptionRecord, supplies } from '@/data/mockData';
+import { getConsumptionRecords } from '@/data/operations/consumptionOperations';
 import { ConsumptionRecord } from '@/types';
 import { Search, Trash2, FileSpreadsheet, Calendar, Package, User, Building2 } from 'lucide-react';
+import { useEffect } from 'react';
 import { format } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -23,9 +24,27 @@ const ConsumptionRecordList = () => {
   const { t, direction, language } = useLanguage();
   const { toast } = useToast();
   
+  const [records, setRecords] = useState<ConsumptionRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
+
+  const loadRecords = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getConsumptionRecords();
+      setRecords(data);
+    } catch (error) {
+      console.error("Failed to fetch consumption records", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRecords();
+  }, []);
   
   // الأقسام المتاحة
   const departments = [
@@ -38,10 +57,10 @@ const ConsumptionRecordList = () => {
   ];
   
   // تصفية السجلات
-  const filteredRecords = consumptionRecords.filter(record => {
+  const filteredRecords = records.filter(record => {
     const matchesSearch = searchQuery === '' || 
-      record.requestedBy.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (record.approvedBy && record.approvedBy.toLowerCase().includes(searchQuery.toLowerCase()));
+      record.requested_by.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (record.approved_by && record.approved_by.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesDepartment = departmentFilter === 'all' || record.department === departmentFilter;
     
@@ -63,20 +82,21 @@ const ConsumptionRecordList = () => {
   };
   
   // حذف سجل
-  const handleDelete = (recordId: string) => {
-    const result = deleteConsumptionRecord(recordId);
-    if (result) {
-      toast({
-        title: t('success'),
-        description: t('record_deleted'),
-      });
-    } else {
-      toast({
-        title: t('error'),
-        description: t('delete_failed'),
-        variant: "destructive"
-      });
-    }
+  const handleDelete = async (recordId: string) => {
+    // try {
+    //   await deleteConsumptionRecord(recordId);
+    //   toast({
+    //     title: t('success'),
+    //     description: t('record_deleted'),
+    //   });
+    //   loadRecords(); // Reload records after deletion
+    // } catch (error) {
+    //   toast({
+    //     title: t('error'),
+    //     description: t('delete_failed'),
+    //     variant: "destructive"
+    //   });
+    // }
   };
   
   return (
@@ -156,7 +176,7 @@ const ConsumptionRecordList = () => {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <User className="h-4 w-4 text-muted-foreground" />
-                              <span>{record.requestedBy}</span>
+                              <span>{record.requested_by}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -218,12 +238,12 @@ const ConsumptionRecordList = () => {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {record.items.map((item) => (
-                                      <TableRow key={item.id}>
+                                    {record.items.map((item, index) => (
+                                      <TableRow key={index}>
                                         <TableCell>
                                           <div className="flex items-center gap-2">
                                             <Package className="h-4 w-4 text-muted-foreground" />
-                                            <span>{item.supplyName}</span>
+                                            <span>{item.inventory_item_id}</span>
                                           </div>
                                         </TableCell>
                                         <TableCell>

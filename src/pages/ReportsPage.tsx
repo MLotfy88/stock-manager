@@ -8,25 +8,59 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileDown, FileText, BarChart3, BarChart, PieChart, LineChart, FileSpreadsheet } from 'lucide-react';
-import { supplies } from '@/data/mockData';
-import { SupplyStatus, SupplyType } from '@/types';
+import { InventoryItem, ProductDefinition } from '@/types';
 import { Label } from '@/components/ui/label';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
-import { supplyTypeTranslations } from '@/data/mockData';
 import { DateRange } from 'react-day-picker';
 import { addDays, format } from 'date-fns';
+import { getInventoryItems } from '@/data/operations/suppliesOperations';
+import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
+import { useMemo, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart as RePieChart, Pie, Cell } from 'recharts';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const ReportsPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [inventoryData, defsData] = await Promise.all([
+          getInventoryItems(),
+          getProductDefinitions(),
+        ]);
+        setInventory(inventoryData);
+        setProductDefs(defsData);
+      } catch (error) {
+        console.error("Failed to fetch report data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
   
   const [reportType, setReportType] = useState<string>('expiry');
   const [date, setDate] = React.useState<DateRange | undefined>({
@@ -35,9 +69,9 @@ const ReportsPage = () => {
   });
   
   // Count supplies by status
-  const validCount = supplies.filter(s => s.status === 'valid').length;
-  const expiringCount = supplies.filter(s => s.status === 'expiring_soon').length;
-  const expiredCount = supplies.filter(s => s.status === 'expired').length;
+  const validCount = inventory.filter(s => s.status === 'valid').length;
+  const expiringCount = inventory.filter(s => s.status === 'expiring_soon').length;
+  const expiredCount = inventory.filter(s => s.status === 'expired').length;
   
   // Generate data for bar chart
   const statusData = [
@@ -47,18 +81,31 @@ const ReportsPage = () => {
   ];
   
   // Group supplies by type
-  const typeData = Object.entries(supplyTypeTranslations).map(([key, value]) => {
-    const count = supplies.filter(s => s.type === key).length;
-    return { name: value, value: count };
-  });
+  const typeData = useMemo(() => {
+    if (isLoading) return [];
+    const grouped = inventory.reduce((acc, item) => {
+      const key = item.product_definition_id;
+      acc[key] = (acc[key] || 0) + item.quantity;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(grouped).map(([defId, count]) => {
+      const def = productDefs.find(d => d.id === defId);
+      return { name: def?.name || 'Unknown', value: count };
+    });
+  }, [inventory, productDefs, isLoading]);
   
   // Colors for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#DC7633'];
   
   return (
     <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
       
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-6xl mx-auto">
@@ -241,26 +288,31 @@ const ReportsPage = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {supplies.slice(0, 5).map((supply) => (
-                            <tr key={supply.id} className="hover:bg-gray-50">
-                              <td className="whitespace-nowrap px-4 py-3">{supply.name}</td>
-                              <td className="whitespace-nowrap px-4 py-3">{supplyTypeTranslations[supply.type] || supply.type}</td>
-                              <td className="whitespace-nowrap px-4 py-3">{supply.batchNumber}</td>
-                              <td className="whitespace-nowrap px-4 py-3">{supply.manufacturerName}</td>
-                              <td className="whitespace-nowrap px-4 py-3">{new Date(supply.expiryDate).toLocaleDateString()}</td>
-                              <td className="whitespace-nowrap px-4 py-3">
-                                <Badge 
-                                  variant={supply.status === 'valid' ? 'outline' : 
-                                        supply.status === 'expiring_soon' ? 'outline' : 'destructive'}
-                                  className={supply.status === 'valid' ? 'bg-green-50 text-green-700 hover:bg-green-50' : 
-                                        supply.status === 'expiring_soon' ? 'bg-amber-50 text-amber-700 hover:bg-amber-50' : ''}
-                                >
-                                  {t(`${supply.status}_status`)}
-                                </Badge>
-                              </td>
-                              <td className="whitespace-nowrap px-4 py-3">{supply.quantity}</td>
-                            </tr>
-                          ))}
+                          {isLoading ? (
+                            <TableRow><TableCell colSpan={7} className="text-center py-10">{t('loading')}</TableCell></TableRow>
+                          ) : inventory.slice(0, 10).map((item) => {
+                            const def = productDefs.find(d => d.id === item.product_definition_id);
+                            return (
+                              <TableRow key={item.id} className="hover:bg-gray-50">
+                                <TableCell className="whitespace-nowrap px-4 py-3">{def?.name || 'N/A'}</TableCell>
+                                <TableCell className="whitespace-nowrap px-4 py-3">{item.variant}</TableCell>
+                                <TableCell className="whitespace-nowrap px-4 py-3">{item.batch_number}</TableCell>
+                                <TableCell className="whitespace-nowrap px-4 py-3">{/* Manufacturer missing */}</TableCell>
+                                <TableCell className="whitespace-nowrap px-4 py-3">{new Date(item.expiry_date).toLocaleDateString()}</TableCell>
+                                <TableCell className="whitespace-nowrap px-4 py-3">
+                                  <Badge 
+                                    variant={item.status === 'valid' ? 'outline' : 
+                                          item.status === 'expiring_soon' ? 'outline' : 'destructive'}
+                                    className={item.status === 'valid' ? 'bg-green-50 text-green-700 hover:bg-green-50' : 
+                                          item.status === 'expiring_soon' ? 'bg-amber-50 text-amber-700 hover:bg-amber-50' : ''}
+                                  >
+                                    {t(`${item.status}_status`)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap px-4 py-3">{item.quantity}</TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

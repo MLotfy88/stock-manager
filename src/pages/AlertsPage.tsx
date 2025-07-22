@@ -8,8 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Bell, CheckCircle, Clock } from 'lucide-react';
-import { supplies } from '@/data/mockData';
-import { MedicalSupply } from '@/types';
+import { InventoryItem, ProductDefinition, Manufacturer } from '@/types';
+import { getInventoryItems } from '@/data/operations/suppliesOperations';
+import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
+import { getManufacturers } from '@/data/operations/manufacturerOperations';
+import { useEffect } from 'react';
 
 // Helper function to classify alerts by severity
 const getAlertSeverity = (daysRemaining: number) => {
@@ -20,18 +23,57 @@ const getAlertSeverity = (daysRemaining: number) => {
 };
 
 const AlertsPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
-  
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [inventoryData, defsData, manufacturersData] = await Promise.all([
+          getInventoryItems(),
+          getProductDefinitions(),
+          getManufacturers(),
+        ]);
+        setInventory(inventoryData);
+        setProductDefs(defsData);
+        setManufacturers(manufacturersData);
+      } catch (error) {
+        console.error("Failed to fetch alerts data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   // Filter supplies by their expiration date and calculate days remaining
-  const suppliesWithAlerts = supplies.map((supply) => {
-    const expiryDate = new Date(supply.expiryDate);
+  const suppliesWithAlerts = inventory.map((item) => {
+    const expiryDate = new Date(item.expiry_date);
     const today = new Date();
     const timeDiff = expiryDate.getTime() - today.getTime();
     const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const def = productDefs.find(d => d.id === item.product_definition_id);
+    const manufacturer = manufacturers.find(m => m.id === item.manufacturer_id);
     
     return {
-      ...supply,
+      ...item,
+      name: def?.name || 'N/A',
+      manufacturerName: manufacturer?.name || 'N/A',
       daysRemaining,
       severity: getAlertSeverity(daysRemaining)
     };
@@ -44,8 +86,12 @@ const AlertsPage = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
       
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-6xl mx-auto">
@@ -133,7 +179,7 @@ const AlertsPage = () => {
                             </Badge>
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            {t('batch')}: {supply.batchNumber} | {t('manufacturer')}: {supply.manufacturerName}
+                            {t('batch')}: {supply.batch_number} | {t('manufacturer')}: {supply.manufacturerName}
                           </p>
                         </div>
                         <Button size="sm" variant="outline" className="text-xs">
@@ -181,7 +227,7 @@ const AlertsPage = () => {
                             </Badge>
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            {t('batch')}: {supply.batchNumber} | {t('manufacturer')}: {supply.manufacturerName}
+                            {t('batch')}: {supply.batch_number} | {t('manufacturer')}: {supply.manufacturerName}
                           </p>
                         </div>
                         <Button size="sm" variant="outline" className="text-xs">
@@ -229,7 +275,7 @@ const AlertsPage = () => {
                             </Badge>
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            {t('batch')}: {supply.batchNumber} | {t('manufacturer')}: {supply.manufacturerName}
+                            {t('batch')}: {supply.batch_number} | {t('manufacturer')}: {supply.manufacturerName}
                           </p>
                         </div>
                         <Button size="sm" variant="outline" className="text-xs">

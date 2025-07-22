@@ -1,12 +1,31 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { supplies } from '@/data/mockData';
+import { InventoryItem } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getInventoryItems } from '@/data/operations/suppliesOperations';
 
 const ExpiryCalendar = () => {
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const inventoryData = await getInventoryItems();
+        setInventory(inventoryData);
+      } catch (error) {
+        console.error("Failed to fetch expiry calendar data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const currentDate = new Date();
   const [currentMonth, setCurrentMonth] = React.useState(currentDate.getMonth());
   const [currentYear, setCurrentYear] = React.useState(currentDate.getFullYear());
@@ -27,15 +46,15 @@ const ExpiryCalendar = () => {
   }
   
   // Get expiry dates for current month
-  const expiryDates = supplies.reduce((acc, supply) => {
-    const expiryDate = new Date(supply.expiryDate);
+  const expiryDates = inventory.reduce((acc, item) => {
+    const expiryDate = new Date(item.expiry_date);
     if (expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear) {
       const day = expiryDate.getDate();
       if (!acc[day]) acc[day] = [];
-      acc[day].push(supply);
+      acc[day].push(item);
     }
     return acc;
-  }, {} as Record<number, typeof supplies>);
+  }, {} as Record<number, InventoryItem[]>);
   
   // Next and previous month
   const goToPreviousMonth = () => {
