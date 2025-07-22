@@ -1,160 +1,149 @@
-
-import { MedicalSupply } from '@/types';
-import { saveData } from '../../utils/storageUtils';
-import { store } from '../store';
-
-/**
- * Add a new medical supply
- */
-export const addSupply = (supply: MedicalSupply) => {
-  // Ensure supply has required fields
-  const newSupply = {
-    ...supply,
-    id: supply.id || `supply_${Date.now()}`,
-    status: supply.status || 'valid',
-    createdAt: supply.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  store.supplies.push(newSupply);
-  
-  const saved = saveData({ 
-    manufacturers: store.manufacturers, 
-    supplies: store.supplies, 
-    consumptionRecords: store.consumptionRecords, 
-    suppliers: store.suppliers, 
-    supplyTypes: store.supplyTypes, 
-    adminSettings: store.adminSettings 
-  });
-  
-  return saved ? newSupply : false;
-};
+import { supabase } from '@/lib/supabaseClient';
+import { InventoryItem } from '@/types';
+import { format } from 'date-fns';
 
 /**
- * Update an existing medical supply
+ * Get all inventory items
  */
-export const updateSupply = (supplyId: string, data: Partial<MedicalSupply>) => {
-  const index = store.supplies.findIndex(s => s.id === supplyId);
-  if (index === -1) return false;
-  
-  store.supplies[index] = {
-    ...store.supplies[index],
-    ...data,
-    updatedAt: new Date().toISOString()
-  };
-  
-  // Update status based on quantity and expiry
-  if (store.supplies[index].quantity <= 0) {
-    store.supplies[index].status = 'empty';
-  } else if (new Date(store.supplies[index].expiryDate) < new Date()) {
-    store.supplies[index].status = 'expired';
-  } else {
-    store.supplies[index].status = 'valid';
+export const getInventoryItems = async (): Promise<InventoryItem[]> => {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching inventory items:', error);
+    throw error;
   }
-  
-  const saved = saveData({ 
-    manufacturers: store.manufacturers, 
-    supplies: store.supplies, 
-    consumptionRecords: store.consumptionRecords, 
-    suppliers: store.suppliers, 
-    supplyTypes: store.supplyTypes, 
-    adminSettings: store.adminSettings 
-  });
-  
-  return saved;
+  return data || [];
 };
 
 /**
- * Delete a medical supply
+ * Get a single inventory item by ID
  */
-export const deleteSupply = (supplyId: string) => {
-  const index = store.supplies.findIndex(s => s.id === supplyId);
-  if (index === -1) return { success: false, error: 'supply_not_found' };
-  
-  // Check if this supply is used by any consumption record
-  const usedInConsumption = store.consumptionRecords.some(record => 
-    record.items.some(item => item.supplyId === supplyId)
-  );
-  
-  if (usedInConsumption) {
-    return { success: false, error: 'supply_in_use' };
+export const getInventoryItemById = async (itemId: string): Promise<InventoryItem | null> => {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('*')
+    .eq('id', itemId)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching item ${itemId}:`, error);
+    throw error;
   }
-  
-  store.supplies.splice(index, 1);
-  
-  const saved = saveData({ 
-    manufacturers: store.manufacturers, 
-    supplies: store.supplies, 
-    consumptionRecords: store.consumptionRecords, 
-    suppliers: store.suppliers, 
-    supplyTypes: store.supplyTypes, 
-    adminSettings: store.adminSettings 
-  });
-  
-  return { success: saved, error: saved ? null : 'save_failed' };
+  return data;
 };
 
 /**
- * Get all medical supplies
+ * Add a new inventory item or a batch of items
  */
-export const getSupplies = () => {
-  return store.supplies;
+export const addInventoryItems = async (items: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at' | 'status'>[]): Promise<InventoryItem[]> => {
+  const itemsToInsert = items.map(item => ({
+    ...item,
+    // Status can be determined here based on expiry date if needed
+  }));
+
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .insert(itemsToInsert)
+    .select();
+
+  if (error) {
+    console.error('Error adding inventory items:', error);
+    throw error;
+  }
+  return data;
 };
 
 /**
- * Get a medical supply by ID
+ * Update an existing inventory item
  */
-export const getSupplyById = (supplyId: string) => {
-  return store.supplies.find(s => s.id === supplyId);
+export const updateInventoryItem = async (itemId: string, updates: Partial<InventoryItem>): Promise<InventoryItem> => {
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .update(updates)
+    .eq('id', itemId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(`Error updating item ${itemId}:`, error);
+    throw error;
+  }
+  return data;
 };
 
 /**
- * Get medical supplies by type
+ * Delete an inventory item
  */
-export const getSuppliesByType = (typeId: string) => {
-  return store.supplies.filter(s => s.typeId === typeId);
+export const deleteInventoryItem = async (itemId: string): Promise<{ success: boolean; error?: string }> => {
+  // Check if this item is used in consumption records
+  const { data: consumption, error: checkError } = await supabase
+    .from('consumption_items')
+    .select('id')
+    .eq('inventory_item_id', itemId)
+    .limit(1);
+
+  if (checkError) {
+    console.error('Error checking for item usage:', checkError);
+    return { success: false, error: 'check_failed' };
+  }
+
+  if (consumption && consumption.length > 0) {
+    return { success: false, error: 'item_in_use' };
+  }
+
+  const { error } = await supabase
+    .from('inventory_items')
+    .delete()
+    .eq('id', itemId);
+
+  if (error) {
+    console.error(`Error deleting item ${itemId}:`, error);
+    return { success: false, error: 'delete_failed' };
+  }
+
+  return { success: true };
 };
 
 /**
- * Get medical supplies by manufacturer
+ * Get soon to expire inventory items
  */
-export const getSuppliesByManufacturer = (manufacturerId: string) => {
-  return store.supplies.filter(s => s.manufacturerId === manufacturerId);
-};
-
-/**
- * Get medical supplies by supplier
- */
-export const getSuppliesBySupplier = (supplierId: string) => {
-  return store.supplies.filter(s => s.supplierId === supplierId);
-};
-
-/**
- * Get expired medical supplies
- */
-export const getExpiredSupplies = () => {
-  return store.supplies.filter(s => s.status === 'expired');
-};
-
-/**
- * Get soon to expire medical supplies
- */
-export const getSoonToExpireSupplies = (daysThreshold: number) => {
+export const getSoonToExpireItems = async (daysThreshold: number): Promise<InventoryItem[]> => {
   const today = new Date();
-  const threshold = new Date();
-  threshold.setDate(today.getDate() + daysThreshold);
-  
-  return store.supplies.filter(s => {
-    const expiryDate = new Date(s.expiryDate);
-    return s.status === 'valid' && expiryDate <= threshold && expiryDate > today;
-  });
+  const thresholdDate = new Date();
+  thresholdDate.setDate(today.getDate() + daysThreshold);
+
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('*')
+    .lte('expiry_date', format(thresholdDate, 'yyyy-MM-dd'))
+    .gt('expiry_date', format(today, 'yyyy-MM-dd'))
+    .gt('quantity', 0);
+
+  if (error) {
+    console.error('Error fetching soon-to-expire items:', error);
+    throw error;
+  }
+  return data || [];
 };
 
 /**
- * Get low stock medical supplies
+ * Get expired inventory items
  */
-export const getLowStockSupplies = (threshold: number) => {
-  return store.supplies.filter(s => 
-    s.status === 'valid' && s.quantity > 0 && s.quantity <= threshold
-  );
+export const getExpiredItems = async (): Promise<InventoryItem[]> => {
+  const today = new Date();
+  
+  const { data, error } = await supabase
+    .from('inventory_items')
+    .select('*')
+    .lte('expiry_date', format(today, 'yyyy-MM-dd'))
+    .gt('quantity', 0);
+
+  if (error) {
+    console.error('Error fetching expired items:', error);
+    throw error;
+  }
+  return data || [];
 };

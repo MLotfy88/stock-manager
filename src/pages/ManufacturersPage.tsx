@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -19,45 +18,61 @@ import {
   addManufacturer, 
   updateManufacturer, 
   deleteManufacturer 
-} from '@/data/mockData';
+} from '@/data/operations/manufacturerOperations';
 
 const ManufacturersPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
   const { toast } = useToast();
   
   const [manufacturersList, setManufacturersList] = useState<Manufacturer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentManufacturer, setCurrentManufacturer] = useState<Manufacturer | null>(null);
   const [newManufacturerName, setNewManufacturerName] = useState('');
   const [newAlertPeriod, setNewAlertPeriod] = useState<string>('30');
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
   
-  // تحميل بيانات الشركات المصنعة
-  const loadManufacturers = () => {
-    const manufacturers = getManufacturers();
-    console.log('تحميل الشركات المصنعة:', manufacturers);
-    setManufacturersList(manufacturers);
+  const loadManufacturers = async () => {
+    setIsLoading(true);
+    try {
+      const manufacturers = await getManufacturers();
+      setManufacturersList(manufacturers);
+    } catch (error) {
+      toast({
+        title: t('error'),
+        description: t('error_fetching_data'),
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   useEffect(() => {
     loadManufacturers();
   }, []);
   
-  const handleAddManufacturer = () => {
+  const handleAddManufacturer = async () => {
     if (!newManufacturerName.trim()) return;
     
-    const newManufacturer: Manufacturer = {
-      id: Date.now().toString(),
-      name: newManufacturerName,
-      alertPeriod: parseInt(newAlertPeriod) || 30,
-      logo: '/placeholder.svg'
-    };
-    
-    const result = addManufacturer(newManufacturer);
-    
-    if (result) {
+    try {
+      await addManufacturer({
+        name: newManufacturerName,
+        alert_period: parseInt(newAlertPeriod) || 30,
+        logo: '/placeholder.svg'
+      });
+      
       loadManufacturers();
       setNewManufacturerName('');
       setNewAlertPeriod('30');
@@ -67,7 +82,7 @@ const ManufacturersPage = () => {
         title: t('success'),
         description: t('item_added'),
       });
-    } else {
+    } catch (error) {
       toast({
         title: t('error'),
         description: t('error_adding_item'),
@@ -76,15 +91,15 @@ const ManufacturersPage = () => {
     }
   };
   
-  const handleEditManufacturer = () => {
+  const handleEditManufacturer = async () => {
     if (!currentManufacturer || !newManufacturerName.trim()) return;
     
-    const result = updateManufacturer(currentManufacturer.id, {
-      name: newManufacturerName,
-      alertPeriod: parseInt(newAlertPeriod) || 30
-    });
-    
-    if (result) {
+    try {
+      await updateManufacturer(currentManufacturer.id, {
+        name: newManufacturerName,
+        alert_period: parseInt(newAlertPeriod) || 30
+      });
+      
       loadManufacturers();
       setIsEditDialogOpen(false);
       
@@ -92,7 +107,7 @@ const ManufacturersPage = () => {
         title: t('success'),
         description: t('item_updated'),
       });
-    } else {
+    } catch (error) {
       toast({
         title: t('error'),
         description: t('error_updating_item'),
@@ -101,23 +116,31 @@ const ManufacturersPage = () => {
     }
   };
   
-  const handleDeleteManufacturer = () => {
+  const handleDeleteManufacturer = async () => {
     if (!currentManufacturer) return;
     
-    const result = deleteManufacturer(currentManufacturer.id);
-    
-    if (result.success) {
-      loadManufacturers();
-      setIsDeleteDialogOpen(false);
+    try {
+      const result = await deleteManufacturer(currentManufacturer.id);
       
-      toast({
-        title: t('success'),
-        description: t('item_deleted'),
-      });
-    } else {
+      if (result.success) {
+        loadManufacturers();
+        setIsDeleteDialogOpen(false);
+        
+        toast({
+          title: t('success'),
+          description: t('item_deleted'),
+        });
+      } else {
+        toast({
+          title: t('error'),
+          description: t(result.error || 'error_deleting_item'),
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
       toast({
         title: t('error'),
-        description: t(result.error || 'error_deleting_item'),
+        description: t('error_deleting_item'),
         variant: 'destructive'
       });
     }
@@ -126,7 +149,7 @@ const ManufacturersPage = () => {
   const openEditDialog = (manufacturer: Manufacturer) => {
     setCurrentManufacturer(manufacturer);
     setNewManufacturerName(manufacturer.name);
-    setNewAlertPeriod(manufacturer.alertPeriod.toString());
+    setNewAlertPeriod(String(manufacturer.alert_period));
     setIsEditDialogOpen(true);
   };
   
@@ -137,8 +160,12 @@ const ManufacturersPage = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
       
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-6xl mx-auto">
@@ -199,25 +226,31 @@ const ManufacturersPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {manufacturersList.map((manufacturer) => (
-                    <TableRow key={manufacturer.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center">
-                          <Building2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                          {manufacturer.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>{manufacturer.alertPeriod} {t('days')}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(manufacturer)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(manufacturer)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={3} className="text-center">{t('loading')}</TableCell></TableRow>
+                  ) : manufacturersList.length === 0 ? (
+                    <TableRow><TableCell colSpan={3} className="text-center">{t('no_data')}</TableCell></TableRow>
+                  ) : (
+                    manufacturersList.map((manufacturer) => (
+                      <TableRow key={manufacturer.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            <Building2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                            {manufacturer.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{manufacturer.alert_period} {t('days')}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(manufacturer)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(manufacturer)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

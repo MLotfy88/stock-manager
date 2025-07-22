@@ -1,14 +1,25 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Package, Clock, CheckCircle2 } from 'lucide-react';
-import { calculateDashboardStats } from '@/data/mockData';
+import { calculateDashboardStats } from '@/data/operations/statsOperations';
 import { Card, CardContent } from "@/components/ui/card";
-import { supplyTypeTranslations } from '@/data/mockData';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const DashboardStats = () => {
-  const stats = calculateDashboardStats();
+  const [stats, setStats] = useState({ totalSupplies: 0, expiringSupplies: 0, expiredSupplies: 0, validSupplies: 0, typeCounts: {} });
   const { t, getLocalizedName } = useLanguage();
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await calculateDashboardStats();
+        setStats(data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats", error);
+      }
+    };
+    fetchStats();
+  }, []);
   
   const statCards = [
     {
@@ -68,11 +79,11 @@ const DashboardStats = () => {
               {Object.entries(stats.typeCounts || {}).map(([type, count]) => (
                 <div key={type} className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <span className="text-sm font-medium">{getLocalizedName(supplyTypeTranslations[type] || type)}</span>
+                    <span className="text-sm font-medium">{type}</span>
                   </div>
                   <div className="flex items-center">
                     <span className="text-sm font-bold">{count as number}</span>
-                    <div className="w-16 h-2 bg-gray-100 rounded-full ml-2">
+                    <div className="w-12 h-2 bg-gray-100 rounded-full ml-2">
                       <div 
                         className="h-full bg-primary rounded-full" 
                         style={{ width: `${((count as number) / stats.totalSupplies) * 100}%` }}

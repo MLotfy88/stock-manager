@@ -9,256 +9,258 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { manufacturers, getSuppliers } from '@/data/mockData';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { getSuppliers } from '@/data/operations/supplierOperations';
 import { Supplier, Manufacturer, ProductDefinition, InventoryItem, Store } from '@/types';
-import { CalendarIcon, Save, RotateCcw, ScanBarcode } from 'lucide-react';
+import { CalendarIcon, Save, RotateCcw, ScanBarcode, PlusCircle, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-// MOCK DATA - REMOVE WHEN SUPABASE IS INTEGRATED
-const MOCK_PRODUCT_DEFINITIONS: ProductDefinition[] = [
-  { id: '1', name: 'Diagnostic Catheter', typeId: 'catheter', barcode: '111', variantLabel: 'Curve', variants: [{name: 'L3.5', reorderPoint: 5}, {name: 'L4', reorderPoint: 5}], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: '2', name: 'Balloons', typeId: 'consumable', barcode: '222', variantLabel: 'Size', variants: [{name: '2.5x10', reorderPoint: 10}, {name: '3.0x15', reorderPoint: 8}], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-];
-const MOCK_STORES: Store[] = [
-    { id: '1', name: 'Main Store' },
-    { id: '2', name: 'Cath Lab 1' },
-];
-// END MOCK DATA
+
+type PurchaseOrderItem = {
+  id: string;
+  barcode: string;
+  productDefinitionId: string;
+  variant: string;
+  batchNumber: string;
+  expiryDate?: Date;
+  quantity: string;
+  purchasePrice: string;
+};
 
 const AddInventoryPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
+
   const [productDefinitions, setProductDefinitions] = useState<ProductDefinition[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [manufacturersList, setManufacturersList] = useState<Manufacturer[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
-  
+
   // Form State
-  const [selectedDefinitionId, setSelectedDefinitionId] = useState('');
-  const [selectedVariant, setSelectedVariant] = useState('');
-  const [batchNumber, setBatchNumber] = useState('');
-  const [quantity, setQuantity] = useState('1');
-  const [purchasePrice, setPurchasePrice] = useState('0');
-  const [manufacturerId, setManufacturerId] = useState('');
   const [supplierId, setSupplierId] = useState('');
+  const [manufacturerId, setManufacturerId] = useState('');
   const [storeId, setStoreId] = useState('');
-  const [expiryDate, setExpiryDate] = useState<Date | undefined>(new Date(new Date().setFullYear(new Date().getFullYear() + 1)));
-
-  // Scanner State
-  const [isScanning, setIsScanning] = useState(false);
-  const [scannedProduct, setScannedProduct] = useState<ProductDefinition | null>(null);
-  const [scannedQuantity, setScannedQuantity] = useState('1');
-  const codeReader = new BrowserMultiFormatReader();
-
-  const selectedDefinition = productDefinitions.find(def => def.id === selectedDefinitionId);
+  const [items, setItems] = useState<PurchaseOrderItem[]>([
+    { id: `item_${Date.now()}`, barcode: '', productDefinitionId: '', variant: '', batchNumber: '', expiryDate: undefined, quantity: '1', purchasePrice: '0' }
+  ]);
 
   useEffect(() => {
-    setProductDefinitions(MOCK_PRODUCT_DEFINITIONS);
-    setSuppliers(getSuppliers());
-    setManufacturersList(manufacturers);
-    setStores(MOCK_STORES);
+    const loadInitialData = async () => {
+      // This needs to be updated to fetch real data
+      // setProductDefinitions(MOCK_PRODUCT_DEFINITIONS);
+      // setManufacturersList(manufacturers); 
+      // setStores(MOCK_STORES);
+      try {
+        const suppliersData = await getSuppliers();
+        setSuppliers(suppliersData);
+      } catch (error) {
+        toast({ title: t('error'), description: t('error_fetching_suppliers'), variant: 'destructive' });
+      }
+    };
+    loadInitialData();
   }, []);
-  
-  const resetForm = () => {
-    setSelectedDefinitionId('');
-    setSelectedVariant('');
-    setBatchNumber('');
-    setQuantity('1');
-    setPurchasePrice('0');
-    setManufacturerId('');
-    setSupplierId('');
-    setStoreId('');
-    setExpiryDate(new Date(new Date().setFullYear(new Date().getFullYear() + 1)));
+
+  const handleItemChange = (itemId: string, field: keyof PurchaseOrderItem, value: any) => {
+    setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, [field]: value } : item));
   };
-  
+
+  const handleBarcodeScan = (itemId: string, barcode: string) => {
+    // This needs to be reimplemented to search the database
+    console.log("Barcode scan triggered for item:", itemId, "with barcode:", barcode);
+    handleItemChange(itemId, 'barcode', barcode);
+    toast({ title: t('feature_in_development'), description: t('barcode_search_not_implemented'), variant: 'default' });
+  };
+
+  const addNewItem = () => {
+    setItems(prevItems => [
+      ...prevItems,
+      { id: `item_${Date.now()}`, barcode: '', productDefinitionId: '', variant: '', batchNumber: '', expiryDate: undefined, quantity: '1', purchasePrice: '0' }
+    ]);
+  };
+
+  const removeItem = (itemId: string) => {
+    setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!selectedDefinitionId || !selectedVariant || !batchNumber.trim() || !expiryDate || !manufacturerId || !storeId) {
-      toast({ title: t('error'), description: t('please_complete_all_fields'), variant: "destructive" });
+    if (!supplierId || !manufacturerId || !storeId) {
+      toast({ title: t('error'), description: t('please_fill_header_fields'), variant: 'destructive' });
       return;
     }
-    
-    const newInventoryItem: Partial<InventoryItem> = {
-      id: `inv_${Date.now()}`,
-      productDefinitionId: selectedDefinitionId,
-      variant: selectedVariant,
-      quantity: parseInt(quantity) || 0,
-      storeId: storeId,
-      purchasePrice: parseFloat(purchasePrice) || 0,
-      manufacturerId: manufacturerId,
-      supplierId: supplierId,
-      batchNumber: batchNumber,
-      expiryDate: expiryDate.toISOString(),
-      status: 'valid',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    console.log("New Inventory Item:", newInventoryItem);
-    toast({ title: t('success'), description: t('item_added') });
-    resetForm();
+
+    for (const item of items) {
+      if (!item.productDefinitionId || !item.variant || !item.batchNumber || !item.expiryDate || !item.quantity || !item.purchasePrice) {
+        toast({ title: t('error'), description: `${t('please_complete_all_fields_for_item')} #${item.id.slice(-4)}`, variant: 'destructive' });
+        return;
+      }
+    }
+
+    const newInventoryItems = items.map(item => ({
+      ...item,
+      supplierId,
+      manufacturerId,
+      storeId,
+      quantity: parseInt(item.quantity),
+      purchasePrice: parseFloat(item.purchasePrice),
+      expiryDate: item.expiryDate ? format(item.expiryDate, 'yyyy-MM-dd') : '',
+    }));
+
+    console.log("Submitting new inventory items:", newInventoryItems);
+    toast({ title: t('success'), description: t('invoice_processed_successfully') });
     navigate('/supplies');
   };
 
-  const startScan = () => {
-    setIsScanning(true);
-    codeReader.decodeFromVideoDevice(undefined, 'video-scanner', (result, err) => {
-      if (result) {
-        const scannedBarcode = result.getText();
-        stopScan();
-        const foundProduct = productDefinitions.find(p => p.barcode === scannedBarcode);
-        if (foundProduct) {
-          setScannedProduct(foundProduct);
-          setSelectedDefinitionId(foundProduct.id);
-        } else {
-          toast({ title: "Not Found", description: `No product definition with barcode: ${scannedBarcode}`, variant: 'destructive' });
-        }
-      }
-      if (err && !(err instanceof NotFoundException)) {
-        console.error(err);
-        stopScan();
-      }
-    });
-  };
-
-  const stopScan = () => {
-    codeReader.reset();
-    setIsScanning(false);
-  };
-
-  const handleScannedProductConfirm = () => {
-    if (!scannedProduct) return;
-    setQuantity(scannedQuantity);
-    setScannedProduct(null);
-    setScannedQuantity('1');
-  };
-  
   return (
     <div className="page-container bg-background" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
       
       <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">{t('add_inventory_item')}</h1>
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-2xl font-bold mb-6">{t('add_new_inventory_invoice')}</h1>
           
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>{t('add_new_inventory')}</CardTitle>
-              <CardDescription>{t('inventory_form_description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="flex justify-end mb-4">
-                <Button type="button" variant="outline" onClick={startScan}>
-                  <ScanBarcode className="mr-2 h-5 w-5" />
-                  {t('scan_barcode_to_find')}
+          <form onSubmit={handleSubmit}>
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>{t('invoice_details')}</CardTitle>
+                <CardDescription>{t('invoice_details_description')}</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+                <div className="space-y-2">
+                  <Label htmlFor="manufacturer">{t('manufacturer')}</Label>
+                  <Select value={manufacturerId} onValueChange={setManufacturerId}>
+                    <SelectTrigger><SelectValue placeholder={`${t('select')} ${t('manufacturer')}`} /></SelectTrigger>
+                    <SelectContent>{manufacturersList.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supplier">{t('supplier')}</Label>
+                  <Select value={supplierId} onValueChange={setSupplierId}>
+                    <SelectTrigger><SelectValue placeholder={`${t('select')} ${t('supplier')}`} /></SelectTrigger>
+                    <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="store">{t('store')}</Label>
+                  <Select value={storeId} onValueChange={setStoreId}>
+                    <SelectTrigger><SelectValue placeholder={t('select_store')}/></SelectTrigger>
+                    <SelectContent>{stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('invoice_items')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[150px]">{t('barcode')}</TableHead>
+                        <TableHead>{t('product')}</TableHead>
+                        <TableHead>{t('variant')}</TableHead>
+                        <TableHead>{t('batch_number')}</TableHead>
+                        <TableHead>{t('expiry_date')}</TableHead>
+                        <TableHead className="w-[100px]">{t('quantity')}</TableHead>
+                        <TableHead className="w-[120px]">{t('purchase_price')}</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item) => {
+                        const selectedDefinition = productDefinitions.find(def => def.id === item.productDefinitionId);
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={item.barcode}
+                                  onChange={(e) => handleBarcodeScan(item.id, e.target.value)}
+                                  placeholder={t('scan_or_enter_barcode')}
+                                />
+                                <Button type="button" size="icon" variant="ghost"><ScanBarcode className="h-5 w-5" /></Button>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Select value={item.productDefinitionId} onValueChange={(val) => handleItemChange(item.id, 'productDefinitionId', val)}>
+                                <SelectTrigger><SelectValue placeholder={t('select_product')} /></SelectTrigger>
+                                <SelectContent>{productDefinitions.map((def) => <SelectItem key={def.id} value={def.id}>{def.name}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Select value={item.variant} onValueChange={(val) => handleItemChange(item.id, 'variant', val)} disabled={!selectedDefinition}>
+                                <SelectTrigger><SelectValue placeholder={t('select_variant')} /></SelectTrigger>
+                                <SelectContent>{selectedDefinition?.variants.map((variant) => <SelectItem key={variant.name} value={variant.name}>{variant.name}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input value={item.batchNumber} onChange={(e) => handleItemChange(item.id, 'batchNumber', e.target.value)} />
+                            </TableCell>
+                            <TableCell>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !item.expiryDate && "text-muted-foreground")}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {item.expiryDate ? format(item.expiryDate, "PPP") : <span>{t('pick_date')}</span>}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={item.expiryDate} onSelect={(date) => handleItemChange(item.id, 'expiryDate', date)} initialFocus /></PopoverContent>
+                              </Popover>
+                            </TableCell>
+                            <TableCell>
+                              <Input type="number" min="1" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} />
+                            </TableCell>
+                            <TableCell>
+                              <Input type="number" min="0" step="0.01" value={item.purchasePrice} onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)} />
+                            </TableCell>
+                            <TableCell>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(item.id)} disabled={items.length <= 1}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <Button type="button" variant="outline" onClick={addNewItem} className="mt-4 gap-2">
+                  <PlusCircle className="h-4 w-4" />
+                  {t('add_another_item')}
                 </Button>
-              </div>
-              {isScanning && (
-                <div className="mb-4 p-4 border rounded-lg bg-black">
-                  <video id="video-scanner" className="w-full h-auto rounded-md"></video>
-                  <Button variant="destructive" className="w-full mt-2" onClick={stopScan}>Stop Scanning</Button>
-                </div>
-              )}
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="product-definition">{t('product')}</Label>
-                    <Select value={selectedDefinitionId} onValueChange={setSelectedDefinitionId}>
-                      <SelectTrigger><SelectValue placeholder={t('select_product')} /></SelectTrigger>
-                      <SelectContent>{productDefinitions.map((def) => <SelectItem key={def.id} value={def.id}>{def.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="variant">{selectedDefinition?.variantLabel || t('variant')}</Label>
-                    <Select value={selectedVariant} onValueChange={setSelectedVariant} disabled={!selectedDefinition}>
-                      <SelectTrigger><SelectValue placeholder={t('select_variant')} /></SelectTrigger>
-                      <SelectContent>{selectedDefinition?.variants.map((variant) => <SelectItem key={variant.name} value={variant.name}>{variant.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="store">{t('store')}</Label>
-                    <Select value={storeId} onValueChange={setStoreId}>
-                      <SelectTrigger><SelectValue placeholder={t('select_store')} /></SelectTrigger>
-                      <SelectContent>{stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="manufacturer">{t('manufacturer')}</Label>
-                    <Select value={manufacturerId} onValueChange={setManufacturerId}>
-                      <SelectTrigger><SelectValue placeholder={`${t('select')} ${t('manufacturer')}`} /></SelectTrigger>
-                      <SelectContent>{manufacturersList.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="supplier">{t('supplier')}</Label>
-                    <Select value={supplierId} onValueChange={setSupplierId}>
-                      <SelectTrigger><SelectValue placeholder={`${t('select')} ${t('supplier')}`} /></SelectTrigger>
-                      <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="batch">{t('batch_number')}</Label>
-                    <Input id="batch" value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">{t('quantity')}</Label>
-                    <Input id="quantity" type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">{t('purchase_price')}</Label>
-                    <Input id="price" type="number" min="0" step="0.01" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="expiry">{t('expiry_date')}</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !expiryDate && "text-muted-foreground")}>
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {expiryDate ? format(expiryDate, "PPP") : <span>{t('pick_date')}</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus /></PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-                <div className="flex justify-end space-x-4 pt-6 border-t">
-                  <Button type="button" variant="outline" onClick={resetForm} className="gap-2"><RotateCcw className="h-4 w-4" />{t('reset')}</Button>
-                  <Button type="submit" className="gap-2"><Save className="h-4 w-4" />{t('save')}</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end space-x-4 mt-8">
+              <Button type="button" variant="outline" onClick={() => navigate('/supplies')} className="gap-2"><RotateCcw className="h-4 w-4" />{t('cancel')}</Button>
+              <Button type="submit" className="gap-2"><Save className="h-4 w-4" />{t('save_invoice')}</Button>
+            </div>
+          </form>
         </div>
       </main>
-
-      <Dialog open={!!scannedProduct} onOpenChange={() => setScannedProduct(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('product_found')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p><strong>{t('product')}:</strong> {scannedProduct?.name}</p>
-            <div className="space-y-2">
-              <Label htmlFor="scanned-quantity">{t('enter_quantity')}</Label>
-              <Input id="scanned-quantity" type="number" min="1" value={scannedQuantity} onChange={(e) => setScannedQuantity(e.target.value)} />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleScannedProductConfirm}>{t('confirm')}</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

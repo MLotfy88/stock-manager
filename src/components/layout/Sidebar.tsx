@@ -3,45 +3,32 @@ import React, { useState, useEffect } from 'react';
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from '@/hooks/use-mobile';
 import SidebarContent from './sidebar/SidebarContent';
-import { MobileMenuToggle, MobileBackdrop } from './sidebar/MobileControls';
+import { MobileBackdrop } from './sidebar/MobileControls';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const Sidebar = () => {
-  const [activePath, setActivePath] = useState('/');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+interface SidebarProps {
+  isSidebarOpen: boolean;
+  toggleSidebar: () => void;
+  closeSidebar: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, closeSidebar }) => {
+  const [activePath, setActivePath] = useState(window.location.pathname);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { direction } = useLanguage();
   
   // Close sidebar when route changes on mobile
   useEffect(() => {
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    } else {
-      setIsSidebarOpen(true);
-    }
-  }, [activePath, isMobile]);
+    closeSidebar();
+  }, [activePath]);
 
-  // Set initial state based on screen size
-  useEffect(() => {
-    setIsSidebarOpen(!isMobile);
-  }, [isMobile]);
-  
   const handleNavClick = (path: string) => {
     setActivePath(path);
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
+    closeSidebar();
   };
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   
   return (
     <>
-      <MobileMenuToggle 
-        isSidebarOpen={isSidebarOpen} 
-        toggleSidebar={toggleSidebar} 
-      />
-      
       <MobileBackdrop 
         isMobile={isMobile} 
         isSidebarOpen={isSidebarOpen} 

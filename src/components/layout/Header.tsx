@@ -5,14 +5,18 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from '@/contexts/LanguageContext';
 import AppLogo from './AppLogo';
 
-const Header = () => {
+interface HeaderProps {
+  toggleSidebar: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const { t, direction } = useLanguage();
   
   return (
     <header className="fixed w-full top-0 z-40 bg-background">
       <div className="flex items-center justify-between h-16 px-4 md:px-6">
         <div className="flex items-center">
-          <Button variant="ghost" size="icon" className="md:hidden">
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
             <Menu className="h-5 w-5" />
           </Button>
         </div>

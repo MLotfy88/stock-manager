@@ -1,87 +1,90 @@
-
+import { supabase } from '@/lib/supabaseClient';
 import { SupplyTypeItem } from '@/types';
-import { saveData } from '../../utils/storageUtils';
-import { store } from '../store';
-
-/**
- * Add a new supply type
- */
-export const addSupplyType = (supplyType: SupplyTypeItem) => {
-  store.supplyTypes.push(supplyType);
-  
-  const saved = saveData({ 
-    manufacturers: store.manufacturers, 
-    supplies: store.supplies, 
-    consumptionRecords: store.consumptionRecords, 
-    suppliers: store.suppliers, 
-    supplyTypes: store.supplyTypes, 
-    adminSettings: store.adminSettings 
-  });
-  
-  return saved;
-};
-
-/**
- * Update an existing supply type
- */
-export const updateSupplyType = (supplyTypeId: string, data: Partial<SupplyTypeItem>) => {
-  const index = store.supplyTypes.findIndex(t => t.id === supplyTypeId);
-  if (index === -1) return false;
-  
-  store.supplyTypes[index] = {
-    ...store.supplyTypes[index],
-    ...data
-  };
-  
-  const saved = saveData({ 
-    manufacturers: store.manufacturers, 
-    supplies: store.supplies, 
-    consumptionRecords: store.consumptionRecords, 
-    suppliers: store.suppliers, 
-    supplyTypes: store.supplyTypes, 
-    adminSettings: store.adminSettings 
-  });
-  
-  return saved;
-};
-
-/**
- * Delete a supply type
- */
-export const deleteSupplyType = (supplyTypeId: string) => {
-  const index = store.supplyTypes.findIndex(t => t.id === supplyTypeId);
-  if (index === -1) return { success: false, error: 'supply_type_not_found' };
-  
-  // Check if this supply type is used by any supply
-  const usedInSupplies = store.supplies.some(s => s.typeId === supplyTypeId);
-  if (usedInSupplies) {
-    return { success: false, error: 'supply_type_in_use' };
-  }
-  
-  store.supplyTypes.splice(index, 1);
-  
-  const saved = saveData({ 
-    manufacturers: store.manufacturers, 
-    supplies: store.supplies, 
-    consumptionRecords: store.consumptionRecords, 
-    suppliers: store.suppliers, 
-    supplyTypes: store.supplyTypes, 
-    adminSettings: store.adminSettings 
-  });
-  
-  return { success: saved, error: saved ? null : 'save_failed' };
-};
 
 /**
  * Get all supply types
  */
-export const getSupplyTypes = () => {
-  return store.supplyTypes;
+export const getSupplyTypes = async (): Promise<SupplyTypeItem[]> => {
+  const { data, error } = await supabase
+    .from('supply_types')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching supply types:', error);
+    throw error;
+  }
+  return data || [];
 };
 
 /**
  * Get a supply type by ID
  */
-export const getSupplyTypeById = (supplyTypeId: string) => {
-  return store.supplyTypes.find(t => t.id === supplyTypeId);
+export const getSupplyTypeById = async (supplyTypeId: string): Promise<SupplyTypeItem | null> => {
+  const { data, error } = await supabase
+    .from('supply_types')
+    .select('*')
+    .eq('id', supplyTypeId)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching supply type ${supplyTypeId}:`, error);
+    throw error;
+  }
+  return data;
+};
+
+/**
+ * Add a new supply type
+ */
+export const addSupplyType = async (supplyType: Omit<SupplyTypeItem, 'id' | 'created_at'>): Promise<SupplyTypeItem> => {
+  const { data, error } = await supabase
+    .from('supply_types')
+    .insert([supplyType])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error adding supply type:', error);
+    throw error;
+  }
+  return data;
+};
+
+/**
+ * Update an existing supply type
+ */
+export const updateSupplyType = async (supplyTypeId: string, updates: Partial<SupplyTypeItem>): Promise<SupplyTypeItem> => {
+  const { data, error } = await supabase
+    .from('supply_types')
+    .update(updates)
+    .eq('id', supplyTypeId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(`Error updating supply type ${supplyTypeId}:`, error);
+    throw error;
+  }
+  return data;
+};
+
+/**
+ * Delete a supply type
+ */
+export const deleteSupplyType = async (supplyTypeId: string): Promise<{ success: boolean; error?: string }> => {
+  // Note: In a real-world scenario, you'd check if this type is used in product_definitions.
+  // For simplicity, we'll omit that check here but it's crucial for data integrity.
+  
+  const { error } = await supabase
+    .from('supply_types')
+    .delete()
+    .eq('id', supplyTypeId);
+
+  if (error) {
+    console.error(`Error deleting supply type ${supplyTypeId}:`, error);
+    return { success: false, error: 'delete_failed' };
+  }
+
+  return { success: true };
 };

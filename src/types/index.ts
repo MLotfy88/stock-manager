@@ -16,7 +16,8 @@ export interface Manufacturer {
   id: string;
   name: string;
   logo?: string;
-  alertPeriod: number; // Period in days to alert before expiration
+  alert_period: number; // Period in days to alert before expiration
+  created_at?: string;
 }
 
 export interface Supplier {
@@ -30,7 +31,7 @@ export interface Supplier {
 export interface SupplyTypeItem {
   id: string;
   name: string;
-  nameEn?: string; // Added nameEn property
+  name_en?: string; // Added nameEn property
   description?: string;
 }
 
@@ -42,37 +43,37 @@ export interface Store {
 
 export interface ProductVariant {
   name: string;
-  reorderPoint: number;
+  reorder_point: number;
 }
 
 export interface ProductDefinition {
   id:string;
   name: string;
-  typeId: string;
-  variantLabel: string; // e.g., "Size", "Curve"
-  variants: ProductVariant[]; // e.g., [{ name: "2x10", reorderPoint: 5 }]
-  createdAt: string;
-  updatedAt: string;
+  type_id: string;
+  variant_label: string; // e.g., "Size", "Curve"
+  variants: ProductVariant[]; // e.g., [{ name: "2x10", reorder_point: 5 }]
+  created_at: string;
+  updated_at: string;
 }
 
 export interface InventoryItem {
   id: string;
-  productDefinitionId: string;
+  product_definition_id: string;
   variant: string;
   barcode?: string;
   quantity: number;
-  storeId: string;
-  manufacturerId: string;
-  supplierId?: string;
-  batchNumber: string;
-  productionDate?: string;
-  purchasePrice?: number;
-  expiryDate: string;
+  store_id: string;
+  manufacturer_id: string;
+  supplier_id?: string;
+  batch_number: string;
+  production_date?: string;
+  purchase_price?: number;
+  expiry_date: string;
   image?: string;
   status: SupplyStatus;
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DashboardStats {
@@ -97,8 +98,8 @@ export interface AlertPeriod {
 // أنواع بيانات لسجلات الاستهلاك
 export interface ConsumptionItem {
   id: string;
-  inventoryItemId: string; // Changed from supplyId
-  itemName: string; // e.g., "Diagnostic Catheter - L3.5"
+  inventory_item_id: string; // Changed from supplyId
+  item_name: string; // e.g., "Diagnostic Catheter - L3.5"
   quantity: number;
   notes?: string;
 }
@@ -107,11 +108,11 @@ export interface ConsumptionRecord {
   id: string;
   date: string;
   department: string;
-  requestedBy: string;
-  approvedBy?: string;
+  requested_by: string;
+  approved_by?: string;
   status: 'pending' | 'approved' | 'completed';
   purpose?: 'use' | 'expired' | 'damaged';
   items: ConsumptionItem[];
   notes?: string;
-  createdAt: string;
+  created_at: string;
 }

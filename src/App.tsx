@@ -22,6 +22,7 @@ import ReorderPointReportPage from './pages/ReorderPointReportPage';
 import ConsumptionReportPage from './pages/ConsumptionReportPage';
 import ImportExportPage from './pages/ImportExportPage';
 import ConsumptionPage from './pages/ConsumptionPage';
+import ManagementPage from './pages/ManagementPage';
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
             <Route path="/stores" element={<StoresPage />} />
             <Route path="/transfer-inventory" element={<TransferInventoryPage />} />
             <Route path="/import-export" element={<ImportExportPage />} />
+            <Route path="/management" element={<ManagementPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

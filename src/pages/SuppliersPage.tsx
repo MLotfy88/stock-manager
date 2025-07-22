@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -22,11 +21,13 @@ import {
 } from '@/data/operations/supplierOperations';
 
 const SuppliersPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
   const { toast } = useToast();
   
   const [suppliersList, setSuppliersList] = useState<Supplier[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -35,30 +36,46 @@ const SuppliersPage = () => {
   const [newContact, setNewContact] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newEmail, setNewEmail] = useState('');
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
   
-  // Reload suppliers list when needed
-  const loadSuppliers = () => {
-    setSuppliersList(getSuppliers());
+  const loadSuppliers = async () => {
+    setIsLoading(true);
+    try {
+      const suppliers = await getSuppliers();
+      setSuppliersList(suppliers);
+    } catch (error) {
+      toast({
+        title: t('error'),
+        description: t('error_fetching_data'),
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   useEffect(() => {
     loadSuppliers();
   }, []);
   
-  const handleAddSupplier = () => {
+  const handleAddSupplier = async () => {
     if (!newName.trim()) return;
     
-    const newSupplier: Supplier = {
-      id: `supplier_${Date.now()}`,
-      name: newName,
-      contact: newContact,
-      phone: newPhone,
-      email: newEmail
-    };
-    
-    const result = addSupplier(newSupplier);
-    
-    if (result) {
+    try {
+      await addSupplier({
+        name: newName,
+        contact: newContact,
+        phone: newPhone,
+        email: newEmail
+      });
+      
       loadSuppliers();
       resetFormFields();
       setIsAddDialogOpen(false);
@@ -67,7 +84,7 @@ const SuppliersPage = () => {
         title: t('success'),
         description: t('item_added'),
       });
-    } else {
+    } catch (error) {
       toast({
         title: t('error'),
         description: t('error_adding_item'),
@@ -76,19 +93,17 @@ const SuppliersPage = () => {
     }
   };
   
-  const handleEditSupplier = () => {
+  const handleEditSupplier = async () => {
     if (!currentSupplier || !newName.trim()) return;
     
-    const updatedData: Partial<Supplier> = {
-      name: newName,
-      contact: newContact,
-      phone: newPhone,
-      email: newEmail
-    };
-    
-    const result = updateSupplier(currentSupplier.id, updatedData);
-    
-    if (result) {
+    try {
+      await updateSupplier(currentSupplier.id, {
+        name: newName,
+        contact: newContact,
+        phone: newPhone,
+        email: newEmail
+      });
+      
       loadSuppliers();
       setIsEditDialogOpen(false);
       
@@ -96,7 +111,7 @@ const SuppliersPage = () => {
         title: t('success'),
         description: t('item_updated'),
       });
-    } else {
+    } catch (error) {
       toast({
         title: t('error'),
         description: t('error_updating_item'),
@@ -105,23 +120,31 @@ const SuppliersPage = () => {
     }
   };
   
-  const handleDeleteSupplier = () => {
+  const handleDeleteSupplier = async () => {
     if (!currentSupplier) return;
     
-    const result = deleteSupplier(currentSupplier.id);
-    
-    if (result.success) {
-      loadSuppliers();
-      setIsDeleteDialogOpen(false);
+    try {
+      const result = await deleteSupplier(currentSupplier.id);
       
-      toast({
-        title: t('success'),
-        description: t('item_deleted'),
-      });
-    } else {
+      if (result.success) {
+        loadSuppliers();
+        setIsDeleteDialogOpen(false);
+        
+        toast({
+          title: t('success'),
+          description: t('item_deleted'),
+        });
+      } else {
+        toast({
+          title: t('error'),
+          description: t(result.error || 'error_deleting_item'),
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
       toast({
         title: t('error'),
-        description: t(result.error || 'error_deleting_item'),
+        description: t('error_deleting_item'),
         variant: 'destructive'
       });
     }
@@ -150,8 +173,12 @@ const SuppliersPage = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
       
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-6xl mx-auto">
@@ -229,48 +256,54 @@ const SuppliersPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {suppliersList.map((supplier) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center">
-                          <Truck className="h-4 w-4 mr-2 text-muted-foreground" />
-                          {supplier.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {supplier.contact && (
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={4} className="text-center">{t('loading')}</TableCell></TableRow>
+                  ) : suppliersList.length === 0 ? (
+                    <TableRow><TableCell colSpan={4} className="text-center">{t('no_data')}</TableCell></TableRow>
+                  ) : (
+                    suppliersList.map((supplier) => (
+                      <TableRow key={supplier.id}>
+                        <TableCell className="font-medium">
                           <div className="flex items-center">
-                            <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                            {supplier.contact}
+                            <Truck className="h-4 w-4 mr-2 text-muted-foreground" />
+                            {supplier.name}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col space-y-1">
-                          {supplier.phone && (
+                        </TableCell>
+                        <TableCell>
+                          {supplier.contact && (
                             <div className="flex items-center">
-                              <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                              {supplier.phone}
+                              <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                              {supplier.contact}
                             </div>
                           )}
-                          {supplier.email && (
-                            <div className="flex items-center">
-                              <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                              {supplier.email}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(supplier)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(supplier)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col space-y-1">
+                            {supplier.phone && (
+                              <div className="flex items-center">
+                                <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                                {supplier.phone}
+                              </div>
+                            )}
+                            {supplier.email && (
+                              <div className="flex items-center">
+                                <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                                {supplier.email}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(supplier)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(supplier)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

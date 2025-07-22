@@ -14,24 +14,33 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { getSupplyTypes } from '@/data/mockData'; 
+import { getSupplyTypes } from '@/data/operations/supplyTypeOperations';
+import { 
+  getProductDefinitions,
+  addProductDefinition,
+  updateProductDefinition,
+  deleteProductDefinition
+} from '@/data/operations/productDefinitionOperations';
 import Papa from 'papaparse';
 
-// MOCK DATA
-const MOCK_PRODUCT_DEFINITIONS: ProductDefinition[] = [
-  { id: '1', name: 'Diagnostic Catheter', typeId: 'catheter', variantLabel: 'Curve', variants: [{name: 'L3.5', reorderPoint: 5}, {name: 'L4', reorderPoint: 5}], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: '2', name: 'Balloons', typeId: 'consumable', variantLabel: 'Size', variants: [{name: '2.5x10', reorderPoint: 10}, {name: '3.0x15', reorderPoint: 8}], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-];
-// END MOCK DATA
-
 const ProductDefinitionsPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
   
-  const [definitions, setDefinitions] = useState<ProductDefinition[]>(MOCK_PRODUCT_DEFINITIONS);
+  const [definitions, setDefinitions] = useState<ProductDefinition[]>([]);
   const [supplyTypes, setSupplyTypes] = useState<SupplyTypeItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentDefinition, setCurrentDefinition] = useState<ProductDefinition | null>(null);
@@ -44,8 +53,24 @@ const ProductDefinitionsPage = () => {
   const [variantNameInput, setVariantNameInput] = useState('');
   const [variantReorderPointInput, setVariantReorderPointInput] = useState('5');
 
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [defs, types] = await Promise.all([
+        getProductDefinitions(),
+        getSupplyTypes()
+      ]);
+      setDefinitions(defs);
+      setSupplyTypes(types);
+    } catch (error) {
+      toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setSupplyTypes(getSupplyTypes());
+    loadData();
   }, []);
 
   // ... (existing functions: handleAddVariant, handleRemoveVariant, resetForm, openDialog, handleSubmit, openDeleteDialog, handleDelete)
@@ -53,7 +78,7 @@ const ProductDefinitionsPage = () => {
   const handleAddVariant = (e: React.FormEvent) => {
     e.preventDefault();
     if (variantNameInput.trim() && !variants.some(v => v.name === variantNameInput.trim())) {
-      setVariants([...variants, { name: variantNameInput.trim(), reorderPoint: parseInt(variantReorderPointInput) || 0 }]);
+      setVariants([...variants, { name: variantNameInput.trim(), reorder_point: parseInt(variantReorderPointInput) || 0 }]);
       setVariantNameInput('');
       setVariantReorderPointInput('5');
     }
@@ -77,8 +102,8 @@ const ProductDefinitionsPage = () => {
     if (definition) {
       setCurrentDefinition(definition);
       setName(definition.name);
-      setTypeId(definition.typeId);
-      setVariantLabel(definition.variantLabel);
+      setTypeId(definition.type_id);
+      setVariantLabel(definition.variant_label);
       setVariants(definition.variants);
     } else {
       resetForm();
@@ -86,24 +111,27 @@ const ProductDefinitionsPage = () => {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name || !typeId || !variantLabel || variants.length === 0) {
       toast({ title: t('error'), description: "Please fill all fields and add at least one variant.", variant: 'destructive' });
       return;
     }
 
-    if (currentDefinition) {
-      const updatedDefinition: ProductDefinition = { ...currentDefinition, name, typeId, variantLabel, variants, updatedAt: new Date().toISOString() };
-      setDefinitions(definitions.map(d => d.id === updatedDefinition.id ? updatedDefinition : d));
-      toast({ title: t('success'), description: "Product definition updated." });
-    } else {
-      const newDefinition: ProductDefinition = { id: `def_${Date.now()}`, name, typeId, variantLabel, variants, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-      setDefinitions([...definitions, newDefinition]);
-      toast({ title: t('success'), description: "Product definition added." });
+    try {
+      if (currentDefinition) {
+        await updateProductDefinition(currentDefinition.id, { name, type_id: typeId, variant_label: variantLabel, variants });
+        toast({ title: t('success'), description: "Product definition updated." });
+      } else {
+        await addProductDefinition({ name, type_id: typeId, variant_label: variantLabel, variants });
+        toast({ title: t('success'), description: "Product definition added." });
+      }
+      
+      loadData();
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      toast({ title: t('error'), description: "Error saving definition.", variant: 'destructive' });
     }
-    
-    setIsDialogOpen(false);
-    resetForm();
   };
 
   const openDeleteDialog = (definition: ProductDefinition) => {
@@ -111,21 +139,25 @@ const ProductDefinitionsPage = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!currentDefinition) return;
-    setDefinitions(definitions.filter(d => d.id !== currentDefinition.id));
-    setIsDeleteDialogOpen(false);
-    setCurrentDefinition(null);
-    toast({ title: t('success'), description: "Product definition deleted." });
+    try {
+      await deleteProductDefinition(currentDefinition.id);
+      loadData();
+      setIsDeleteDialogOpen(false);
+      setCurrentDefinition(null);
+      toast({ title: t('success'), description: "Product definition deleted." });
+    } catch (error) {
+      toast({ title: t('error'), description: "Error deleting definition.", variant: 'destructive' });
+    }
   };
 
   const handleExport = () => {
     const dataToExport = definitions.map(def => ({
       product_name: def.name,
-      product_type_id: def.typeId,
-      barcode: def.barcode || '',
-      variant_label: def.variantLabel,
-      variants: def.variants.map(v => `${v.name}:${v.reorderPoint}`).join('|') // Format: name1:point1|name2:point2
+      product_type_id: def.type_id,
+      variant_label: def.variant_label,
+      variants: def.variants.map(v => `${v.name}:${v.reorder_point}`).join('|') // Format: name1:point1|name2:point2
     }));
     const csv = Papa.unparse(dataToExport);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -142,7 +174,6 @@ const ProductDefinitionsPage = () => {
     const templateData = [{
       product_name: 'Example Product',
       product_type_id: 'consumable',
-      barcode: '123456789',
       variant_label: 'Size',
       variants: 'Small:5|Medium:10|Large:5'
     }];
@@ -167,20 +198,19 @@ const ProductDefinitionsPage = () => {
         const newDefinitions: ProductDefinition[] = results.data.map((row: any) => {
           const variants: ProductVariant[] = (row.variants || '').split('|').map((v: string) => {
             const [name, reorderPoint] = v.split(':');
-            return { name, reorderPoint: parseInt(reorderPoint) || 0 };
+            return { name, reorder_point: parseInt(reorderPoint) || 0 };
           }).filter((v: ProductVariant) => v.name);
 
           return {
             id: `def_${Date.now()}_${Math.random()}`,
             name: row.product_name,
-            typeId: row.product_type_id,
-            barcode: row.barcode,
-            variantLabel: row.variant_label,
+            type_id: row.product_type_id,
+            variant_label: row.variant_label,
             variants,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           };
-        }).filter(def => def.name && def.typeId && def.variantLabel && def.variants.length > 0);
+        }).filter(def => def.name && def.type_id && def.variant_label && def.variants.length > 0);
 
         setDefinitions(prev => [...prev, ...newDefinitions]);
         toast({ title: t('success'), description: `${newDefinitions.length} products imported successfully.` });
@@ -193,8 +223,12 @@ const ProductDefinitionsPage = () => {
 
   return (
     <div className="page-container bg-background" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
       
       <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
         <div className="max-w-6xl mx-auto">
@@ -229,8 +263,8 @@ const ProductDefinitionsPage = () => {
                     {definitions.map((def) => (
                       <tr key={def.id} className="border-b">
                         <td className="p-4 font-medium">{def.name}</td>
-                        <td className="p-4">{supplyTypes.find(st => st.id === def.typeId)?.name || def.typeId}</td>
-                        <td className="p-4">{def.variantLabel}</td>
+                        <td className="p-4">{supplyTypes.find(st => st.id === def.type_id)?.name || def.type_id}</td>
+                        <td className="p-4">{def.variant_label}</td>
                         <td className="p-4 text-center">{def.variants.length}</td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end space-x-2">
@@ -279,7 +313,7 @@ const ProductDefinitionsPage = () => {
                 <div className="flex flex-wrap gap-2 mt-2">
                   {variants.map(v => (
                     <Badge key={v.name} variant="secondary" className="flex items-center gap-2">
-                      <span>{v.name} ({t('reorder_point')}: {v.reorderPoint})</span>
+                      <span>{v.name} ({t('reorder_point')}: {v.reorder_point})</span>
                       <button onClick={() => handleRemoveVariant(v.name)}><X className="h-3 w-3" /></button>
                     </Badge>
                   ))}

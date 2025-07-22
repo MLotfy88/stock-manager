@@ -11,14 +11,39 @@ import { Plus, ChevronRight } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { calculateDashboardStats } from '@/data/mockData';
+import { calculateDashboardStats } from '@/data/operations/statsOperations';
 
 const Index = () => {
+  const [stats, setStats] = useState({ expiringSupplies: 0 });
   const [showNotification, setShowNotification] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
   const navigate = useNavigate();
-  const stats = calculateDashboardStats('all');
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    setIsSidebarOpen(!isMobile);
+  }, [isMobile]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await calculateDashboardStats();
+        setStats(data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats", error);
+      }
+    };
+    fetchStats();
+  }, []);
   
   useEffect(() => {
     // Show notification after a short delay for better UX
@@ -33,8 +58,12 @@ const Index = () => {
   
   return (
     <div className="page-container bg-background" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
       
       {showNotification && (
         <Notification 
@@ -45,10 +74,10 @@ const Index = () => {
         />
       )}
       
-      <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
+      <main className={`px-4 md:px-8 ${direction === 'rtl' ? 'md:pr-72' : 'md:pl-72'} transition-all`}>
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-fade-in">
-            <div>
+            <div className="w-full">
               <Badge variant="outline" className="mb-2 bg-primary/10 text-primary border-primary/20">
                 {t('welcome')}
               </Badge>

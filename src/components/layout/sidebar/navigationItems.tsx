@@ -7,14 +7,10 @@ import {
   Calendar,
   AlertTriangle,
   BarChart4,
-  Factory,
-  Truck,
-  Tag,
-  Warehouse,
   Settings,
-  Box,
   Recycle,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Database
 } from 'lucide-react';
 
 export const useNavigationItems = () => {
@@ -57,9 +53,14 @@ export const useNavigationItems = () => {
       href: '/reports',
     },
     {
-      label: t('settings'),
-      icon: <Settings className="h-5 w-5" />,
+      label: t('data_settings_nav'),
+      icon: <Database className="h-5 w-5" />,
       href: '/admin',
+    },
+    {
+      label: t('management_settings_nav'),
+      icon: <Settings className="h-5 w-5" />,
+      href: '/management',
     },
   ];
 };
@@ -139,10 +140,16 @@ export const getManagementNavItems = (activePath: string) => {
       active: activePath === '/consumption-report'
     },
     {
-      label: t('settings'),
-      icon: <Settings className="h-5 w-5" />,
+      label: t('data_settings_nav'),
+      icon: <Database className="h-5 w-5" />,
       href: '/admin',
       active: activePath === '/admin'
+    },
+    {
+      label: t('management_settings_nav'),
+      icon: <Settings className="h-5 w-5" />,
+      href: '/management',
+      active: activePath === '/management'
     },
   ];
 };
