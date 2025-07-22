@@ -40,10 +40,10 @@ const AdminPage = () => {
       
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">{t('admin_settings')}</h1>
+          <h1 className="text-2xl font-bold mb-6">{t('data_settings_nav')}</h1>
           
-          <Tabs defaultValue="definitions" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="definitions" className="w-full" orientation={isMobile ? 'vertical' : 'horizontal'}>
+            <TabsList className="grid w-full md:grid-cols-4">
               <TabsTrigger value="definitions"><Tag className="mr-2 h-4 w-4" />{t('product_definitions_nav')}</TabsTrigger>
               <TabsTrigger value="manufacturers"><Factory className="mr-2 h-4 w-4" />{t('manufacturers_nav')}</TabsTrigger>
               <TabsTrigger value="suppliers"><Truck className="mr-2 h-4 w-4" />{t('suppliers_nav')}</TabsTrigger>

@@ -17,6 +17,11 @@ export default {
   more: 'المزيد',
   name: 'الاسم',
   description: 'الوصف',
+
+  // Sidebar Headers
+  inventory_management: 'إدارة المخزون',
+  operations: 'العمليات',
+  analysis: 'التحليل',
   
   // Navigation
   dashboard_nav: 'لوحة التحكم',

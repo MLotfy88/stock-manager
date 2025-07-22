@@ -17,6 +17,11 @@ export default {
   more: 'more',
   name: 'Name',
   description: 'Description',
+
+  // Sidebar Headers
+  inventory_management: 'Inventory',
+  operations: 'Operations',
+  analysis: 'Analysis',
   
   // Navigation
   dashboard_nav: 'Dashboard',

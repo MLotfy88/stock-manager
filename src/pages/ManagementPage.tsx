@@ -101,8 +101,6 @@ const ManagementPage = () => {
     const result = await testSupabaseConnection(supabaseUrl, supabaseKey);
 
     if (result.success) {
-      localStorage.setItem('supabaseUrl', supabaseUrl);
-      localStorage.setItem('supabaseKey', supabaseKey);
       setConnectionStatus('success');
       setTables(result.tables || []);
       toast({
@@ -118,6 +116,27 @@ const ManagementPage = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleSaveCredentials = () => {
+    if (!supabaseUrl || !supabaseKey) {
+      toast({
+        title: t('error'),
+        description: "Please provide both Supabase URL and Key before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+    localStorage.setItem('supabaseUrl', supabaseUrl);
+    localStorage.setItem('supabaseKey', supabaseKey);
+    toast({
+      title: t('success'),
+      description: "Supabase credentials saved successfully!",
+    });
+    // You might want to reset connection status to encourage re-testing with saved credentials
+    setConnectionStatus('idle');
+    setTables([]);
+    setConnectionMessage('');
   };
 
   const generateSqlScript = () => {
@@ -249,10 +268,10 @@ COMMENT ON TABLE inventory_items IS 'Each row represents a specific batch of a p
       
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">{t('management_settings')}</h1>
+          <h1 className="text-2xl font-bold mb-6">{t('management_settings_nav')}</h1>
           
-          <Tabs defaultValue="credentials" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs defaultValue="credentials" className="w-full" orientation={isMobile ? 'vertical' : 'horizontal'}>
+            <TabsList className="grid w-full md:grid-cols-2">
               <TabsTrigger value="credentials"><UserCog className="mr-2 h-4 w-4" />{t('credentials')}</TabsTrigger>
               <TabsTrigger value="supabase"><Database className="mr-2 h-4 w-4" />Supabase</TabsTrigger>
             </TabsList>
@@ -351,11 +370,16 @@ COMMENT ON TABLE inventory_items IS 'Each row represents a specific batch of a p
                       />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Button onClick={handleTestConnection} disabled={connectionStatus === 'testing'}>
-                      {connectionStatus === 'testing' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Test Connection
-                    </Button>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Button onClick={handleSaveCredentials}>
+                        Save Credentials
+                      </Button>
+                      <Button onClick={handleTestConnection} disabled={connectionStatus === 'testing'}>
+                        {connectionStatus === 'testing' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Test Connection
+                      </Button>
+                    </div>
                     <Button variant="outline" onClick={generateSqlScript}>
                       <FileCode className="mr-2 h-4 w-4" />
                       Generate Table Script
