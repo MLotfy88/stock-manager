@@ -1,10 +1,13 @@
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 import { Manufacturer } from '@/types';
 
 /**
  * Get all manufacturers
  */
 export const getManufacturers = async (): Promise<Manufacturer[]> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('manufacturers')
     .select('*')
@@ -21,6 +24,9 @@ export const getManufacturers = async (): Promise<Manufacturer[]> => {
  * Get a manufacturer by ID
  */
 export const getManufacturerById = async (manufacturerId: string): Promise<Manufacturer | null> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('manufacturers')
     .select('*')
@@ -38,6 +44,9 @@ export const getManufacturerById = async (manufacturerId: string): Promise<Manuf
  * Add a new manufacturer
  */
 export const addManufacturer = async (manufacturer: Omit<Manufacturer, 'id' | 'created_at'>): Promise<Manufacturer> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('manufacturers')
     .insert([manufacturer])
@@ -55,6 +64,9 @@ export const addManufacturer = async (manufacturer: Omit<Manufacturer, 'id' | 'c
  * Update an existing manufacturer
  */
 export const updateManufacturer = async (manufacturerId: string, updates: Partial<Manufacturer>): Promise<Manufacturer> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('manufacturers')
     .update(updates)
@@ -73,6 +85,9 @@ export const updateManufacturer = async (manufacturerId: string, updates: Partia
  * Delete a manufacturer
  */
 export const deleteManufacturer = async (manufacturerId: string): Promise<{ success: boolean; error?: string }> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   // First, check if the manufacturer is being used in the 'supplies' table.
   // This is a simplified check. In a real app, you might want more robust cascading or checks.
   const { data: supplies, error: checkError } = await supabase

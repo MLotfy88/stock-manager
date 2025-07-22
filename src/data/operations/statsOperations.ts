@@ -1,8 +1,14 @@
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 import { InventoryItem } from '@/types';
 import { getSoonToExpireItems, getExpiredItems } from './suppliesOperations';
 
 export const calculateDashboardStats = async () => {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    console.log("Supabase client not available, returning default stats.");
+    return { totalSupplies: 0, expiringSupplies: 0, expiredSupplies: 0, validSupplies: 0, typeCounts: {} };
+  }
+
   // Note: These operations can be slow if the table is large.
   // In a production app, you might use database views or functions for this.
 

@@ -1,10 +1,13 @@
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 import { ProductDefinition } from '@/types';
 
 /**
  * Get all product definitions
  */
 export const getProductDefinitions = async (): Promise<ProductDefinition[]> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) return []; // Return empty array if client is not available
+
   const { data, error } = await supabase
     .from('product_definitions')
     .select('*')
@@ -21,6 +24,9 @@ export const getProductDefinitions = async (): Promise<ProductDefinition[]> => {
  * Add a new product definition
  */
 export const addProductDefinition = async (definition: Omit<ProductDefinition, 'id' | 'created_at' | 'updated_at'>): Promise<ProductDefinition> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('product_definitions')
     .insert([definition])
@@ -38,6 +44,9 @@ export const addProductDefinition = async (definition: Omit<ProductDefinition, '
  * Update an existing product definition
  */
 export const updateProductDefinition = async (definitionId: string, updates: Partial<ProductDefinition>): Promise<ProductDefinition> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('product_definitions')
     .update(updates)
@@ -56,6 +65,9 @@ export const updateProductDefinition = async (definitionId: string, updates: Par
  * Delete a product definition
  */
 export const deleteProductDefinition = async (definitionId: string): Promise<{ success: boolean; error?: string }> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { error } = await supabase
     .from('product_definitions')
     .delete()

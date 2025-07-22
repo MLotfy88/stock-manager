@@ -1,10 +1,13 @@
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 import { Supplier } from '@/types';
 
 /**
  * Get all suppliers
  */
 export const getSuppliers = async (): Promise<Supplier[]> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from('suppliers')
     .select('*')
@@ -21,6 +24,9 @@ export const getSuppliers = async (): Promise<Supplier[]> => {
  * Get a supplier by ID
  */
 export const getSupplierById = async (supplierId: string): Promise<Supplier | null> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('suppliers')
     .select('*')
@@ -38,6 +44,9 @@ export const getSupplierById = async (supplierId: string): Promise<Supplier | nu
  * Add a new supplier
  */
 export const addSupplier = async (supplier: Omit<Supplier, 'id' | 'created_at'>): Promise<Supplier> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('suppliers')
     .insert([supplier])
@@ -55,6 +64,9 @@ export const addSupplier = async (supplier: Omit<Supplier, 'id' | 'created_at'>)
  * Update an existing supplier
  */
 export const updateSupplier = async (supplierId: string, updates: Partial<Supplier>): Promise<Supplier> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('suppliers')
     .update(updates)
@@ -73,6 +85,9 @@ export const updateSupplier = async (supplierId: string, updates: Partial<Suppli
  * Delete a supplier
  */
 export const deleteSupplier = async (supplierId: string): Promise<{ success: boolean; error?: string }> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data: supplies, error: checkError } = await supabase
     .from('supplies')
     .select('id')

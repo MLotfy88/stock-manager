@@ -1,10 +1,13 @@
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 import { SupplyTypeItem } from '@/types';
 
 /**
  * Get all supply types
  */
 export const getSupplyTypes = async (): Promise<SupplyTypeItem[]> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
   const { data, error } = await supabase
     .from('supply_types')
     .select('*')
@@ -21,6 +24,9 @@ export const getSupplyTypes = async (): Promise<SupplyTypeItem[]> => {
  * Get a supply type by ID
  */
 export const getSupplyTypeById = async (supplyTypeId: string): Promise<SupplyTypeItem | null> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('supply_types')
     .select('*')
@@ -38,6 +44,9 @@ export const getSupplyTypeById = async (supplyTypeId: string): Promise<SupplyTyp
  * Add a new supply type
  */
 export const addSupplyType = async (supplyType: Omit<SupplyTypeItem, 'id' | 'created_at'>): Promise<SupplyTypeItem> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('supply_types')
     .insert([supplyType])
@@ -55,6 +64,9 @@ export const addSupplyType = async (supplyType: Omit<SupplyTypeItem, 'id' | 'cre
  * Update an existing supply type
  */
 export const updateSupplyType = async (supplyTypeId: string, updates: Partial<SupplyTypeItem>): Promise<SupplyTypeItem> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   const { data, error } = await supabase
     .from('supply_types')
     .update(updates)
@@ -73,6 +85,9 @@ export const updateSupplyType = async (supplyTypeId: string, updates: Partial<Su
  * Delete a supply type
  */
 export const deleteSupplyType = async (supplyTypeId: string): Promise<{ success: boolean; error?: string }> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
   // Note: In a real-world scenario, you'd check if this type is used in product_definitions.
   // For simplicity, we'll omit that check here but it's crucial for data integrity.
   

@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { AdminSettings } from '@/types';
-import { UserCog, Lock, ShieldCheck, Database, CheckCircle, XCircle, FileCode } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { UserCog, Lock, ShieldCheck, Database, CheckCircle, XCircle, FileCode, Loader2 } from 'lucide-react';
+import { testSupabaseConnection } from '@/lib/supabaseClient';
+import { Badge } from '@/components/ui/badge';
 
 const ManagementPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -30,7 +31,9 @@ const ManagementPage = () => {
   // Supabase State
   const [supabaseUrl, setSupabaseUrl] = useState(localStorage.getItem('supabaseUrl') || '');
   const [supabaseKey, setSupabaseKey] = useState(localStorage.getItem('supabaseKey') || '');
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [connectionMessage, setConnectionMessage] = useState('');
+  const [tables, setTables] = useState<string[]>([]);
 
   const [adminSettings, setAdminSettings] = useState<AdminSettings>({
     username: 'admin',
@@ -90,20 +93,28 @@ const ManagementPage = () => {
       });
       return;
     }
-    try {
-      createClient(supabaseUrl, supabaseKey);
+    
+    setConnectionStatus('testing');
+    setConnectionMessage('');
+    setTables([]);
+
+    const result = await testSupabaseConnection(supabaseUrl, supabaseKey);
+
+    if (result.success) {
       localStorage.setItem('supabaseUrl', supabaseUrl);
       localStorage.setItem('supabaseKey', supabaseKey);
       setConnectionStatus('success');
+      setTables(result.tables || []);
       toast({
         title: t('success'),
         description: "Connection to Supabase successful!",
       });
-    } catch (error) {
+    } else {
       setConnectionStatus('error');
+      setConnectionMessage(result.error || 'An unknown error occurred.');
       toast({
         title: t('error'),
-        description: "Failed to connect to Supabase. Check your credentials.",
+        description: `Connection failed: ${result.error}`,
         variant: "destructive",
       });
     }
@@ -301,26 +312,38 @@ CREATE TABLE consumption_items (
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <Button onClick={handleTestConnection}>Test Connection</Button>
-                      {connectionStatus === 'success' && (
-                        <div className="flex items-center gap-2 text-green-600">
-                          <CheckCircle className="h-5 w-5" />
-                          <span>Connected</span>
-                        </div>
-                      )}
-                      {connectionStatus === 'error' && (
-                        <div className="flex items-center gap-2 text-red-600">
-                          <XCircle className="h-5 w-5" />
-                          <span>Connection Failed</span>
-                        </div>
-                      )}
-                    </div>
+                    <Button onClick={handleTestConnection} disabled={connectionStatus === 'testing'}>
+                      {connectionStatus === 'testing' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Test Connection
+                    </Button>
                     <Button variant="outline" onClick={generateSqlScript}>
                       <FileCode className="mr-2 h-4 w-4" />
                       Generate Table Script
                     </Button>
                   </div>
+
+                  {connectionStatus === 'success' && (
+                    <div className="p-4 border rounded-md bg-green-50 border-green-200 text-green-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-5 w-5" />
+                        <span className="font-semibold">Connection Successful</span>
+                      </div>
+                      <p className="text-sm mb-2">Successfully connected and found the following tables:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {tables.map(table => <Badge key={table} variant="outline" className="bg-white">{table}</Badge>)}
+                      </div>
+                    </div>
+                  )}
+                  {connectionStatus === 'error' && (
+                    <div className="p-4 border rounded-md bg-red-50 border-red-200 text-red-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <XCircle className="h-5 w-5" />
+                        <span className="font-semibold">Connection Failed</span>
+                      </div>
+                      <p className="text-sm">{connectionMessage}</p>
+                    </div>
+                  )}
+
                   <p className="text-sm text-muted-foreground">
                     After testing the connection, click "Generate Table Script" and run the copied SQL in your Supabase SQL Editor to set up your database.
                   </p>

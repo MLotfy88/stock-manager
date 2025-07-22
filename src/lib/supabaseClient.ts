@@ -1,14 +1,60 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = localStorage.getItem('supabaseUrl');
-const supabaseKey = localStorage.getItem('supabaseKey');
+let supabaseInstance: SupabaseClient | null = null;
 
-// Check if the URL and Key exist. If not, we can't create a client.
-// The application should handle this gracefully, perhaps by redirecting
-// to the settings page or showing a warning.
-if (!supabaseUrl || !supabaseKey) {
-  console.error("Supabase URL or Key is not set in localStorage.");
+export const getSupabaseClient = (): SupabaseClient | null => {
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+
+  const supabaseUrl = localStorage.getItem('supabaseUrl');
+  const supabaseKey = localStorage.getItem('supabaseKey');
+
+  if (supabaseUrl && supabaseKey) {
+    try {
+      supabaseInstance = createClient(supabaseUrl, supabaseKey);
+      return supabaseInstance;
+    } catch (error) {
+      console.error("Error creating Supabase client:", error);
+      return null;
+    }
+  }
+  
+  return null;
+};
+
+interface ConnectionResult {
+  success: boolean;
+  tables?: string[];
+  error?: string;
 }
 
-// Create and export the Supabase client
-export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+export const testSupabaseConnection = async (url: string, key: string): Promise<ConnectionResult> => {
+  try {
+    const testClient = createClient(url, key);
+    
+    // Attempt to fetch tables from the public schema
+    const { data, error } = await testClient
+      .from('information_schema.tables')
+      .select('table_name')
+      .eq('table_schema', 'public');
+
+    if (error) {
+      // Handle specific auth errors vs. general network errors
+      if (error.message.includes('JWT') || error.message.includes('key')) {
+        return { success: false, error: 'Invalid API Key.' };
+      }
+      return { success: false, error: error.message };
+    }
+
+    if (data) {
+      const tableNames = data.map((table: any) => table.table_name);
+      return { success: true, tables: tableNames };
+    }
+
+    return { success: false, error: 'Could not retrieve tables.' };
+
+  } catch (e: any) {
+    return { success: false, error: e.message || 'A network error occurred.' };
+  }
+};
