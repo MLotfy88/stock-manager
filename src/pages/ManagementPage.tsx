@@ -372,8 +372,8 @@ $$;
                 <TabsTrigger value="supabase"><Database className="mr-2 h-4 w-4" />Supabase</TabsTrigger>
               </TabsList>
               
-              <div className="flex-1">
-                <TabsContent value="credentials">
+              <div className="flex-1 w-full">
+                <TabsContent value="credentials" className="mt-6 md:mt-0">
               <Card>
                 <CardHeader>
                   <CardTitle>{t('change_credentials')}</CardTitle>
@@ -437,7 +437,7 @@ $$;
               </Card>
             </TabsContent>
             
-            <TabsContent value="supabase">
+            <TabsContent value="supabase" className="mt-6 md:mt-0">
               <Card>
                 <CardHeader>
                   <CardTitle>Supabase Integration</CardTitle>
