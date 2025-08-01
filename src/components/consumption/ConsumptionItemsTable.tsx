@@ -14,7 +14,7 @@ interface ConsumptionItemsTableProps {
   items: (Partial<ConsumptionItem> & { id: string; availableQuantity?: number })[];
   handleItemChange: (itemId: string, field: keyof ConsumptionItem, value: any) => void;
   removeItem: (itemId: string) => void;
-  startScan: (itemId: string) => void;
+  startScan: (itemId: string, continuous?: boolean) => void;
   availableSupplies: InventoryItem[];
   productDefs: ProductDefinition[];
 }
@@ -113,8 +113,8 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
           <MobileSupplyItemCard
             key={item.id}
             itemId={item.id}
-            onScan={startScan}
-            onRemove={removeItem}
+            onScan={() => startScan(item.id, false)}
+            onRemove={() => removeItem(item.id)}
             canRemove={items.length > 0}
           >
             <div className="space-y-4">

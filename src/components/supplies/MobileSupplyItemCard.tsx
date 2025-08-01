@@ -6,9 +6,9 @@ import { ScanBarcode, Trash2, Copy } from 'lucide-react';
 interface MobileSupplyItemCardProps {
   itemId: string;
   children: React.ReactNode;
-  onScan: (itemId: string) => void;
-  onRemove: (itemId: string) => void;
-  onDuplicate?: (itemId: string) => void;
+  onScan: () => void;
+  onRemove: () => void;
+  onDuplicate?: () => void;
   canRemove: boolean;
 }
 
@@ -25,15 +25,15 @@ export const MobileSupplyItemCard: React.FC<MobileSupplyItemCardProps> = ({
       <CardContent className="p-4 space-y-4">
         {children}
         <div className="flex justify-end items-center gap-2 pt-2 border-t border-dashed">
-          <Button type="button" size="icon" variant="ghost" onClick={() => onScan(itemId)}>
+          <Button type="button" size="icon" variant="ghost" onClick={onScan}>
             <ScanBarcode className="h-5 w-5 text-primary" />
           </Button>
           {onDuplicate && (
-            <Button type="button" size="icon" variant="ghost" onClick={() => onDuplicate(itemId)}>
+            <Button type="button" size="icon" variant="ghost" onClick={onDuplicate}>
               <Copy className="h-5 w-5 text-blue-500" />
             </Button>
           )}
-          <Button type="button" size="icon" variant="ghost" onClick={() => onRemove(itemId)} disabled={!canRemove}>
+          <Button type="button" size="icon" variant="ghost" onClick={onRemove} disabled={!canRemove}>
             <Trash2 className="h-5 w-5 text-destructive" />
           </Button>
         </div>

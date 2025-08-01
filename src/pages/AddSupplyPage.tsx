@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
@@ -102,40 +102,52 @@ const AddInventoryPage = () => {
     loadInitialData();
   }, [toast, t]);
 
-  const handleItemChange = (itemId: string, field: keyof PurchaseOrderItem, value: any) => {
+  const handleItemChange = useCallback((itemId: string, field: keyof PurchaseOrderItem, value: any) => {
     setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, [field]: value } : item));
-  };
+  }, []);
 
-  const startScan = (itemId: string) => {
-    setActiveScannerId(itemId);
-    setIsScanning(true);
-
-    const constraints: MediaStreamConstraints = {
-      video: {
-        facingMode: 'environment',
-        height: { ideal: 1080 }, // Request higher resolution
-        advanced: [{ focusMode: 'continuous' } as any]
-      }
-    };
-    
-    codeReader.decodeFromConstraints(constraints, `video-scanner-${itemId}`, (result, err) => {
-      if (result) {
-        const scannedBarcode = result.getText();
-        stopScan();
-        handleItemChange(itemId, 'barcode', scannedBarcode);
-        toast({ title: "Barcode Scanned", description: `Barcode: ${scannedBarcode}` });
-      }
-      if (err && !(err instanceof NotFoundException)) {
-        // This error happens constantly when no barcode is found, so we can ignore it.
-      }
-    });
-  };
-
-  const stopScan = () => {
+  const stopScan = useCallback(() => {
     codeReader.reset();
     setIsScanning(false);
     setActiveScannerId(null);
-  };
+  }, [codeReader]);
+
+  useEffect(() => {
+    if (isScanning && activeScannerId) {
+      const videoElementId = `video-scanner-${activeScannerId}`;
+      
+      // Use decodeFromVideoDevice to let zxing handle the stream and decoding
+      codeReader.decodeFromVideoDevice(undefined, videoElementId, (result, err) => {
+        if (result) {
+          const scannedBarcode = result.getText();
+          // Vibrate on success for better feedback on mobile
+          if (navigator.vibrate) {
+            navigator.vibrate(100);
+          }
+          stopScan();
+          handleItemChange(activeScannerId, 'barcode', scannedBarcode);
+          toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
+        }
+        if (err && !(err instanceof NotFoundException)) {
+          // Ignore NotFoundException, which is fired continuously when no barcode is found
+        }
+      }).catch(err => {
+        console.error("Scanner init error:", err);
+        toast({ title: t('error'), description: t('failed_to_start_camera'), variant: 'destructive' });
+        stopScan();
+      });
+
+      return () => {
+        // Ensure the reader is reset when the component unmounts or dependencies change
+        codeReader.reset();
+      };
+    }
+  }, [isScanning, activeScannerId, codeReader, handleItemChange, stopScan, t, toast]);
+
+  const startScan = useCallback((itemId: string) => {
+    setActiveScannerId(itemId);
+    setIsScanning(true);
+  }, []);
 
   const addNewItem = () => {
     setItems(prevItems => [
@@ -265,7 +277,7 @@ const AddInventoryPage = () => {
                         const selectedDefinition = productDefinitions.find(def => def.id === item.productDefinitionId);
                         return (
                           <React.Fragment key={item.id}>
-                            <TableRow className="flex flex-col md:table-row mb-4 md:mb-0 border md:border-none rounded-lg md:rounded-none">
+                            <TableRow>
                               <TableCell className="min-w-[200px] p-2 md:p-4" data-label={t('barcode')}>
                                 <div className="flex items-center gap-2">
                                   <Input
@@ -314,28 +326,6 @@ const AddInventoryPage = () => {
                                 </Button>
                               </TableCell>
                             </TableRow>
-                            {/* Fullscreen scanner for mobile */}
-                            {isMobile && isScanning && activeScannerId === item.id && (
-                              <div className="fixed inset-0 bg-black z-50">
-                                <video id={`video-scanner-${item.id}`} className="w-full h-full object-cover"></video>
-                                <BarcodeScannerViewfinder />
-                                <div className="absolute top-4 right-4">
-                                  <Button variant="destructive" onClick={stopScan}>Stop Scanning</Button>
-                                </div>
-                              </div>
-                            )}
-                            {/* Inline scanner for desktop */}
-                            {!isMobile && isScanning && activeScannerId === item.id && (
-                              <TableRow>
-                                <TableCell colSpan={8} className="p-0">
-                                  <div className="relative p-4 border rounded-lg bg-black">
-                                    <video id={`video-scanner-${item.id}`} className="w-full h-auto rounded-md"></video>
-                                    <BarcodeScannerViewfinder />
-                                    <Button variant="destructive" className="w-full mt-2" onClick={stopScan}>Stop Scanning</Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            )}
                           </React.Fragment>
                         );
                       })}
@@ -351,9 +341,9 @@ const AddInventoryPage = () => {
                       <MobileSupplyItemCard
                         key={item.id}
                         itemId={item.id}
-                        onScan={startScan}
-                        onRemove={removeItem}
-                        onDuplicate={duplicateItem}
+                        onScan={() => startScan(item.id)}
+                        onRemove={() => removeItem(item.id)}
+                        onDuplicate={() => duplicateItem(item.id)}
                         canRemove={items.length > 1}
                       >
                         <div className="space-y-4">
@@ -414,6 +404,18 @@ const AddInventoryPage = () => {
               <Button type="submit" className="gap-2"><Save className="h-4 w-4" />{t('save_invoice')}</Button>
             </div>
           </form>
+
+          {/* Fullscreen scanner, rendered at the top level */}
+          {isScanning && activeScannerId && (
+            <div className="fixed inset-0 bg-black z-50">
+              {/* The video element ID now uses activeScannerId directly */}
+              <video id={`video-scanner-${activeScannerId}`} className="w-full h-full object-cover"></video>
+              <BarcodeScannerViewfinder />
+              <div className="absolute top-4 right-4 z-[51]">
+                <Button variant="destructive" onClick={stopScan}>{t('stop_scanning')}</Button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
