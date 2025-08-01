@@ -366,13 +366,13 @@ $$;
           <h1 className="text-2xl font-bold mb-6">{t('management_settings_nav')}</h1>
           
           <Tabs defaultValue="credentials" className="w-full">
-            <div className="md:flex md:space-x-4">
+            <div className="flex flex-col md:flex-row gap-6">
               <TabsList className="grid w-full md:w-auto md:grid-cols-1 md:h-full">
                 <TabsTrigger value="credentials"><UserCog className="mr-2 h-4 w-4" />{t('credentials')}</TabsTrigger>
                 <TabsTrigger value="supabase"><Database className="mr-2 h-4 w-4" />Supabase</TabsTrigger>
               </TabsList>
               
-              <div className="flex-1 mt-4 md:mt-0">
+              <div className="flex-1">
                 <TabsContent value="credentials">
               <Card>
                 <CardHeader>
