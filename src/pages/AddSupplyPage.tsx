@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
@@ -22,7 +22,7 @@ import { getManufacturers } from '@/data/operations/manufacturerOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getStores } from '@/data/operations/storesOperations';
 import { addInventoryItems } from '@/data/operations/suppliesOperations';
-import { BrowserBarcodeReader, NotFoundException, DecodeHintType, BarcodeFormat } from '@zxing/library';
+import { MultiFormatReader, NotFoundException, DecodeHintType, BarcodeFormat, RGBLuminanceSource, BinaryBitmap, HybridBinarizer } from '@zxing/library';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 
@@ -59,6 +59,9 @@ const AddInventoryPage = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   
   // --- Barcode Scanner Optimization ---
   const hints = new Map();
@@ -70,8 +73,7 @@ const AddInventoryPage = () => {
     BarcodeFormat.UPC_A,
   ];
   hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-  // Use BrowserBarcodeReader for 1D codes, which is faster.
-  const codeReader = new BrowserBarcodeReader();
+  const codeReader = new MultiFormatReader();
   // --- End Optimization ---
 
   // Form State
@@ -106,43 +108,99 @@ const AddInventoryPage = () => {
     setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, [field]: value } : item));
   }, []);
 
+  const playBeep = useCallback(() => {
+    if (!audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      } catch (e) {
+        console.error("Web Audio API is not supported in this browser");
+        return;
+      }
+    }
+    const oscillator = audioContextRef.current.createOscillator();
+    const gainNode = audioContextRef.current.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContextRef.current.destination);
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, audioContextRef.current.currentTime); // A5 note
+    gainNode.gain.setValueAtTime(0.5, audioContextRef.current.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.1);
+    oscillator.start(audioContextRef.current.currentTime);
+    oscillator.stop(audioContextRef.current.currentTime + 0.1);
+  }, []);
+
   const stopScan = useCallback(() => {
-    codeReader.reset();
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
     setIsScanning(false);
     setActiveScannerId(null);
-  }, [codeReader]);
+  }, []);
 
   useEffect(() => {
-    if (isScanning && activeScannerId) {
-      const videoElementId = `video-scanner-${activeScannerId}`;
-      
-      // Use decodeFromVideoDevice to let zxing handle the stream and decoding
-      codeReader.decodeFromVideoDevice(undefined, videoElementId, (result, err) => {
-        if (result) {
-          const scannedBarcode = result.getText();
-          // Vibrate on success for better feedback on mobile
-          if (navigator.vibrate) {
-            navigator.vibrate(100);
-          }
-          stopScan();
-          handleItemChange(activeScannerId, 'barcode', scannedBarcode);
-          toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
-        }
-        if (err && !(err instanceof NotFoundException)) {
-          // Ignore NotFoundException, which is fired continuously when no barcode is found
-        }
-      }).catch(err => {
-        console.error("Scanner init error:", err);
-        toast({ title: t('error'), description: t('failed_to_start_camera'), variant: 'destructive' });
-        stopScan();
-      });
+    if (isScanning && activeScannerId && videoRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas?.getContext('2d');
 
-      return () => {
-        // Ensure the reader is reset when the component unmounts or dependencies change
-        codeReader.reset();
+      const constraints = {
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          advanced: [{ focusMode: 'continuous' } as any]
+        }
       };
+
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+          video.srcObject = stream;
+          video.setAttribute('playsinline', 'true'); // Required for iOS
+          video.play();
+
+          const scanInterval = setInterval(() => {
+            if (video.readyState === video.HAVE_ENOUGH_DATA && canvas && context) {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              
+              try {
+                const luminanceSource = new RGBLuminanceSource(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+                const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+                const result = codeReader.decode(binaryBitmap, hints);
+                if (result) {
+                  clearInterval(scanInterval);
+                  const scannedBarcode = result.getText();
+                  
+                  playBeep();
+                  if (navigator.vibrate) navigator.vibrate(150);
+                  
+                  stopScan();
+                  handleItemChange(activeScannerId, 'barcode', scannedBarcode);
+                  toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
+                }
+              } catch (err) {
+                if (!(err instanceof NotFoundException)) {
+                  console.error('Scan Error:', err);
+                }
+              }
+            }
+          }, 500); // Scan every 500ms
+
+          return () => {
+            clearInterval(scanInterval);
+            stream.getTracks().forEach(track => track.stop());
+          };
+        })
+        .catch(err => {
+          console.error("Camera access error:", err);
+          toast({ title: t('error'), description: t('failed_to_start_camera'), variant: 'destructive' });
+          stopScan();
+        });
     }
-  }, [isScanning, activeScannerId, codeReader, handleItemChange, stopScan, t, toast]);
+  }, [isScanning, activeScannerId, codeReader, handleItemChange, stopScan, t, toast, playBeep]);
 
   const startScan = useCallback((itemId: string) => {
     setActiveScannerId(itemId);
@@ -408,8 +466,8 @@ const AddInventoryPage = () => {
           {/* Fullscreen scanner, rendered at the top level */}
           {isScanning && activeScannerId && (
             <div className="fixed inset-0 bg-black z-50">
-              {/* The video element ID now uses activeScannerId directly */}
-              <video id={`video-scanner-${activeScannerId}`} className="w-full h-full object-cover"></video>
+              <video ref={videoRef} className="w-full h-full object-cover"></video>
+              <canvas ref={canvasRef} className="hidden"></canvas>
               <BarcodeScannerViewfinder />
               <div className="absolute top-4 right-4 z-[51]">
                 <Button variant="destructive" onClick={stopScan}>{t('stop_scanning')}</Button>
