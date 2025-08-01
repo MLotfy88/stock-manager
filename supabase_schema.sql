@@ -1,5 +1,27 @@
--- CathLab Stock Manager - Supabase Schema v3
--- This script includes tables, RLS policies, and RPC functions for transactions.
+-- CathLab Stock Manager - Supabase Schema v4
+-- This script completely resets the database schema.
+-- It drops all existing tables and functions, then rebuilds them from scratch.
+
+-- 1. DROP EXISTING OBJECTS
+-- Drop functions first to remove dependencies
+DROP FUNCTION IF EXISTS delete_consumption_record(uuid);
+DROP FUNCTION IF EXISTS create_consumption_record(date, text, text, text, text, jsonb);
+DROP FUNCTION IF EXISTS get_public_tables();
+
+-- Drop tables in reverse order of creation to handle foreign keys
+DROP TABLE IF EXISTS consumption_record_items;
+DROP TABLE IF EXISTS consumption_records;
+DROP TABLE IF EXISTS inventory_items;
+DROP TABLE IF EXISTS product_definitions;
+DROP TABLE IF EXISTS suppliers;
+DROP TABLE IF EXISTS manufacturers;
+DROP TABLE IF EXISTS supply_types;
+DROP TABLE IF EXISTS stores;
+-- Drop legacy tables if they exist from a previous version
+DROP TABLE IF EXISTS supplies;
+DROP TABLE IF EXISTS consumption_items;
+
+-- 2. RECREATE FUNCTIONS AND TABLES
 
 -- Helper Function to Get Table Names
 CREATE OR REPLACE FUNCTION get_public_tables()
@@ -12,7 +34,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 1. TABLES
+-- Create Tables
 CREATE TABLE stores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
@@ -85,7 +107,7 @@ CREATE TABLE consumption_record_items (
   quantity INT NOT NULL CHECK (quantity > 0)
 );
 
--- 2. ROW LEVEL SECURITY (RLS)
+-- 3. ROW LEVEL SECURITY (RLS)
 -- Enable RLS for all tables
 ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE supply_types ENABLE ROW LEVEL SECURITY;
@@ -117,7 +139,7 @@ CREATE POLICY "Allow all for authenticated users" ON consumption_records FOR ALL
 CREATE POLICY "Allow all for authenticated users" ON consumption_record_items FOR ALL USING (auth.role() = 'authenticated');
 
 
--- 3. RPC FUNCTIONS FOR TRANSACTIONS
+-- 4. RPC FUNCTIONS FOR TRANSACTIONS
 
 -- Function to create a consumption record and update inventory atomically
 CREATE OR REPLACE FUNCTION create_consumption_record(

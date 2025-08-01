@@ -11,7 +11,7 @@ import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 
 // استيراد وظائف العمليات
 import { addConsumptionRecord } from '@/data/operations/consumptionOperations';
-import { getInventoryItems } from '@/data/operations/suppliesOperations'; 
+import { getInventoryItems } from '@/data/operations/suppliesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 
 // استيراد المكونات المعاد هيكلتها
@@ -157,7 +157,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
   };
   
   // إرسال النموذج
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!isFormValid()) {
@@ -169,32 +169,30 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
       return;
     }
     
-    const newRecord: Partial<ConsumptionRecord> = {
-      date: date?.toISOString() || new Date().toISOString(),
+    const newRecord = {
+      date: date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
       department,
       requested_by: requestedBy,
       notes,
-      status: 'completed',
       purpose: purpose,
-      items: items.map(item => ({
-        ...item,
-        quantity: Number(item.quantity)
-      }))
+      items: items.map(({ id, item_name, ...rest }) => ({ ...rest, quantity: Number(rest.quantity) }))
     };
     
-    const result = addConsumptionRecord(newRecord as ConsumptionRecord);
-    
-    if (result) {
+    try {
+      await addConsumptionRecord(newRecord as any);
       toast({
         title: t('success'),
         description: t('consumption_record_created'),
       });
       resetForm();
       if (onSuccess) onSuccess();
-    } else {
+    } catch (error: any) {
+      const errorMessage = error.message === 'insufficient_quantity' 
+        ? t('insufficient_quantity') 
+        : t('error');
       toast({
         title: t('error'),
-        description: t('insufficient_quantity'),
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -204,14 +202,14 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({
     setIsScanning(true);
     codeReader.decodeFromVideoDevice(undefined, 'video-scanner-consumption', (result, err) => {
       if (result) {
-        const scannedSerial = result.getText();
+        const scannedBarcode = result.getText();
         stopScan();
-        const foundItem = inventory.find(item => (item as any).serialNumber === scannedSerial);
+        const foundItem = inventory.find(item => item.barcode === scannedBarcode);
         if (foundItem) {
           addItem(foundItem);
-          toast({ title: "Item Found", description: `Added item with serial: ${scannedSerial}` });
+          toast({ title: "Item Found", description: `Added item with barcode: ${scannedBarcode}` });
         } else {
-          toast({ title: "Not Found", description: `No item found with serial: ${scannedSerial}`, variant: 'destructive' });
+          toast({ title: "Not Found", description: `No item found with barcode: ${scannedBarcode}`, variant: 'destructive' });
         }
       }
       if (err && !(err instanceof NotFoundException)) {

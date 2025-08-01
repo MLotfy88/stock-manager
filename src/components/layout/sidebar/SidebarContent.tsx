@@ -27,11 +27,12 @@ const SidebarContent = ({ activePath, handleNavClick }: SidebarContentProps) => 
               </div>
             );
           }
-          if (item.type === 'link') {
+          if (item.type === 'link' || item.type === 'collapsible') {
+            const isActive = item.href ? activePath === item.href : (item.subItems || []).some((sub: any) => activePath === sub.href);
             return (
               <NavLink 
-                key={item.href} 
-                item={{ ...item, active: activePath === item.href }} 
+                key={item.label} 
+                item={{ ...item, active: isActive }} 
                 onClick={handleNavClick} 
               />
             );
