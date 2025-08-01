@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from '@/hooks/use-mobile';
 import SidebarContent from './sidebar/SidebarContent';
@@ -13,18 +14,23 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, closeSidebar }) => {
-  const [activePath, setActivePath] = useState(window.location.pathname);
+  const location = useLocation();
+  const [activePath, setActivePath] = useState(location.pathname);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { direction } = useLanguage();
-  
-  // Close sidebar when route changes on mobile
+
   useEffect(() => {
-    closeSidebar();
-  }, [activePath]);
+    setActivePath(location.pathname);
+    if (isMobile) {
+      closeSidebar();
+    }
+  }, [location.pathname, isMobile]);
 
   const handleNavClick = (path: string) => {
-    setActivePath(path);
-    closeSidebar();
+    // No need to setActivePath here, useEffect will handle it
+    if (isMobile) {
+      closeSidebar();
+    }
   };
   
   return (

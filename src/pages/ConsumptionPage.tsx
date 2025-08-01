@@ -14,13 +14,18 @@ const ConsumptionPage = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
   const { toast } = useToast();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [activeTab, setActiveTab] = useState<'new' | 'list'>('list');
   
   return (
     <div className="page-container bg-background" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        closeSidebar={() => setIsSidebarOpen(false)}
+      />
       
       <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
         <div className="max-w-6xl mx-auto">

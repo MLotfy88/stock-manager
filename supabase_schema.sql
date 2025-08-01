@@ -123,7 +123,7 @@ JOIN
   manufacturers m ON ii.manufacturer_id = m.id;
 
 -- 4. ROW LEVEL SECURITY (RLS)
--- Enable RLS for all tables and the view
+-- Enable RLS for all tables
 ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE supply_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE manufacturers ENABLE ROW LEVEL SECURITY;
@@ -132,7 +132,6 @@ ALTER TABLE product_definitions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE consumption_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE consumption_record_items ENABLE ROW LEVEL SECURITY;
-ALTER VIEW inventory_items_with_status ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
 CREATE POLICY "Public read access" ON stores FOR SELECT USING (true);
@@ -143,7 +142,6 @@ CREATE POLICY "Public read access" ON product_definitions FOR SELECT USING (true
 CREATE POLICY "Public read access" ON inventory_items FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON consumption_records FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON consumption_record_items FOR SELECT USING (true);
-CREATE POLICY "Public read access on view" ON inventory_items_with_status FOR SELECT USING (true);
 
 CREATE POLICY "Allow all for authenticated users" ON stores FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Allow all for authenticated users" ON supply_types FOR ALL USING (auth.role() = 'authenticated');

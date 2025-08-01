@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
@@ -7,58 +7,72 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Store, ProductDefinition, InventoryItem, Manufacturer } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
-// MOCK DATA
-const MOCK_STORES: Store[] = [
-    { id: '1', name: 'Main Store' },
-    { id: '2', name: 'Cath Lab 1' },
-];
-const MOCK_MANUFACTURERS: Manufacturer[] = [
-    { id: '1', name: 'Medtronic', alertPeriod: 30 },
-    { id: '2', name: 'Boston Scientific', alertPeriod: 30 },
-];
-const MOCK_PRODUCT_DEFINITIONS: ProductDefinition[] = [
-  { id: '1', name: 'Diagnostic Catheter', typeId: 'catheter', barcode: '111', variantLabel: 'Curve', variants: [{name: 'L3.5', reorderPoint: 5}, {name: 'L4', reorderPoint: 5}], createdAt: '', updatedAt: '' },
-  { id: '2', name: 'Balloons', typeId: 'consumable', barcode: '222', variantLabel: 'Size', variants: [{name: '2.5x10', reorderPoint: 10}, {name: '3.0x15', reorderPoint: 8}], createdAt: '', updatedAt: '' },
-];
-const MOCK_INVENTORY: InventoryItem[] = [
-    { id: 'inv1', productDefinitionId: '1', variant: 'L3.5', quantity: 10, storeId: '1', manufacturerId: '1', batchNumber: 'B1', expiryDate: '2025-12-31', status: 'valid', createdAt: '', updatedAt: '' },
-    { id: 'inv2', productDefinitionId: '2', variant: '2.5x10', quantity: 5, storeId: '1', manufacturerId: '2', batchNumber: 'B2', expiryDate: '2026-01-31', status: 'valid', createdAt: '', updatedAt: '' },
-    { id: 'inv3', productDefinitionId: '1', variant: 'L4', quantity: 8, storeId: '2', manufacturerId: '1', batchNumber: 'B3', expiryDate: '2025-11-30', status: 'valid', createdAt: '', updatedAt: '' },
-    { id: 'inv4', productDefinitionId: '1', variant: 'L3.5', quantity: 3, storeId: '1', manufacturerId: '2', batchNumber: 'B4', expiryDate: '2026-02-28', status: 'valid', createdAt: '', updatedAt: '' },
-];
-// END MOCK DATA
+import { getStores } from '@/data/operations/storesOperations';
+import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
+import { getInventoryItems } from '@/data/operations/suppliesOperations';
+import { getManufacturers } from '@/data/operations/manufacturerOperations';
 
 type GroupBy = 'product' | 'manufacturer';
 
 const InventoryReportPage = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const [stores, setStores] = useState<Store[]>([]);
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+  const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [selectedStoreId, setSelectedStoreId] = useState<string>('all');
   const [groupBy, setGroupBy] = useState<GroupBy>('product');
 
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [storesData, manufacturersData, defsData, inventoryData] = await Promise.all([
+          getStores(),
+          getManufacturers(),
+          getProductDefinitions(),
+          getInventoryItems(),
+        ]);
+        setStores(storesData);
+        setManufacturers(manufacturersData);
+        setProductDefs(defsData);
+        setInventory(inventoryData);
+      } catch (error) {
+        console.error("Failed to fetch report data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const filteredInventory = useMemo(() => {
-    if (selectedStoreId === 'all') return MOCK_INVENTORY;
-    return MOCK_INVENTORY.filter(item => item.storeId === selectedStoreId);
-  }, [selectedStoreId]);
+    if (selectedStoreId === 'all') return inventory;
+    return inventory.filter(item => item.store_id === selectedStoreId);
+  }, [selectedStoreId, inventory]);
 
   const groupedData = useMemo(() => {
-    const groups: { [key: string]: { name: string; items: { variant: string; quantity: number }[] } } = {};
+    const groups: { [key: string]: { name: string; items: { name: string; variant: string; quantity: number }[] } } = {};
 
     filteredInventory.forEach(item => {
-      const productDef = MOCK_PRODUCT_DEFINITIONS.find(p => p.id === item.productDefinitionId);
+      const productDef = productDefs.find(p => p.id === item.product_definition_id);
       if (!productDef) return;
 
       let key = '';
       let groupName = '';
+      let itemName = productDef.name;
 
       if (groupBy === 'product') {
         key = productDef.id;
         groupName = productDef.name;
       } else if (groupBy === 'manufacturer') {
-        const manufacturer = MOCK_MANUFACTURERS.find(m => m.id === item.manufacturerId);
-        key = item.manufacturerId;
+        const manufacturer = manufacturers.find(m => m.id === item.manufacturer_id);
+        key = item.manufacturer_id || 'unknown';
         groupName = manufacturer?.name || 'Unknown';
       }
 
@@ -66,38 +80,42 @@ const InventoryReportPage = () => {
         groups[key] = { name: groupName, items: [] };
       }
       
-      const existingItem = groups[key].items.find(i => i.variant === item.variant);
+      const existingItem = groups[key].items.find(i => i.variant === item.variant && i.name === itemName);
       if (existingItem) {
         existingItem.quantity += item.quantity;
       } else {
-        groups[key].items.push({ variant: item.variant, quantity: item.quantity });
+        groups[key].items.push({ name: itemName, variant: item.variant, quantity: item.quantity });
       }
     });
 
-    return Object.values(groups);
-  }, [filteredInventory, groupBy]);
+    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+  }, [filteredInventory, groupBy, productDefs, manufacturers]);
 
   return (
     <div className="page-container bg-background" dir={direction}>
-      <Header />
-      <Sidebar />
+      <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        closeSidebar={() => setIsSidebarOpen(false)}
+      />
       <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">{t('inventory_report')}</h1>
+          <h1 className="text-2xl font-bold mb-6">{t('inventory_report_nav')}</h1>
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <CardTitle>{t('stock_balance')}</CardTitle>
-                <div className="flex gap-4">
+                <div className="flex gap-4 w-full md:w-auto">
                   <Select value={selectedStoreId} onValueChange={setSelectedStoreId}>
-                    <SelectTrigger className="w-[180px]"><SelectValue placeholder={t('select_store')} /></SelectTrigger>
+                    <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder={t('select_store')} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">{t('all_stores')}</SelectItem>
-                      {MOCK_STORES.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                      {stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupBy)}>
-                    <SelectTrigger className="w-[180px]"><SelectValue placeholder={t('group_by')} /></SelectTrigger>
+                    <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder={t('group_by')} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="product">{t('group_by_product')}</SelectItem>
                       <SelectItem value="manufacturer">{t('group_by_manufacturer')}</SelectItem>
@@ -107,25 +125,29 @@ const InventoryReportPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {groupedData.map((group, index) => (
-                <div key={index} className="mb-6">
-                  <h2 className="text-lg font-semibold mb-2 p-2 bg-gray-100 rounded-md">{group.name}</h2>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{groupBy === 'product' ? t('variant') : t('product')}</TableHead>
-                        <TableHead className="text-right">{t('quantity')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {group.items.map((item, itemIndex) => (
-                        <TableRow key={itemIndex}>
-                          <TableCell>{item.variant}</TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
+              {isLoading ? (
+                <p>Loading...</p>
+              ) : groupedData.map((group, index) => (
+                <div key={index} className="mb-6 last:mb-0">
+                  <h2 className="text-lg font-semibold mb-2 p-2 bg-muted/50 rounded-md">{group.name}</h2>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{groupBy === 'product' ? t('variant') : t('product')}</TableHead>
+                          <TableHead className="text-right">{t('quantity')}</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {group.items.sort((a,b) => a.variant.localeCompare(b.variant)).map((item, itemIndex) => (
+                          <TableRow key={itemIndex}>
+                            <TableCell>{groupBy === 'product' ? item.variant : `${item.name} - ${item.variant}`}</TableCell>
+                            <TableCell className="text-right">{item.quantity}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               ))}
             </CardContent>
