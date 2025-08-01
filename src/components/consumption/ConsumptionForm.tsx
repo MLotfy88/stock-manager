@@ -3,11 +3,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { Plus, ScanBarcode } from 'lucide-react';
+import { Plus, ScanBarcode, Camera } from 'lucide-react';
 import { ConsumptionRecord, ConsumptionItem, InventoryItem, ProductDefinition, Store } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { BrowserBarcodeReader, NotFoundException, DecodeHintType, BarcodeFormat } from '@zxing/library';
+import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
+import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 import { addConsumptionRecord } from '@/data/operations/consumptionOperations';
 import { getInventoryItems } from '@/data/operations/suppliesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
@@ -37,6 +39,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   
   const [isScanning, setIsScanning] = useState(false);
+  const [isContinuousScanning, setIsContinuousScanning] = useState(false);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
 
   // --- Barcode Scanner Optimization ---
@@ -109,13 +112,11 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     codeReader.decodeFromConstraints(constraints, `video-scanner-${itemId}`, (result, err) => {
       if (result) {
         const scannedBarcode = result.getText();
-        stopScan();
-        const foundItem = availableSupplies.find(item => item.barcode === scannedBarcode);
-        if (foundItem) {
-          handleItemChange(itemId, 'inventory_item_id', foundItem.id);
-          toast({ title: "Item Found", description: `Item with barcode ${scannedBarcode} selected.` });
+        if (isContinuousScanning) {
+          handleBarcodeScanned(scannedBarcode, true, itemId);
         } else {
-          toast({ title: "Not Found", description: `Item with barcode ${scannedBarcode} not found in this store.`, variant: 'destructive' });
+          stopScan();
+          handleBarcodeScanned(scannedBarcode, false, itemId);
         }
       }
       if (err && !(err instanceof NotFoundException)) {
@@ -124,10 +125,29 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     });
   };
 
+  const handleBarcodeScanned = (barcode: string, isContinuous: boolean, currentItemId: string) => {
+    const foundItem = availableSupplies.find(item => item.barcode === barcode);
+    if (foundItem) {
+      if (isContinuous) {
+        // In continuous mode, add new item automatically
+        const newItemId = `item_${Date.now()}`;
+        setItems(prev => [...prev, { id: newItemId, inventory_item_id: foundItem.id, quantity: 1, availableQuantity: foundItem.quantity }]);
+        toast({ title: t('item_added'), description: `${productDefs.find(p => p.id === foundItem.product_definition_id)?.name} - ${foundItem.variant}` });
+      } else {
+        // In single scan mode, update the current item
+        handleItemChange(currentItemId, 'inventory_item_id', foundItem.id);
+        toast({ title: "Item Found", description: `Item with barcode ${barcode} selected.` });
+      }
+    } else {
+      toast({ title: "Not Found", description: `Item with barcode ${barcode} not found in this store.`, variant: 'destructive' });
+    }
+  };
+
   const stopScan = () => {
     codeReader.reset();
     setIsScanning(false);
     setActiveScannerId(null);
+    setIsContinuousScanning(false);
   };
 
   const addNewItem = () => {
@@ -194,15 +214,23 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium">{t('items')}</h3>
-              <Button type="button" variant="outline" size="sm" onClick={addNewItem} disabled={!selectedStoreId}>
-                <Plus className="h-4 w-4 mr-1" />{t('add_item')}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => { setIsContinuousScanning(true); startScan('continuous'); }} disabled={!selectedStoreId}>
+                  <Camera className="h-4 w-4 mr-1" />{t('scan_continuously')}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={addNewItem} disabled={!selectedStoreId}>
+                  <Plus className="h-4 w-4 mr-1" />{t('add_item')}
+                </Button>
+              </div>
             </div>
             
-            {isScanning && activeScannerId && (
-              <div className="p-4 border rounded-lg bg-black">
-                <video id={`video-scanner-${activeScannerId}`} className="w-full h-auto rounded-md"></video>
-                <Button variant="destructive" className="w-full mt-2" onClick={stopScan}>Stop Scanning</Button>
+            {isScanning && (
+              <div className="fixed inset-0 bg-black z-50">
+                <video id={`video-scanner-${activeScannerId}`} className="w-full h-full object-cover"></video>
+                <BarcodeScannerViewfinder />
+                <div className="absolute top-4 right-4">
+                  <Button variant="destructive" onClick={stopScan}>{t('stop_scanning')}</Button>
+                </div>
               </div>
             )}
             
@@ -213,9 +241,6 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
               startScan={startScan}
               availableSupplies={availableSupplies}
               productDefs={productDefs}
-              isScanning={isScanning}
-              activeScannerId={activeScannerId}
-              stopScan={stopScan}
             />
           </div>
           

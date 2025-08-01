@@ -179,26 +179,43 @@ export const ProductDefinitionsPageContent = () => {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
-        const newDefinitions: ProductDefinition[] = results.data.map((row: any) => {
+      encoding: "UTF-8", // Explicitly set encoding for Arabic characters
+      complete: async (results) => {
+        const definitionsToCreate = results.data.map((row: any) => {
           const variants: ProductVariant[] = (row.variants || '').split('|').map((v: string) => {
             const [name, reorderPoint] = v.split(':');
             return { name, reorder_point: parseInt(reorderPoint) || 0 };
           }).filter((v: ProductVariant) => v.name);
 
-          return {
-            id: `def_${Date.now()}_${Math.random()}`,
-            name: row.product_name,
-            type_id: row.product_type_id,
-            variant_label: row.variant_label,
-            variants,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-        }).filter(def => def.name && def.type_id && def.variant_label && def.variants.length > 0);
+          if (row.product_name && row.product_type_id && row.variant_label && variants.length > 0) {
+            return {
+              name: row.product_name,
+              type_id: row.product_type_id,
+              variant_label: row.variant_label,
+              variants,
+            };
+          }
+          return null;
+        }).filter(Boolean);
 
-        setDefinitions(prev => [...prev, ...newDefinitions]);
-        toast({ title: t('success'), description: `${newDefinitions.length} products imported successfully.` });
+        if (definitionsToCreate.length === 0) {
+          toast({ title: t('error'), description: "No valid product definitions found in the file.", variant: 'destructive' });
+          return;
+        }
+
+        try {
+          // Save each new definition to the database
+          await Promise.all(definitionsToCreate.map(def => addProductDefinition(def as any)));
+          
+          toast({ title: t('success'), description: `${definitionsToCreate.length} products imported and saved successfully.` });
+          
+          // Reload data from the database to show the new items
+          loadData();
+
+        } catch (dbError) {
+          console.error("Database save error:", dbError);
+          toast({ title: t('error'), description: "An error occurred while saving the imported products to the database.", variant: 'destructive' });
+        }
       },
       error: (error) => {
         toast({ title: t('error'), description: `CSV parsing error: ${error.message}`, variant: 'destructive' });

@@ -7,14 +7,16 @@ import SupplyList from '@/components/supplies/SupplyList';
 import Notification from '@/components/ui/Notification';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ChevronRight } from 'lucide-react';
+import { Plus, ChevronRight, PlusCircle, MinusCircle } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { calculateDashboardStats } from '@/data/operations/statsOperations';
+import { UrgentActionsBox } from '@/components/dashboard/UrgentActionsBox';
+import { DashboardStats as StatsType } from '@/types';
 
 const Index = () => {
-  const [stats, setStats] = useState({ expiringSupplies: 0 });
+  const [stats, setStats] = useState<Partial<StatsType>>({ expiringSupplies: 0, reorderPointItems: 0 });
   const [showNotification, setShowNotification] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -46,9 +48,8 @@ const Index = () => {
   }, []);
   
   useEffect(() => {
-    // Show notification after a short delay for better UX
     const timer = setTimeout(() => {
-      if (stats.expiringSupplies > 0) {
+      if (stats.expiringSupplies && stats.expiringSupplies > 0) {
         setShowNotification(true);
       }
     }, 1500);
@@ -86,15 +87,26 @@ const Index = () => {
                 {t('dashboard_overview')}
               </p>
             </div>
-            <Button 
-              className="gap-2 w-full md:w-auto bg-primary hover:bg-primary/90 group transition-all shadow" 
-              onClick={() => navigate('/add-supply')}
-            >
-              <Plus className="h-4 w-4" />
-              {t('add_new_supply')}
-              <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all -mr-2 group-hover:mr-0" />
-            </Button>
+            {/* Quick Action Buttons */}
+            <div className="flex w-full md:w-auto gap-2">
+              <Button asChild className="flex-1 gap-2">
+                <Link to="/add-supply">
+                  <PlusCircle className="h-4 w-4" /> {t('add_invoice')}
+                </Link>
+              </Button>
+              <Button asChild variant="secondary" className="flex-1 gap-2">
+                <Link to="/consumption">
+                  <MinusCircle className="h-4 w-4" /> {t('new_consumption')}
+                </Link>
+              </Button>
+            </div>
           </div>
+
+          {/* Urgent Actions Box */}
+          <UrgentActionsBox 
+            expiringSoonCount={stats.expiringSupplies || 0}
+            reorderPointCount={stats.reorderPointItems || 0}
+          />
           
           <div className="mb-8 animate-fade-in" style={{ animationDelay: '0.1s' }}>
             <DashboardStats />

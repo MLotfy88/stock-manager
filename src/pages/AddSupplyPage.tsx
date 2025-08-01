@@ -23,6 +23,8 @@ import { getProductDefinitions } from '@/data/operations/productDefinitionOperat
 import { getStores } from '@/data/operations/storesOperations';
 import { addInventoryItems } from '@/data/operations/suppliesOperations';
 import { BrowserBarcodeReader, NotFoundException, DecodeHintType, BarcodeFormat } from '@zxing/library';
+import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
+import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 
 
 type PurchaseOrderItem = {
@@ -146,6 +148,18 @@ const AddInventoryPage = () => {
     setItems(prevItems => prevItems.filter(item => item.id !== itemId));
   };
 
+  const duplicateItem = (itemId: string) => {
+    const itemToDuplicate = items.find(item => item.id === itemId);
+    if (itemToDuplicate) {
+      const newItem = {
+        ...itemToDuplicate,
+        id: `item_${Date.now()}`,
+        barcode: '', // Barcode should be unique per item
+      };
+      setItems(prevItems => [...prevItems, newItem]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supplierId || !manufacturerId || !storeId) {
@@ -231,9 +245,10 @@ const AddInventoryPage = () => {
                 <CardTitle>{t('invoice_items')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                {/* Desktop Table */}
+                <div className="overflow-x-auto hidden md:block">
                   <Table>
-                    <TableHeader className="hidden md:table-header-group">
+                    <TableHeader>
                       <TableRow>
                         <TableHead className="w-[150px]">{t('barcode')}</TableHead>
                         <TableHead>{t('product')}</TableHead>
@@ -302,8 +317,9 @@ const AddInventoryPage = () => {
                             {isScanning && activeScannerId === item.id && (
                               <TableRow>
                                 <TableCell colSpan={8} className="p-0">
-                                  <div className="p-4 border rounded-lg bg-black">
+                                  <div className="relative p-4 border rounded-lg bg-black">
                                     <video id={`video-scanner-${item.id}`} className="w-full h-auto rounded-md"></video>
+                                    <BarcodeScannerViewfinder />
                                     <Button variant="destructive" className="w-full mt-2" onClick={stopScan}>Stop Scanning</Button>
                                   </div>
                                 </TableCell>
@@ -315,12 +331,72 @@ const AddInventoryPage = () => {
                     </TableBody>
                   </Table>
                 </div>
-                <Button type="button" variant="outline" onClick={addNewItem} className="mt-4 gap-2">
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-4">
+                  {items.map((item) => {
+                    const selectedDefinition = productDefinitions.find(def => def.id === item.productDefinitionId);
+                    return (
+                      <MobileSupplyItemCard
+                        key={item.id}
+                        itemId={item.id}
+                        onScan={startScan}
+                        onRemove={removeItem}
+                        onDuplicate={duplicateItem}
+                        canRemove={items.length > 1}
+                      >
+                        <div className="space-y-4">
+                          {/* Barcode */}
+                          <div className="flex items-center gap-2">
+                            <Input value={item.barcode} onChange={(e) => handleItemChange(item.id, 'barcode', e.target.value)} placeholder={t('scan_or_enter_barcode')} />
+                          </div>
+                          {/* Product */}
+                          <Select value={item.productDefinitionId} onValueChange={(val) => handleItemChange(item.id, 'productDefinitionId', val)}>
+                            <SelectTrigger><SelectValue placeholder={t('select_product')} /></SelectTrigger>
+                            <SelectContent>{productDefinitions.map((def) => <SelectItem key={def.id} value={def.id}>{def.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                          {/* Variant */}
+                          <Select value={item.variant} onValueChange={(val) => handleItemChange(item.id, 'variant', val)} disabled={!selectedDefinition}>
+                            <SelectTrigger><SelectValue placeholder={t('select_variant')} /></SelectTrigger>
+                            <SelectContent>{selectedDefinition?.variants.map((variant: any) => <SelectItem key={variant.name} value={variant.name}>{variant.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                          {/* Batch & Expiry */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <Input value={item.batchNumber} onChange={(e) => handleItemChange(item.id, 'batchNumber', e.target.value)} placeholder={t('batch_number')} />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !item.expiryDate && "text-muted-foreground")}>
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {item.expiryDate ? format(item.expiryDate, "P") : <span>{t('pick_date')}</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={item.expiryDate} onSelect={(date) => handleItemChange(item.id, 'expiryDate', date)} initialFocus /></PopoverContent>
+                            </Popover>
+                          </div>
+                          {/* Quantity & Price */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <Input type="number" min="1" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder={t('quantity')} />
+                            <Input type="number" min="0" step="0.01" value={item.purchasePrice} onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)} placeholder={t('purchase_price')} />
+                          </div>
+                        </div>
+                      </MobileSupplyItemCard>
+                    );
+                  })}
+                </div>
+
+                <Button type="button" variant="outline" onClick={addNewItem} className="mt-4 gap-2 hidden md:inline-flex">
                   <PlusCircle className="h-4 w-4" />
                   {t('add_another_item')}
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Floating Action Button for Mobile */}
+            <div className="md:hidden fixed bottom-20 right-4 z-50">
+              <Button type="button" size="icon" className="h-14 w-14 rounded-full shadow-lg" onClick={addNewItem}>
+                <PlusCircle className="h-7 w-7" />
+              </Button>
+            </div>
 
             <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 mt-8">
               <Button type="button" variant="outline" onClick={() => navigate('/supplies')} className="gap-2"><RotateCcw className="h-4 w-4" />{t('cancel')}</Button>

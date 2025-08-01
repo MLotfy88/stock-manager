@@ -9,10 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Store, ProductDefinition, InventoryItem } from '@/types';
-import { ArrowRightLeft, ScanBarcode, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, ScanBarcode, Trash2, Camera } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { BrowserBarcodeReader, NotFoundException, DecodeHintType, BarcodeFormat } from '@zxing/library';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
+import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 import { getStores } from '@/data/operations/storesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getInventoryItems, transferInventoryItems } from '@/data/operations/suppliesOperations';
@@ -43,6 +45,7 @@ const TransferInventoryPage = () => {
   const [transferList, setTransferList] = useState<TransferItem[]>([]);
   
   const [isScanning, setIsScanning] = useState(false);
+  const [isContinuousScanning, setIsContinuousScanning] = useState(false);
   const [scannedItem, setScannedItem] = useState<InventoryItem | null>(null);
   const [scannedQuantity, setScannedQuantity] = useState('1');
 
@@ -99,13 +102,11 @@ const TransferInventoryPage = () => {
     codeReader.decodeFromConstraints(constraints, 'video-scanner-transfer', (result, err) => {
       if (result) {
         const scannedBarcode = result.getText();
-        stopScan();
-        const itemInStore = inventory.find(i => i.barcode === scannedBarcode && i.store_id === fromStoreId);
-        
-        if (itemInStore) {
-            setScannedItem(itemInStore);
+        if (isContinuousScanning) {
+          handleBarcodeScanned(scannedBarcode, true);
         } else {
-            toast({ title: t('not_found'), description: t('item_not_in_source_store'), variant: 'destructive' });
+          stopScan();
+          handleBarcodeScanned(scannedBarcode, false);
         }
       }
       if (err && !(err instanceof NotFoundException)) {
@@ -114,9 +115,33 @@ const TransferInventoryPage = () => {
     });
   };
 
+  const handleBarcodeScanned = (barcode: string, isContinuous: boolean) => {
+    const itemInStore = inventory.find(i => i.barcode === barcode && i.store_id === fromStoreId);
+    if (itemInStore) {
+      if (isContinuous) {
+        addItemToTransferList(itemInStore, 1);
+        toast({ title: t('item_added'), description: `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}` });
+      } else {
+        setScannedItem(itemInStore);
+      }
+    } else {
+      toast({ title: t('not_found'), description: t('item_not_in_source_store'), variant: 'destructive' });
+    }
+  };
+
+  const addItemToTransferList = (item: InventoryItem, quantity: number) => {
+    const existingItem = transferList.find(i => i.id === item.id);
+    if (existingItem) {
+      setTransferList(transferList.map(i => i.id === item.id ? { ...i, transferQuantity: i.transferQuantity + quantity } : i));
+    } else {
+      setTransferList([...transferList, { ...item, transferQuantity: quantity }]);
+    }
+  };
+
   const stopScan = () => {
     codeReader.reset();
     setIsScanning(false);
+    setIsContinuousScanning(false);
   };
 
   const handleConfirmScan = () => {
@@ -127,13 +152,7 @@ const TransferInventoryPage = () => {
         return;
     }
     
-    const existingItem = transferList.find(item => item.id === scannedItem.id);
-    if (existingItem) {
-        setTransferList(transferList.map(item => item.id === scannedItem.id ? { ...item, transferQuantity: item.transferQuantity + quantity } : item));
-    } else {
-        setTransferList([...transferList, { ...scannedItem, transferQuantity: quantity }]);
-    }
-
+    addItemToTransferList(scannedItem, quantity);
     setScannedItem(null);
     setScannedQuantity('1');
   };
@@ -198,21 +217,29 @@ const TransferInventoryPage = () => {
                   <SelectContent>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="text-center">
+              <div className="flex justify-center gap-4">
                 <Button onClick={handleScan} disabled={isScanning || !fromStoreId || !toStoreId}>
                   <ScanBarcode className="mr-2 h-5 w-5" />
-                  {isScanning ? t('scanning') : t('start_scanning')}
+                  {t('scan_single_item')}
+                </Button>
+                <Button onClick={() => { setIsContinuousScanning(true); handleScan(); }} disabled={isScanning || !fromStoreId || !toStoreId}>
+                  <Camera className="mr-2 h-5 w-5" />
+                  {t('scan_continuously')}
                 </Button>
               </div>
               {isScanning && (
-                <div className="p-4 border rounded-lg bg-black">
-                  <video id="video-scanner-transfer" className="w-full h-auto rounded-md"></video>
-                  <Button variant="destructive" className="w-full mt-2" onClick={stopScan}>{t('stop_scanning')}</Button>
+                <div className="fixed inset-0 bg-black z-50">
+                  <video id="video-scanner-transfer" className="w-full h-full object-cover"></video>
+                  <BarcodeScannerViewfinder />
+                  <div className="absolute top-4 right-4">
+                    <Button variant="destructive" onClick={stopScan}>{t('stop_scanning')}</Button>
+                  </div>
                 </div>
               )}
               <div>
                 <h3 className="text-lg font-medium mb-2">{t('items_to_transfer')}</h3>
-                <div className="border rounded-md">
+                {/* Desktop Table */}
+                <div className="border rounded-md hidden md:block">
                   <table className="w-full">
                     <thead className="bg-muted/50">
                       <tr className="border-b">
@@ -241,6 +268,27 @@ const TransferInventoryPage = () => {
                       )}
                     </tbody>
                   </table>
+                </div>
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-4">
+                  {transferList.length === 0 ? (
+                    <p className="p-4 text-center text-muted-foreground">{t('no_items_added')}</p>
+                  ) : (
+                    transferList.map(item => (
+                      <Card key={item.id} className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-bold">{productDefinitions.find(p => p.id === item.product_definition_id)?.name}</p>
+                            <p className="text-sm text-muted-foreground">{item.variant}</p>
+                            <p className="text-sm">{t('quantity')}: {item.transferQuantity}</p>
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))
+                  )}
                 </div>
               </div>
               <div className="flex justify-end">

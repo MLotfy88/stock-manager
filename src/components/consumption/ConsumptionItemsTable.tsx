@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ConsumptionItem, InventoryItem, ProductDefinition } from '@/types';
 import { format } from 'date-fns';
+import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 
 interface ConsumptionItemsTableProps {
   items: (Partial<ConsumptionItem> & { id: string; availableQuantity?: number })[];
@@ -16,9 +17,6 @@ interface ConsumptionItemsTableProps {
   startScan: (itemId: string) => void;
   availableSupplies: InventoryItem[];
   productDefs: ProductDefinition[];
-  isScanning: boolean;
-  activeScannerId: string | null;
-  stopScan: () => void;
 }
 
 const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
@@ -32,11 +30,13 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
   const { t } = useLanguage();
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader className="hidden md:table-header-group">
-          <TableRow>
-            <TableHead className="w-[250px]">{t('product')}</TableHead>
+    <div>
+      {/* Desktop Table */}
+      <div className="overflow-x-auto hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[250px]">{t('product')}</TableHead>
             <TableHead>{t('batch_number')}</TableHead>
             <TableHead>{t('expiry_date')}</TableHead>
             <TableHead className="text-center">{t('available_quantity')}</TableHead>
@@ -101,6 +101,72 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
         </TableBody>
       </Table>
     </div>
+
+    {/* Mobile Cards */}
+    <div className="md:hidden space-y-4">
+      {items.map((item) => {
+        const selectedSupply = availableSupplies.find(s => s.id === item.inventory_item_id);
+        const productDef = selectedSupply ? productDefs.find(p => p.id === selectedSupply.product_definition_id) : null;
+        const isExceeded = item.quantity && item.availableQuantity ? item.quantity > item.availableQuantity : false;
+
+        return (
+          <MobileSupplyItemCard
+            key={item.id}
+            itemId={item.id}
+            onScan={startScan}
+            onRemove={removeItem}
+            canRemove={items.length > 0}
+          >
+            <div className="space-y-4">
+              <Select
+                value={item.inventory_item_id}
+                onValueChange={(value) => handleItemChange(item.id, 'inventory_item_id', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('select_supply')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSupplies.map(supply => {
+                    const def = productDefs.find(p => p.id === supply.product_definition_id);
+                    return (
+                      <SelectItem key={supply.id} value={supply.id}>
+                        {def?.name || '...'} - {supply.variant} (Batch: {supply.batch_number})
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {selectedSupply && (
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">{t('batch_number')}</p>
+                    <p>{selectedSupply.batch_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">{t('expiry_date')}</p>
+                    <p>{format(new Date(selectedSupply.expiry_date), 'yyyy-MM-dd')}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">{t('available_quantity')}</p>
+                    <p><Badge variant="secondary">{selectedSupply.quantity}</Badge></p>
+                  </div>
+                </div>
+              )}
+              <Input
+                type="number"
+                min="1"
+                max={selectedSupply?.quantity || undefined}
+                value={item.quantity || ''}
+                onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                className={isExceeded ? "border-destructive" : ""}
+                placeholder={t('quantity')}
+              />
+            </div>
+          </MobileSupplyItemCard>
+        );
+      })}
+    </div>
+  </div>
   );
 };
 

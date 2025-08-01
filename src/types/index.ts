@@ -80,6 +80,7 @@ export interface DashboardStats {
   totalSupplies: number;
   expiringSupplies: number;
   expiredSupplies: number;
+  reorderPointItems: number; // Added for urgent actions
   typeCounts: Record<SupplyType, number>;
   manufacturerCounts: Record<string, number>;
 }
