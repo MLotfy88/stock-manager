@@ -43,33 +43,30 @@ const AdminPage = () => {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">{t('data_settings_nav')}</h1>
           
-          <Tabs defaultValue="definitions" className="w-full">
-            <div className="flex flex-col md:flex-row gap-6">
-              <TabsList className="grid w-full md:w-auto md:grid-cols-1 md:h-full">
-                <TabsTrigger value="definitions"><Tag className="mr-2 h-4 w-4" />{t('product_definitions_nav')}</TabsTrigger>
-                <TabsTrigger value="supplyTypes"><Shapes className="mr-2 h-4 w-4" />{t('supply_types_nav')}</TabsTrigger>
-                <TabsTrigger value="manufacturers"><Factory className="mr-2 h-4 w-4" />{t('manufacturers_nav')}</TabsTrigger>
-                <TabsTrigger value="suppliers"><Truck className="mr-2 h-4 w-4" />{t('suppliers_nav')}</TabsTrigger>
-                <TabsTrigger value="stores"><Warehouse className="mr-2 h-4 w-4" />{t('stores_nav')}</TabsTrigger>
-              </TabsList>
-              
-              <div className="flex-1 w-full mt-6 md:mt-0">
-                <TabsContent value="definitions">
-                  <ProductDefinitionsPageContent />
-                </TabsContent>
-                <TabsContent value="supplyTypes">
-                  <SupplyTypesManagementPageContent />
-                </TabsContent>
-                <TabsContent value="manufacturers">
-                  <ManufacturersPageContent />
-                </TabsContent>
-                <TabsContent value="suppliers">
-                  <SuppliersPageContent />
-                </TabsContent>
-                <TabsContent value="stores">
-                  <StoresPageContent />
-                </TabsContent>
-              </div>
+          <Tabs defaultValue="definitions" className="w-full" orientation={isMobile ? 'vertical' : 'horizontal'}>
+            <TabsList className="grid w-full md:grid-cols-5">
+              <TabsTrigger value="definitions"><Tag className="mr-2 h-4 w-4" />{t('product_definitions_nav')}</TabsTrigger>
+              <TabsTrigger value="supplyTypes"><Shapes className="mr-2 h-4 w-4" />{t('supply_types_nav')}</TabsTrigger>
+              <TabsTrigger value="manufacturers"><Factory className="mr-2 h-4 w-4" />{t('manufacturers_nav')}</TabsTrigger>
+              <TabsTrigger value="suppliers"><Truck className="mr-2 h-4 w-4" />{t('suppliers_nav')}</TabsTrigger>
+              <TabsTrigger value="stores"><Warehouse className="mr-2 h-4 w-4" />{t('stores_nav')}</TabsTrigger>
+            </TabsList>
+            <div className="mt-6">
+              <TabsContent value="definitions">
+                <ProductDefinitionsPageContent />
+              </TabsContent>
+              <TabsContent value="supplyTypes">
+                <SupplyTypesManagementPageContent />
+              </TabsContent>
+              <TabsContent value="manufacturers">
+                <ManufacturersPageContent />
+              </TabsContent>
+              <TabsContent value="suppliers">
+                <SuppliersPageContent />
+              </TabsContent>
+              <TabsContent value="stores">
+                <StoresPageContent />
+              </TabsContent>
             </div>
           </Tabs>
         </div>

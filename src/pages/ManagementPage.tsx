@@ -365,17 +365,15 @@ $$;
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">{t('management_settings_nav')}</h1>
           
-          <Tabs defaultValue="credentials" className="w-full">
-            <div className="flex flex-col md:flex-row gap-6">
-              <TabsList className="grid w-full md:w-auto md:grid-cols-1 md:h-full">
-                <TabsTrigger value="credentials"><UserCog className="mr-2 h-4 w-4" />{t('credentials')}</TabsTrigger>
-                <TabsTrigger value="supabase"><Database className="mr-2 h-4 w-4" />Supabase</TabsTrigger>
-              </TabsList>
-              
-              <div className="flex-1 w-full">
-                <TabsContent value="credentials" className="mt-6 md:mt-0">
-              <Card>
-                <CardHeader>
+          <Tabs defaultValue="credentials" className="w-full" orientation={isMobile ? 'vertical' : 'horizontal'}>
+            <TabsList className="grid w-full md:grid-cols-2">
+              <TabsTrigger value="credentials"><UserCog className="mr-2 h-4 w-4" />{t('credentials')}</TabsTrigger>
+              <TabsTrigger value="supabase"><Database className="mr-2 h-4 w-4" />Supabase</TabsTrigger>
+            </TabsList>
+            <div className="mt-6">
+              <TabsContent value="credentials">
+                <Card>
+                  <CardHeader>
                   <CardTitle>{t('change_credentials')}</CardTitle>
                   <CardDescription>
                     Update your admin username and password.
@@ -437,7 +435,7 @@ $$;
               </Card>
             </TabsContent>
             
-            <TabsContent value="supabase" className="mt-6 md:mt-0">
+            <TabsContent value="supabase">
               <Card>
                 <CardHeader>
                   <CardTitle>Supabase Integration</CardTitle>
@@ -511,7 +509,6 @@ $$;
                 </CardContent>
               </Card>
             </TabsContent>
-              </div>
             </div>
           </Tabs>
         </div>
