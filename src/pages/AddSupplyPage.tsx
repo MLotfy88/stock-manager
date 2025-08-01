@@ -22,7 +22,7 @@ import { getManufacturers } from '@/data/operations/manufacturerOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getStores } from '@/data/operations/storesOperations';
 import { addInventoryItems } from '@/data/operations/suppliesOperations';
-import { BrowserMultiFormatReader, NotFoundException, DecodeHintType } from '@zxing/library';
+import { BrowserBarcodeReader, NotFoundException, DecodeHintType, BarcodeFormat } from '@zxing/library';
 
 
 type PurchaseOrderItem = {
@@ -57,7 +57,20 @@ const AddInventoryPage = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
-  const codeReader = new BrowserMultiFormatReader(new Map([[DecodeHintType.TRY_HARDER, true]]));
+  
+  // --- Barcode Scanner Optimization ---
+  const hints = new Map();
+  const formats = [
+    BarcodeFormat.CODE_128, 
+    BarcodeFormat.EAN_13, 
+    BarcodeFormat.DATA_MATRIX,
+    BarcodeFormat.CODE_39,
+    BarcodeFormat.UPC_A,
+  ];
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
+  // Use BrowserBarcodeReader for 1D codes, which is faster.
+  const codeReader = new BrowserBarcodeReader();
+  // --- End Optimization ---
 
   // Form State
   const [supplierId, setSupplierId] = useState('');
@@ -98,6 +111,7 @@ const AddInventoryPage = () => {
     const constraints: MediaStreamConstraints = {
       video: {
         facingMode: 'environment',
+        height: { ideal: 1080 }, // Request higher resolution
         advanced: [{ focusMode: 'continuous' } as any]
       }
     };

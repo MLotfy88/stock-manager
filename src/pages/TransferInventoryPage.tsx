@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Store, ProductDefinition, InventoryItem } from '@/types';
 import { ArrowRightLeft, ScanBarcode, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { BrowserMultiFormatReader, NotFoundException, DecodeHintType } from '@zxing/library';
+import { BrowserBarcodeReader, NotFoundException, DecodeHintType, BarcodeFormat } from '@zxing/library';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getStores } from '@/data/operations/storesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
@@ -45,7 +45,19 @@ const TransferInventoryPage = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scannedItem, setScannedItem] = useState<InventoryItem | null>(null);
   const [scannedQuantity, setScannedQuantity] = useState('1');
-  const codeReader = new BrowserMultiFormatReader(new Map([[DecodeHintType.TRY_HARDER, true]]));
+
+  // --- Barcode Scanner Optimization ---
+  const hints = new Map();
+  const formats = [
+    BarcodeFormat.CODE_128, 
+    BarcodeFormat.EAN_13, 
+    BarcodeFormat.DATA_MATRIX,
+    BarcodeFormat.CODE_39,
+    BarcodeFormat.UPC_A,
+  ];
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
+  const codeReader = new BrowserBarcodeReader();
+  // --- End Optimization ---
 
   useEffect(() => {
     const loadData = async () => {
@@ -79,6 +91,7 @@ const TransferInventoryPage = () => {
     const constraints: MediaStreamConstraints = {
       video: {
         facingMode: 'environment',
+        height: { ideal: 1080 },
         advanced: [{ focusMode: 'continuous' } as any]
       }
     };
