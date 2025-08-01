@@ -194,4 +194,14 @@
   .data-table tbody tr {
     @apply hover:bg-muted/50 transition-colors;
   }
+
+  /* Responsive table styles */
+  @media (max-width: 768px) {
+    td[data-label]::before {
+      content: attr(data-label);
+      font-weight: 600;
+      margin-right: 0.5rem;
+      display: inline-block;
+    }
+  }
 }

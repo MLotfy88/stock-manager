@@ -100,8 +100,8 @@ const Index = () => {
             <DashboardStats />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            <div className="md:col-span-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="lg:col-span-8">
               <div className="content-card">
                 <SupplyList 
                   title={t('supplies_expiring_soon')} 
@@ -110,7 +110,7 @@ const Index = () => {
                 />
               </div>
             </div>
-            <div className="md:col-span-4">
+            <div className="lg:col-span-4">
               <div className="content-card h-full p-4">
                 <ExpiryCalendar />
               </div>

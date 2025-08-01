@@ -22,7 +22,7 @@ import { getManufacturers } from '@/data/operations/manufacturerOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getStores } from '@/data/operations/storesOperations';
 import { addInventoryItems } from '@/data/operations/suppliesOperations';
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
+import { BrowserMultiFormatReader, NotFoundException, DecodeHintType } from '@zxing/library';
 
 
 type PurchaseOrderItem = {
@@ -57,7 +57,7 @@ const AddInventoryPage = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
-  const codeReader = new BrowserMultiFormatReader();
+  const codeReader = new BrowserMultiFormatReader(new Map([[DecodeHintType.TRY_HARDER, true]]));
 
   // Form State
   const [supplierId, setSupplierId] = useState('');
@@ -94,7 +94,15 @@ const AddInventoryPage = () => {
   const startScan = (itemId: string) => {
     setActiveScannerId(itemId);
     setIsScanning(true);
-    codeReader.decodeFromVideoDevice(undefined, `video-scanner-${itemId}`, (result, err) => {
+
+    const constraints: MediaStreamConstraints = {
+      video: {
+        facingMode: 'environment',
+        advanced: [{ focusMode: 'continuous' } as any]
+      }
+    };
+    
+    codeReader.decodeFromConstraints(constraints, `video-scanner-${itemId}`, (result, err) => {
       if (result) {
         const scannedBarcode = result.getText();
         stopScan();
@@ -102,8 +110,7 @@ const AddInventoryPage = () => {
         toast({ title: "Barcode Scanned", description: `Barcode: ${scannedBarcode}` });
       }
       if (err && !(err instanceof NotFoundException)) {
-        console.error(err);
-        stopScan();
+        // This error happens constantly when no barcode is found, so we can ignore it.
       }
     });
   };
@@ -212,7 +219,7 @@ const AddInventoryPage = () => {
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="hidden md:table-header-group">
                       <TableRow>
                         <TableHead className="w-[150px]">{t('barcode')}</TableHead>
                         <TableHead>{t('product')}</TableHead>
@@ -229,8 +236,8 @@ const AddInventoryPage = () => {
                         const selectedDefinition = productDefinitions.find(def => def.id === item.productDefinitionId);
                         return (
                           <React.Fragment key={item.id}>
-                            <TableRow>
-                              <TableCell className="min-w-[200px]">
+                            <TableRow className="flex flex-col md:table-row mb-4 md:mb-0 border md:border-none rounded-lg md:rounded-none">
+                              <TableCell className="min-w-[200px] p-2 md:p-4" data-label={t('barcode')}>
                                 <div className="flex items-center gap-2">
                                   <Input
                                     value={item.barcode}
@@ -240,22 +247,22 @@ const AddInventoryPage = () => {
                                   <Button type="button" size="icon" variant="ghost" onClick={() => startScan(item.id)}><ScanBarcode className="h-5 w-5" /></Button>
                                 </div>
                               </TableCell>
-                              <TableCell className="min-w-[250px]">
+                              <TableCell className="min-w-[250px] p-2 md:p-4" data-label={t('product')}>
                                 <Select value={item.productDefinitionId} onValueChange={(val) => handleItemChange(item.id, 'productDefinitionId', val)}>
                                   <SelectTrigger><SelectValue placeholder={t('select_product')} /></SelectTrigger>
                                   <SelectContent>{productDefinitions.map((def) => <SelectItem key={def.id} value={def.id}>{def.name}</SelectItem>)}</SelectContent>
                                 </Select>
                               </TableCell>
-                              <TableCell className="min-w-[150px]">
+                              <TableCell className="min-w-[150px] p-2 md:p-4" data-label={t('variant')}>
                                 <Select value={item.variant} onValueChange={(val) => handleItemChange(item.id, 'variant', val)} disabled={!selectedDefinition}>
                                   <SelectTrigger><SelectValue placeholder={t('select_variant')} /></SelectTrigger>
                                   <SelectContent>{selectedDefinition?.variants.map((variant: any) => <SelectItem key={variant.name} value={variant.name}>{variant.name}</SelectItem>)}</SelectContent>
                                 </Select>
                               </TableCell>
-                              <TableCell className="min-w-[150px]">
+                              <TableCell className="min-w-[150px] p-2 md:p-4" data-label={t('batch_number')}>
                                 <Input value={item.batchNumber} onChange={(e) => handleItemChange(item.id, 'batchNumber', e.target.value)} />
                               </TableCell>
-                              <TableCell className="min-w-[200px]">
+                              <TableCell className="min-w-[200px] p-2 md:p-4" data-label={t('expiry_date')}>
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !item.expiryDate && "text-muted-foreground")}>
@@ -266,13 +273,13 @@ const AddInventoryPage = () => {
                                   <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={item.expiryDate} onSelect={(date) => handleItemChange(item.id, 'expiryDate', date)} initialFocus /></PopoverContent>
                                 </Popover>
                               </TableCell>
-                              <TableCell className="min-w-[100px]">
+                              <TableCell className="min-w-[100px] p-2 md:p-4" data-label={t('quantity')}>
                                 <Input type="number" min="1" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} />
                               </TableCell>
-                              <TableCell className="min-w-[120px]">
+                              <TableCell className="min-w-[120px] p-2 md:p-4" data-label={t('purchase_price')}>
                                 <Input type="number" min="0" step="0.01" value={item.purchasePrice} onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)} />
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="p-2 md:p-4 text-right">
                                 <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(item.id)} disabled={items.length <= 1}>
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>

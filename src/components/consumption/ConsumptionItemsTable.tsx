@@ -34,7 +34,7 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
   return (
     <div className="overflow-x-auto">
       <Table>
-        <TableHeader>
+        <TableHeader className="hidden md:table-header-group">
           <TableRow>
             <TableHead className="w-[250px]">{t('product')}</TableHead>
             <TableHead>{t('batch_number')}</TableHead>
@@ -51,8 +51,8 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
             const isExceeded = item.quantity && item.availableQuantity ? item.quantity > item.availableQuantity : false;
 
             return (
-              <TableRow key={item.id}>
-                <TableCell className="min-w-[300px]">
+              <TableRow key={item.id} className="flex flex-col md:table-row mb-4 md:mb-0 border md:border-none rounded-lg md:rounded-none">
+                <TableCell className="min-w-[300px] p-2 md:p-4" data-label={t('product')}>
                   <div className="flex items-center gap-2">
                     <Select
                       value={item.inventory_item_id}
@@ -75,12 +75,12 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
                      <Button type="button" size="icon" variant="ghost" onClick={() => startScan(item.id)}><ScanBarcode className="h-5 w-5" /></Button>
                   </div>
                 </TableCell>
-                <TableCell>{selectedSupply?.batch_number || '-'}</TableCell>
-                <TableCell>{selectedSupply ? format(new Date(selectedSupply.expiry_date), 'yyyy-MM-dd') : '-'}</TableCell>
-                <TableCell className="text-center">
+                <TableCell className="p-2 md:p-4" data-label={t('batch_number')}>{selectedSupply?.batch_number || '-'}</TableCell>
+                <TableCell className="p-2 md:p-4" data-label={t('expiry_date')}>{selectedSupply ? format(new Date(selectedSupply.expiry_date), 'yyyy-MM-dd') : '-'}</TableCell>
+                <TableCell className="text-center p-2 md:p-4" data-label={t('available_quantity')}>
                   {selectedSupply && <Badge variant="secondary">{selectedSupply.quantity}</Badge>}
                 </TableCell>
-                <TableCell>
+                <TableCell className="p-2 md:p-4" data-label={t('quantity')}>
                   <Input
                     type="number"
                     min="1"
@@ -90,7 +90,7 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
                     className={isExceeded ? "border-destructive" : ""}
                   />
                 </TableCell>
-                <TableCell>
+                <TableCell className="p-2 md:p-4 text-right">
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(item.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

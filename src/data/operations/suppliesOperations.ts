@@ -22,6 +22,29 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
 };
 
 /**
+ * Transfer a quantity of an item from one store to another.
+ * This will be handled by an RPC call to ensure atomicity.
+ */
+export const transferInventoryItems = async (
+  items: { itemId: string; quantity: number; fromStoreId: string; toStoreId: string }[]
+): Promise<{ success: boolean; error?: any }> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
+  // The RPC function 'transfer_inventory' will handle the logic on the database side.
+  const { error } = await supabase.rpc('transfer_inventory', {
+    items_to_transfer: items,
+  });
+
+  if (error) {
+    console.error('Error transferring inventory:', error);
+    return { success: false, error };
+  }
+
+  return { success: true };
+};
+
+/**
  * Get a single inventory item by ID with its dynamic status
  */
 export const getInventoryItemById = async (itemId: string): Promise<InventoryItem | null> => {

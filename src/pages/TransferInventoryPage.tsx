@@ -11,44 +11,59 @@ import { Label } from '@/components/ui/label';
 import { Store, ProductDefinition, InventoryItem } from '@/types';
 import { ArrowRightLeft, ScanBarcode, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
+import { BrowserMultiFormatReader, NotFoundException, DecodeHintType } from '@zxing/library';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
-// MOCK DATA
-const MOCK_STORES: Store[] = [
-    { id: '1', name: 'Main Store' },
-    { id: '2', name: 'Cath Lab 1' },
-];
-const MOCK_PRODUCT_DEFINITIONS: ProductDefinition[] = [
-  { id: '1', name: 'Diagnostic Catheter', typeId: 'catheter', barcode: '111', variantLabel: 'Curve', variants: ['L3.5', 'L4', 'R3.5', 'R4'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: '2', name: 'Balloons', typeId: 'consumable', barcode: '222', variantLabel: 'Size', variants: ['2.5x10', '2.5x15', '3.0x10'], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-];
-const MOCK_INVENTORY: InventoryItem[] = [
-    { id: 'inv1', productDefinitionId: '1', variant: 'L3.5', quantity: 10, storeId: '1', manufacturerId: '1', batchNumber: 'B1', expiryDate: '2025-12-31', status: 'valid', createdAt: '', updatedAt: '' },
-    { id: 'inv2', productDefinitionId: '2', variant: '2.5x10', quantity: 5, storeId: '1', manufacturerId: '2', batchNumber: 'B2', expiryDate: '2026-01-31', status: 'valid', createdAt: '', updatedAt: '' },
-    { id: 'inv3', productDefinitionId: '1', variant: 'L4', quantity: 8, storeId: '2', manufacturerId: '1', batchNumber: 'B3', expiryDate: '2025-11-30', status: 'valid', createdAt: '', updatedAt: '' },
-];
-// END MOCK DATA
+import { getStores } from '@/data/operations/storesOperations';
+import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
+import { getInventoryItems, transferInventoryItems } from '@/data/operations/suppliesOperations';
 
 interface TransferItem extends InventoryItem {
     transferQuantity: number;
 }
 
 const TransferInventoryPage = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
   const { toast } = useToast();
 
-  const [stores, setStores] = useState<Store[]>(MOCK_STORES);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  const [stores, setStores] = useState<Store[]>([]);
+  const [productDefinitions, setProductDefinitions] = useState<ProductDefinition[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [fromStoreId, setFromStoreId] = useState<string>('');
   const [toStoreId, setToStoreId] = useState<string>('');
   const [transferList, setTransferList] = useState<TransferItem[]>([]);
   
-  // Scanner State
   const [isScanning, setIsScanning] = useState(false);
   const [scannedItem, setScannedItem] = useState<InventoryItem | null>(null);
   const [scannedQuantity, setScannedQuantity] = useState('1');
-  const codeReader = new BrowserMultiFormatReader();
+  const codeReader = new BrowserMultiFormatReader(new Map([[DecodeHintType.TRY_HARDER, true]]));
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [storesData, productsData, inventoryData] = await Promise.all([
+          getStores(),
+          getProductDefinitions(),
+          getInventoryItems()
+        ]);
+        setStores(storesData);
+        setProductDefinitions(productsData);
+        setInventory(inventoryData);
+      } catch (error) {
+        toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
+      }
+    };
+    loadData();
+  }, [toast, t]);
 
   const handleScan = () => {
     if (!fromStoreId || !toStoreId) {
@@ -60,26 +75,28 @@ const TransferInventoryPage = () => {
       return;
     }
     setIsScanning(true);
-    codeReader.decodeFromVideoDevice(undefined, 'video-scanner-transfer', (result, err) => {
+    
+    const constraints: MediaStreamConstraints = {
+      video: {
+        facingMode: 'environment',
+        advanced: [{ focusMode: 'continuous' } as any]
+      }
+    };
+
+    codeReader.decodeFromConstraints(constraints, 'video-scanner-transfer', (result, err) => {
       if (result) {
         const scannedBarcode = result.getText();
         stopScan();
-        const productDef = MOCK_PRODUCT_DEFINITIONS.find(p => p.barcode === scannedBarcode);
-        if (productDef) {
-            const itemsInStore = MOCK_INVENTORY.filter(i => i.productDefinitionId === productDef.id && i.storeId === fromStoreId);
-            if (itemsInStore.length > 0) {
-                // For simplicity, we take the first available batch. A real scenario might let the user choose.
-                setScannedItem(itemsInStore[0]);
-            } else {
-                toast({ title: t('not_found'), description: t('item_not_in_source_store'), variant: 'destructive' });
-            }
+        const itemInStore = inventory.find(i => i.barcode === scannedBarcode && i.store_id === fromStoreId);
+        
+        if (itemInStore) {
+            setScannedItem(itemInStore);
         } else {
-          toast({ title: t('not_found'), description: `No product with barcode: ${scannedBarcode}`, variant: 'destructive' });
+            toast({ title: t('not_found'), description: t('item_not_in_source_store'), variant: 'destructive' });
         }
       }
       if (err && !(err instanceof NotFoundException)) {
-        console.error(err);
-        stopScan();
+        // Ignore not found errors
       }
     });
   };
@@ -92,17 +109,15 @@ const TransferInventoryPage = () => {
   const handleConfirmScan = () => {
     if (!scannedItem) return;
     const quantity = parseInt(scannedQuantity);
-    if (quantity > scannedItem.quantity) {
-        toast({ title: t('error'), description: t('insufficient_quantity'), variant: 'destructive' });
+    if (isNaN(quantity) || quantity <= 0 || quantity > scannedItem.quantity) {
+        toast({ title: t('error'), description: t('invalid_or_insufficient_quantity'), variant: 'destructive' });
         return;
     }
     
     const existingItem = transferList.find(item => item.id === scannedItem.id);
     if (existingItem) {
-        // Update quantity if item is already in the list
         setTransferList(transferList.map(item => item.id === scannedItem.id ? { ...item, transferQuantity: item.transferQuantity + quantity } : item));
     } else {
-        // Add new item to the list
         setTransferList([...transferList, { ...scannedItem, transferQuantity: quantity }]);
     }
 
@@ -114,21 +129,41 @@ const TransferInventoryPage = () => {
     setTransferList(transferList.filter(item => item.id !== itemId));
   };
 
-  const handleConfirmTransfer = () => {
+  const handleConfirmTransfer = async () => {
     if (transferList.length === 0) return;
-    // In a real app, this would trigger a Supabase transaction
-    console.log("Transferring items:", transferList, "From:", fromStoreId, "To:", toStoreId);
-    toast({ title: t('success'), description: t('transfer_successful') });
-    setTransferList([]);
-    setFromStoreId('');
-    setToStoreId('');
+    try {
+      const itemsToTransfer = transferList.map(item => ({
+        itemId: item.id,
+        quantity: item.transferQuantity,
+        fromStoreId: fromStoreId,
+        toStoreId: toStoreId,
+      }));
+      
+      await transferInventoryItems(itemsToTransfer);
+
+      toast({ title: t('success'), description: t('transfer_successful') });
+      
+      // Refresh data
+      const updatedInventory = await getInventoryItems();
+      setInventory(updatedInventory);
+
+      setTransferList([]);
+      setFromStoreId('');
+      setToStoreId('');
+    } catch (error) {
+      toast({ title: t('error'), description: t('transfer_failed'), variant: 'destructive' });
+    }
   };
 
   return (
     <div className="page-container bg-background" dir={direction}>
-      <Header />
-      <Sidebar />
-      <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
+      <Header toggleSidebar={toggleSidebar} />
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
+      <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all pt-20`}>
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">{t('transfer_inventory')}</h1>
           <Card>
@@ -151,7 +186,7 @@ const TransferInventoryPage = () => {
                 </Select>
               </div>
               <div className="text-center">
-                <Button onClick={handleScan} disabled={isScanning}>
+                <Button onClick={handleScan} disabled={isScanning || !fromStoreId || !toStoreId}>
                   <ScanBarcode className="mr-2 h-5 w-5" />
                   {isScanning ? t('scanning') : t('start_scanning')}
                 </Button>
@@ -166,7 +201,7 @@ const TransferInventoryPage = () => {
                 <h3 className="text-lg font-medium mb-2">{t('items_to_transfer')}</h3>
                 <div className="border rounded-md">
                   <table className="w-full">
-                    <thead>
+                    <thead className="bg-muted/50">
                       <tr className="border-b">
                         <th className="p-2 text-left">{t('product')}</th>
                         <th className="p-2 text-left">{t('variant')}</th>
@@ -175,18 +210,22 @@ const TransferInventoryPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {transferList.map(item => (
-                        <tr key={item.id} className="border-b">
-                          <td className="p-2">{MOCK_PRODUCT_DEFINITIONS.find(p => p.id === item.productDefinitionId)?.name}</td>
-                          <td className="p-2">{item.variant}</td>
-                          <td className="p-2 text-center">{item.transferQuantity}</td>
-                          <td className="p-2 text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
+                      {transferList.length === 0 ? (
+                        <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">{t('no_items_added')}</td></tr>
+                      ) : (
+                        transferList.map(item => (
+                          <tr key={item.id} className="border-b">
+                            <td className="p-2">{productDefinitions.find(p => p.id === item.product_definition_id)?.name}</td>
+                            <td className="p-2">{item.variant}</td>
+                            <td className="p-2 text-center">{item.transferQuantity}</td>
+                            <td className="p-2 text-right">
+                              <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -203,9 +242,9 @@ const TransferInventoryPage = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>{t('confirm_item_quantity')}</DialogTitle></DialogHeader>
           <div className="py-4 space-y-4">
-            <p><strong>{t('product')}:</strong> {MOCK_PRODUCT_DEFINITIONS.find(p => p.id === scannedItem?.productDefinitionId)?.name}</p>
+            <p><strong>{t('product')}:</strong> {productDefinitions.find(p => p.id === scannedItem?.product_definition_id)?.name}</p>
             <p><strong>{t('variant')}:</strong> {scannedItem?.variant}</p>
-            <p><strong>{t('batch_number')}:</strong> {scannedItem?.batchNumber}</p>
+            <p><strong>{t('batch_number')}:</strong> {scannedItem?.batch_number}</p>
             <p><strong>{t('available_quantity')}:</strong> {scannedItem?.quantity}</p>
             <div className="space-y-2">
               <Label htmlFor="transfer-quantity">{t('quantity_to_transfer')}</Label>

@@ -7,7 +7,7 @@ import { Plus, ScanBarcode } from 'lucide-react';
 import { ConsumptionRecord, ConsumptionItem, InventoryItem, ProductDefinition, Store } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
+import { BrowserMultiFormatReader, NotFoundException, DecodeHintType } from '@zxing/library';
 import { addConsumptionRecord } from '@/data/operations/consumptionOperations';
 import { getInventoryItems } from '@/data/operations/suppliesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
@@ -38,7 +38,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
   
   const [isScanning, setIsScanning] = useState(false);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
-  const codeReader = new BrowserMultiFormatReader();
+  const codeReader = new BrowserMultiFormatReader(new Map([[DecodeHintType.TRY_HARDER, true]]));
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,7 +85,15 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     }
     setActiveScannerId(itemId);
     setIsScanning(true);
-    codeReader.decodeFromVideoDevice(undefined, `video-scanner-${itemId}`, (result, err) => {
+
+    const constraints: MediaStreamConstraints = {
+      video: {
+        facingMode: 'environment',
+        advanced: [{ focusMode: 'continuous' } as any]
+      }
+    };
+
+    codeReader.decodeFromConstraints(constraints, `video-scanner-${itemId}`, (result, err) => {
       if (result) {
         const scannedBarcode = result.getText();
         stopScan();
@@ -98,8 +106,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
         }
       }
       if (err && !(err instanceof NotFoundException)) {
-        console.error(err);
-        stopScan();
+        // This error happens constantly when no barcode is found, so we can ignore it.
       }
     });
   };

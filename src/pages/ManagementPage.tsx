@@ -365,13 +365,15 @@ $$;
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">{t('management_settings_nav')}</h1>
           
-          <Tabs defaultValue="credentials" className="w-full" orientation={isMobile ? 'vertical' : 'horizontal'}>
-            <TabsList className="grid w-full md:grid-cols-2">
-              <TabsTrigger value="credentials"><UserCog className="mr-2 h-4 w-4" />{t('credentials')}</TabsTrigger>
-              <TabsTrigger value="supabase"><Database className="mr-2 h-4 w-4" />Supabase</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="credentials">
+          <Tabs defaultValue="credentials" className="w-full">
+            <div className="md:flex md:space-x-4">
+              <TabsList className="grid w-full md:w-auto md:grid-cols-1 md:h-full">
+                <TabsTrigger value="credentials"><UserCog className="mr-2 h-4 w-4" />{t('credentials')}</TabsTrigger>
+                <TabsTrigger value="supabase"><Database className="mr-2 h-4 w-4" />Supabase</TabsTrigger>
+              </TabsList>
+              
+              <div className="flex-1 mt-4 md:mt-0">
+                <TabsContent value="credentials">
               <Card>
                 <CardHeader>
                   <CardTitle>{t('change_credentials')}</CardTitle>
@@ -509,6 +511,8 @@ $$;
                 </CardContent>
               </Card>
             </TabsContent>
+              </div>
+            </div>
           </Tabs>
         </div>
       </main>

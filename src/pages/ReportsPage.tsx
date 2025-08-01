@@ -124,7 +124,7 @@ const ReportsPage = () => {
               <CardDescription>{t('select_report_options')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="report-type">{t('report_type')}</Label>
                   <Select value={reportType} onValueChange={setReportType}>
@@ -275,31 +275,31 @@ const ReportsPage = () => {
                 <CardContent>
                   <div className="rounded-md border">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-100">
-                          <tr>
-                            <th className="whitespace-nowrap px-4 py-3 text-left font-medium">{t('name')}</th>
-                            <th className="whitespace-nowrap px-4 py-3 text-left font-medium">{t('type')}</th>
+                      <Table>
+                        <TableHeader className="hidden md:table-header-group">
+                          <TableRow>
+                            <TableHead>{t('name')}</TableHead>
+                            <TableHead>{t('type')}</TableHead>
                             <th className="whitespace-nowrap px-4 py-3 text-left font-medium">{t('batch_number')}</th>
                             <th className="whitespace-nowrap px-4 py-3 text-left font-medium">{t('manufacturer')}</th>
                             <th className="whitespace-nowrap px-4 py-3 text-left font-medium">{t('expiry_date')}</th>
-                            <th className="whitespace-nowrap px-4 py-3 text-left font-medium">{t('status')}</th>
-                            <th className="whitespace-nowrap px-4 py-3 text-left font-medium">{t('quantity')}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
+                            <TableHead>{t('status')}</TableHead>
+                            <TableHead>{t('quantity')}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {isLoading ? (
                             <TableRow><TableCell colSpan={7} className="text-center py-10">{t('loading')}</TableCell></TableRow>
                           ) : inventory.slice(0, 10).map((item) => {
                             const def = productDefs.find(d => d.id === item.product_definition_id);
                             return (
-                              <TableRow key={item.id} className="hover:bg-gray-50">
-                                <TableCell className="whitespace-nowrap px-4 py-3">{def?.name || 'N/A'}</TableCell>
-                                <TableCell className="whitespace-nowrap px-4 py-3">{item.variant}</TableCell>
-                                <TableCell className="whitespace-nowrap px-4 py-3">{item.batch_number}</TableCell>
-                                <TableCell className="whitespace-nowrap px-4 py-3">{/* Manufacturer missing */}</TableCell>
-                                <TableCell className="whitespace-nowrap px-4 py-3">{new Date(item.expiry_date).toLocaleDateString()}</TableCell>
-                                <TableCell className="whitespace-nowrap px-4 py-3">
+                              <TableRow key={item.id} className="flex flex-col md:table-row mb-4 md:mb-0 border md:border-none rounded-lg md:rounded-none">
+                                <TableCell className="p-2 md:p-4" data-label={t('name')}>{def?.name || 'N/A'}</TableCell>
+                                <TableCell className="p-2 md:p-4" data-label={t('type')}>{item.variant}</TableCell>
+                                <TableCell className="p-2 md:p-4" data-label={t('batch_number')}>{item.batch_number}</TableCell>
+                                <TableCell className="p-2 md:p-4" data-label={t('manufacturer')}>{/* Manufacturer missing */}</TableCell>
+                                <TableCell className="p-2 md:p-4" data-label={t('expiry_date')}>{new Date(item.expiry_date).toLocaleDateString()}</TableCell>
+                                <TableCell className="p-2 md:p-4" data-label={t('status')}>
                                   <Badge 
                                     variant={item.status === 'valid' ? 'outline' : 
                                           item.status === 'expiring_soon' ? 'outline' : 'destructive'}
@@ -309,12 +309,12 @@ const ReportsPage = () => {
                                     {t(`${item.status}_status`)}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap px-4 py-3">{item.quantity}</TableCell>
+                                <TableCell className="p-2 md:p-4" data-label={t('quantity')}>{item.quantity}</TableCell>
                               </TableRow>
                             );
                           })}
-                        </tbody>
-                      </table>
+                        </TableBody>
+                      </Table>
                     </div>
                   </div>
                 </CardContent>
