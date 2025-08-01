@@ -1,120 +1,98 @@
-
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Plus, Trash2 } from 'lucide-react';
+import { Trash2, ScanBarcode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from '@/components/ui/table';
-import { 
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
-} from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ConsumptionItem, MedicalSupply } from '@/types';
+import { ConsumptionItem, InventoryItem, ProductDefinition } from '@/types';
+import { format } from 'date-fns';
 
 interface ConsumptionItemsTableProps {
-  items: ConsumptionItem[];
-  addItem: () => void;
+  items: (Partial<ConsumptionItem> & { id: string; availableQuantity?: number })[];
+  handleItemChange: (itemId: string, field: keyof ConsumptionItem, value: any) => void;
   removeItem: (itemId: string) => void;
-  updateItem: (itemId: string, field: keyof ConsumptionItem, value: any) => void;
-  availableSupplies: MedicalSupply[];
+  startScan: (itemId: string) => void;
+  availableSupplies: InventoryItem[];
+  productDefs: ProductDefinition[];
+  isScanning: boolean;
+  activeScannerId: string | null;
+  stopScan: () => void;
 }
 
-const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({ 
-  items, 
-  addItem, 
-  removeItem, 
-  updateItem,
-  availableSupplies
+const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
+  items,
+  handleItemChange,
+  removeItem,
+  startScan,
+  availableSupplies,
+  productDefs,
 }) => {
   const { t } = useLanguage();
 
-  if (items.length === 0) {
-    return (
-      <div className="text-center py-8 bg-muted/20 border border-dashed rounded-md">
-        <p className="text-muted-foreground">{t('no_items_added')}</p>
-        <Button 
-          type="button" 
-          variant="ghost" 
-          size="sm" 
-          className="mt-2"
-          onClick={addItem}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          {t('add_item')}
-        </Button>
-      </div>
-    );
-  }
-  
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('supply')}</TableHead>
-            <TableHead className="w-20">{t('quantity')}</TableHead>
-            <TableHead className="w-40">{t('available')}</TableHead>
-            <TableHead className="w-32">{t('actions')}</TableHead>
+            <TableHead className="w-[250px]">{t('product')}</TableHead>
+            <TableHead>{t('batch_number')}</TableHead>
+            <TableHead>{t('expiry_date')}</TableHead>
+            <TableHead className="text-center">{t('available_quantity')}</TableHead>
+            <TableHead className="w-[100px]">{t('quantity')}</TableHead>
+            <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.map((item) => {
-            const selectedSupply = availableSupplies.find(s => s.id === item.supplyId);
-            const isExceeded = selectedSupply ? item.quantity > selectedSupply.quantity : false;
-            
+            const selectedSupply = availableSupplies.find(s => s.id === item.inventory_item_id);
+            const productDef = selectedSupply ? productDefs.find(p => p.id === selectedSupply.product_definition_id) : null;
+            const isExceeded = item.quantity && item.availableQuantity ? item.quantity > item.availableQuantity : false;
+
             return (
               <TableRow key={item.id}>
-                <TableCell>
-                  <Select value={item.supplyId} onValueChange={(value) => updateItem(item.id, 'supplyId', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('select_supply')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSupplies.map(supply => (
-                        <SelectItem key={supply.id} value={supply.id}>
-                          {supply.name} ({supply.quantity} {t('available')})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <TableCell className="min-w-[300px]">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={item.inventory_item_id}
+                      onValueChange={(value) => handleItemChange(item.id, 'inventory_item_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('select_supply')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSupplies.map(supply => {
+                          const def = productDefs.find(p => p.id === supply.product_definition_id);
+                          return (
+                            <SelectItem key={supply.id} value={supply.id}>
+                              {def?.name || '...'} - {supply.variant} (Batch: {supply.batch_number})
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                     <Button type="button" size="icon" variant="ghost" onClick={() => startScan(item.id)}><ScanBarcode className="h-5 w-5" /></Button>
+                  </div>
+                </TableCell>
+                <TableCell>{selectedSupply?.batch_number || '-'}</TableCell>
+                <TableCell>{selectedSupply ? format(new Date(selectedSupply.expiry_date), 'yyyy-MM-dd') : '-'}</TableCell>
+                <TableCell className="text-center">
+                  {selectedSupply && <Badge variant="secondary">{selectedSupply.quantity}</Badge>}
                 </TableCell>
                 <TableCell>
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     min="1"
-                    max={selectedSupply?.quantity || 999}
-                    value={item.quantity} 
-                    onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                    className={isExceeded ? "border-red-500" : ""}
+                    max={selectedSupply?.quantity || undefined}
+                    value={item.quantity || ''}
+                    onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                    className={isExceeded ? "border-destructive" : ""}
                   />
                 </TableCell>
                 <TableCell>
-                  {selectedSupply ? (
-                    <div className="flex items-center">
-                      <Badge variant={isExceeded ? "destructive" : "secondary"}>
-                        {selectedSupply.quantity} {t('units')}
-                      </Badge>
-                      {isExceeded && (
-                        <span className="text-destructive text-xs ml-2">
-                          {t('exceeds_available')}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => removeItem(item.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(item.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </TableCell>
               </TableRow>

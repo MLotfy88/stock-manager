@@ -11,10 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { Factory, Truck, Warehouse, Tag } from 'lucide-react';
-import ManufacturersPage from './ManufacturersPage';
-import SuppliersPage from './SuppliersPage';
-import StoresPage from './StoresPage';
-import ProductDefinitionsPage from './SupplyTypesPage';
+import { ManufacturersPageContent } from './ManufacturersPage';
+import { SuppliersPageContent } from './SuppliersPage';
+import { StoresPageContent } from './StoresPage';
+import { ProductDefinitionsPageContent } from './SupplyTypesPage';
 
 const AdminPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -43,7 +43,7 @@ const AdminPage = () => {
           <h1 className="text-2xl font-bold mb-6">{t('data_settings_nav')}</h1>
           
           <Tabs defaultValue="definitions" className="w-full" orientation={isMobile ? 'vertical' : 'horizontal'}>
-            <TabsList className="grid w-full md:grid-cols-4">
+            <TabsList className={`grid w-full ${isMobile ? 'grid-cols-1' : 'grid-cols-4'}`}>
               <TabsTrigger value="definitions"><Tag className="mr-2 h-4 w-4" />{t('product_definitions_nav')}</TabsTrigger>
               <TabsTrigger value="manufacturers"><Factory className="mr-2 h-4 w-4" />{t('manufacturers_nav')}</TabsTrigger>
               <TabsTrigger value="suppliers"><Truck className="mr-2 h-4 w-4" />{t('suppliers_nav')}</TabsTrigger>
@@ -51,18 +51,17 @@ const AdminPage = () => {
             </TabsList>
             
             <TabsContent value="definitions" className="mt-4">
-              <ProductDefinitionsPage />
+              <ProductDefinitionsPageContent />
             </TabsContent>
             <TabsContent value="manufacturers" className="mt-4">
-              <ManufacturersPage />
+              <ManufacturersPageContent />
             </TabsContent>
             <TabsContent value="suppliers" className="mt-4">
-              <SuppliersPage />
+              <SuppliersPageContent />
             </TabsContent>
             <TabsContent value="stores" className="mt-4">
-              <StoresPage />
+              <StoresPageContent />
             </TabsContent>
-            
           </Tabs>
         </div>
       </main>

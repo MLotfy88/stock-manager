@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
-import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,40 +17,26 @@ import {
   deleteManufacturer 
 } from '@/data/operations/manufacturerOperations';
 
-const ManufacturersPage = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const { t, direction } = useLanguage();
+export const ManufacturersPageContent = () => {
+  const { t } = useLanguage();
   const { toast } = useToast();
   
   const [manufacturersList, setManufacturersList] = useState<Manufacturer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentManufacturer, setCurrentManufacturer] = useState<Manufacturer | null>(null);
-  const [newManufacturerName, setNewManufacturerName] = useState('');
-  const [newAlertPeriod, setNewAlertPeriod] = useState<string>('30');
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
-  const closeSidebar = () => {
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
-  };
   
+  const [name, setName] = useState('');
+  const [alertPeriod, setAlertPeriod] = useState('30');
+
   const loadManufacturers = async () => {
     setIsLoading(true);
     try {
       const manufacturers = await getManufacturers();
       setManufacturersList(manufacturers);
     } catch (error) {
-      toast({
-        title: t('error'),
-        description: t('error_fetching_data'),
-        variant: 'destructive'
-      });
+      toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -62,238 +45,141 @@ const ManufacturersPage = () => {
   useEffect(() => {
     loadManufacturers();
   }, []);
-  
-  const handleAddManufacturer = async () => {
-    if (!newManufacturerName.trim()) return;
-    
-    try {
-      await addManufacturer({
-        name: newManufacturerName,
-        alert_period: parseInt(newAlertPeriod) || 30,
-        logo: '/placeholder.svg'
-      });
-      
-      loadManufacturers();
-      setNewManufacturerName('');
-      setNewAlertPeriod('30');
-      setIsAddDialogOpen(false);
-      
-      toast({
-        title: t('success'),
-        description: t('item_added'),
-      });
-    } catch (error) {
-      toast({
-        title: t('error'),
-        description: t('error_adding_item'),
-        variant: 'destructive'
-      });
+
+  const resetForm = () => {
+    setName('');
+    setAlertPeriod('30');
+    setCurrentManufacturer(null);
+  };
+
+  const openDialog = (manufacturer: Manufacturer | null = null) => {
+    if (manufacturer) {
+      setCurrentManufacturer(manufacturer);
+      setName(manufacturer.name);
+      setAlertPeriod(String(manufacturer.alert_period));
+    } else {
+      resetForm();
     }
+    setIsDialogOpen(true);
   };
   
-  const handleEditManufacturer = async () => {
-    if (!currentManufacturer || !newManufacturerName.trim()) return;
+  const handleSubmit = async () => {
+    if (!name.trim()) return;
     
     try {
-      await updateManufacturer(currentManufacturer.id, {
-        name: newManufacturerName,
-        alert_period: parseInt(newAlertPeriod) || 30
-      });
-      
-      loadManufacturers();
-      setIsEditDialogOpen(false);
-      
-      toast({
-        title: t('success'),
-        description: t('item_updated'),
-      });
-    } catch (error) {
-      toast({
-        title: t('error'),
-        description: t('error_updating_item'),
-        variant: 'destructive'
-      });
-    }
-  };
-  
-  const handleDeleteManufacturer = async () => {
-    if (!currentManufacturer) return;
-    
-    try {
-      const result = await deleteManufacturer(currentManufacturer.id);
-      
-      if (result.success) {
-        loadManufacturers();
-        setIsDeleteDialogOpen(false);
-        
-        toast({
-          title: t('success'),
-          description: t('item_deleted'),
-        });
+      const manufacturerData = {
+        name,
+        alert_period: parseInt(alertPeriod) || 30,
+      };
+
+      if (currentManufacturer) {
+        await updateManufacturer(currentManufacturer.id, manufacturerData);
+        toast({ title: t('success'), description: t('item_updated') });
       } else {
-        toast({
-          title: t('error'),
-          description: t(result.error || 'error_deleting_item'),
-          variant: 'destructive'
-        });
+        await addManufacturer(manufacturerData as any);
+        toast({ title: t('success'), description: t('item_added') });
       }
+      
+      loadManufacturers();
+      setIsDialogOpen(false);
+      resetForm();
     } catch (error) {
-      toast({
-        title: t('error'),
-        description: t('error_deleting_item'),
-        variant: 'destructive'
-      });
+      toast({ title: t('error'), description: t('error_processing_item'), variant: 'destructive' });
     }
-  };
-  
-  const openEditDialog = (manufacturer: Manufacturer) => {
-    setCurrentManufacturer(manufacturer);
-    setNewManufacturerName(manufacturer.name);
-    setNewAlertPeriod(String(manufacturer.alert_period));
-    setIsEditDialogOpen(true);
   };
   
   const openDeleteDialog = (manufacturer: Manufacturer) => {
     setCurrentManufacturer(manufacturer);
     setIsDeleteDialogOpen(true);
   };
+
+  const handleDelete = async () => {
+    if (!currentManufacturer) return;
+    
+    try {
+      const result = await deleteManufacturer(currentManufacturer.id);
+      if (result.success) {
+        loadManufacturers();
+        toast({ title: t('success'), description: t('item_deleted') });
+      } else {
+        toast({ title: t('error'), description: t(result.error || 'error_deleting_item'), variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: t('error'), description: t('error_deleting_item'), variant: 'destructive' });
+    } finally {
+      setIsDeleteDialogOpen(false);
+    }
+  };
   
   return (
-    <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
-      <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
-        toggleSidebar={toggleSidebar}
-        closeSidebar={closeSidebar}
-      />
-      
-      <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">{t('manufacturers_nav')}</h1>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('add_manufacturer')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t('add_manufacturer')}</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">{t('manufacturer_name')}</Label>
-                    <Input 
-                      id="name" 
-                      value={newManufacturerName} 
-                      onChange={(e) => setNewManufacturerName(e.target.value)} 
-                      className="col-span-3" 
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="alertPeriod" className="text-right">{t('manufacturer_alert_period')}</Label>
-                    <Input 
-                      id="alertPeriod" 
-                      type="number"
-                      min="1"
-                      max="365"
-                      value={newAlertPeriod} 
-                      onChange={(e) => setNewAlertPeriod(e.target.value)} 
-                      className="col-span-3" 
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline">{t('cancel')}</Button>
-                  </DialogClose>
-                  <Button onClick={handleAddManufacturer}>{t('save')}</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-          
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('manufacturer_name')}</TableHead>
-                    <TableHead>{t('manufacturer_alert_period')}</TableHead>
-                    <TableHead className="text-right">{t('actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow><TableCell colSpan={3} className="text-center">{t('loading')}</TableCell></TableRow>
-                  ) : manufacturersList.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} className="text-center">{t('no_data')}</TableCell></TableRow>
-                  ) : (
-                    manufacturersList.map((manufacturer) => (
-                      <TableRow key={manufacturer.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center">
-                            <Building2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                            {manufacturer.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>{manufacturer.alert_period} {t('days')}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(manufacturer)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(manufacturer)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-      
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('edit_manufacturer')}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-name" className="text-right">{t('manufacturer_name')}</Label>
-              <Input 
-                id="edit-name" 
-                value={newManufacturerName} 
-                onChange={(e) => setNewManufacturerName(e.target.value)} 
-                className="col-span-3" 
-              />
+    <div>
+      <div className="flex justify-end items-center mb-6">
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => openDialog()}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('add_manufacturer')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{currentManufacturer ? t('edit_manufacturer') : t('add_manufacturer')}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">{t('manufacturer_name')}</Label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="alertPeriod">{t('manufacturer_alert_period')}</Label>
+                <Input id="alertPeriod" type="number" min="1" max="365" value={alertPeriod} onChange={(e) => setAlertPeriod(e.target.value)} />
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-alertPeriod" className="text-right">{t('manufacturer_alert_period')}</Label>
-              <Input 
-                id="edit-alertPeriod" 
-                type="number"
-                min="1"
-                max="365"
-                value={newAlertPeriod} 
-                onChange={(e) => setNewAlertPeriod(e.target.value)} 
-                className="col-span-3" 
-              />
-            </div>
+            <DialogFooter>
+              <DialogClose asChild><Button variant="outline">{t('cancel')}</Button></DialogClose>
+              <Button onClick={handleSubmit}>{t('save')}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+      
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('manufacturer_name')}</TableHead>
+                  <TableHead>{t('manufacturer_alert_period')}</TableHead>
+                  <TableHead className="text-right">{t('actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={3} className="text-center h-24">{t('loading')}</TableCell></TableRow>
+                ) : manufacturersList.length === 0 ? (
+                  <TableRow><TableCell colSpan={3} className="text-center h-24">{t('no_data')}</TableCell></TableRow>
+                ) : (
+                  manufacturersList.map((manufacturer) => (
+                    <TableRow key={manufacturer.id}>
+                      <TableCell className="font-medium">{manufacturer.name}</TableCell>
+                      <TableCell>{manufacturer.alert_period} {t('days')}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => openDialog(manufacturer)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(manufacturer)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">{t('cancel')}</Button>
-            </DialogClose>
-            <Button onClick={handleEditManufacturer}>{t('save')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -303,7 +189,7 @@ const ManufacturersPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteManufacturer} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               {t('yes_delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -312,5 +198,3 @@ const ManufacturersPage = () => {
     </div>
   );
 };
-
-export default ManufacturersPage;

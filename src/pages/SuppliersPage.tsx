@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
-import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,42 +17,28 @@ import {
   deleteSupplier 
 } from '@/data/operations/supplierOperations';
 
-const SuppliersPage = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const { t, direction } = useLanguage();
+export const SuppliersPageContent = () => {
+  const { t } = useLanguage();
   const { toast } = useToast();
   
   const [suppliersList, setSuppliersList] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentSupplier, setCurrentSupplier] = useState<Supplier | null>(null);
-  const [newName, setNewName] = useState('');
-  const [newContact, setNewContact] = useState('');
-  const [newPhone, setNewPhone] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
-  const closeSidebar = () => {
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
-  };
   
+  const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+
   const loadSuppliers = async () => {
     setIsLoading(true);
     try {
       const suppliers = await getSuppliers();
       setSuppliersList(suppliers);
     } catch (error) {
-      toast({
-        title: t('error'),
-        description: t('error_fetching_data'),
-        variant: 'destructive'
-      });
+      toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -64,305 +47,153 @@ const SuppliersPage = () => {
   useEffect(() => {
     loadSuppliers();
   }, []);
-  
-  const handleAddSupplier = async () => {
-    if (!newName.trim()) return;
-    
-    try {
-      await addSupplier({
-        name: newName,
-        contact: newContact,
-        phone: newPhone,
-        email: newEmail
-      });
-      
-      loadSuppliers();
-      resetFormFields();
-      setIsAddDialogOpen(false);
-      
-      toast({
-        title: t('success'),
-        description: t('item_added'),
-      });
-    } catch (error) {
-      toast({
-        title: t('error'),
-        description: t('error_adding_item'),
-        variant: 'destructive'
-      });
+
+  const resetForm = () => {
+    setName('');
+    setContact('');
+    setPhone('');
+    setEmail('');
+    setCurrentSupplier(null);
+  };
+
+  const openDialog = (supplier: Supplier | null = null) => {
+    if (supplier) {
+      setCurrentSupplier(supplier);
+      setName(supplier.name);
+      setContact(supplier.contact || '');
+      setPhone(supplier.phone || '');
+      setEmail(supplier.email || '');
+    } else {
+      resetForm();
     }
+    setIsDialogOpen(true);
   };
   
-  const handleEditSupplier = async () => {
-    if (!currentSupplier || !newName.trim()) return;
+  const handleSubmit = async () => {
+    if (!name.trim()) return;
     
     try {
-      await updateSupplier(currentSupplier.id, {
-        name: newName,
-        contact: newContact,
-        phone: newPhone,
-        email: newEmail
-      });
-      
-      loadSuppliers();
-      setIsEditDialogOpen(false);
-      
-      toast({
-        title: t('success'),
-        description: t('item_updated'),
-      });
-    } catch (error) {
-      toast({
-        title: t('error'),
-        description: t('error_updating_item'),
-        variant: 'destructive'
-      });
-    }
-  };
-  
-  const handleDeleteSupplier = async () => {
-    if (!currentSupplier) return;
-    
-    try {
-      const result = await deleteSupplier(currentSupplier.id);
-      
-      if (result.success) {
-        loadSuppliers();
-        setIsDeleteDialogOpen(false);
-        
-        toast({
-          title: t('success'),
-          description: t('item_deleted'),
-        });
+      const supplierData = { name, contact, phone, email };
+      if (currentSupplier) {
+        await updateSupplier(currentSupplier.id, supplierData);
+        toast({ title: t('success'), description: t('item_updated') });
       } else {
-        toast({
-          title: t('error'),
-          description: t(result.error || 'error_deleting_item'),
-          variant: 'destructive'
-        });
+        await addSupplier(supplierData);
+        toast({ title: t('success'), description: t('item_added') });
       }
+      loadSuppliers();
+      setIsDialogOpen(false);
+      resetForm();
     } catch (error) {
-      toast({
-        title: t('error'),
-        description: t('error_deleting_item'),
-        variant: 'destructive'
-      });
+      toast({ title: t('error'), description: t('error_processing_item'), variant: 'destructive' });
     }
-  };
-  
-  const openEditDialog = (supplier: Supplier) => {
-    setCurrentSupplier(supplier);
-    setNewName(supplier.name);
-    setNewContact(supplier.contact || '');
-    setNewPhone(supplier.phone || '');
-    setNewEmail(supplier.email || '');
-    setIsEditDialogOpen(true);
   };
   
   const openDeleteDialog = (supplier: Supplier) => {
     setCurrentSupplier(supplier);
     setIsDeleteDialogOpen(true);
   };
-  
-  const resetFormFields = () => {
-    setNewName('');
-    setNewContact('');
-    setNewPhone('');
-    setNewEmail('');
+
+  const handleDelete = async () => {
+    if (!currentSupplier) return;
+    try {
+      const result = await deleteSupplier(currentSupplier.id);
+      if (result.success) {
+        loadSuppliers();
+        toast({ title: t('success'), description: t('item_deleted') });
+      } else {
+        toast({ title: t('error'), description: t(result.error || 'error_deleting_item'), variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: t('error'), description: t('error_deleting_item'), variant: 'destructive' });
+    } finally {
+      setIsDeleteDialogOpen(false);
+    }
   };
   
   return (
-    <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
-      <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
-        toggleSidebar={toggleSidebar}
-        closeSidebar={closeSidebar}
-      />
+    <div>
+      <div className="flex justify-end items-center mb-6">
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => openDialog()}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('add_supplier')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{currentSupplier ? t('edit_supplier') : t('add_supplier')}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">{t('supplier_name')}</Label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact">{t('supplier_contact')}</Label>
+                <Input id="contact" value={contact} onChange={(e) => setContact(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">{t('supplier_phone')}</Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">{t('supplier_email')}</Label>
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild><Button variant="outline">{t('cancel')}</Button></DialogClose>
+              <Button onClick={handleSubmit}>{t('save')}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
       
-      <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">{t('suppliers_nav')}</h1>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('add_supplier')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t('add_supplier')}</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">{t('supplier_name')}</Label>
-                    <Input 
-                      id="name" 
-                      value={newName} 
-                      onChange={(e) => setNewName(e.target.value)} 
-                      className="col-span-3" 
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="contact" className="text-right">{t('contact_person')}</Label>
-                    <Input 
-                      id="contact" 
-                      value={newContact} 
-                      onChange={(e) => setNewContact(e.target.value)} 
-                      className="col-span-3" 
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="phone" className="text-right">{t('phone')}</Label>
-                    <Input 
-                      id="phone" 
-                      value={newPhone} 
-                      onChange={(e) => setNewPhone(e.target.value)} 
-                      className="col-span-3" 
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="email" className="text-right">{t('email')}</Label>
-                    <Input 
-                      id="email" 
-                      type="email"
-                      value={newEmail} 
-                      onChange={(e) => setNewEmail(e.target.value)} 
-                      className="col-span-3" 
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline">{t('cancel')}</Button>
-                  </DialogClose>
-                  <Button onClick={handleAddSupplier}>{t('save')}</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('supplier_name')}</TableHead>
+                  <TableHead>{t('supplier_contact')}</TableHead>
+                  <TableHead className="text-right">{t('actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={3} className="text-center h-24">{t('loading')}</TableCell></TableRow>
+                ) : suppliersList.length === 0 ? (
+                  <TableRow><TableCell colSpan={3} className="text-center h-24">{t('no_data')}</TableCell></TableRow>
+                ) : (
+                  suppliersList.map((supplier) => (
+                    <TableRow key={supplier.id}>
+                      <TableCell className="font-medium">{supplier.name}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span>{supplier.contact}</span>
+                          <span className="text-xs text-muted-foreground">{supplier.phone}</span>
+                          <span className="text-xs text-muted-foreground">{supplier.email}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => openDialog(supplier)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(supplier)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-          
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('supplier_name')}</TableHead>
-                    <TableHead>{t('contact_person')}</TableHead>
-                    <TableHead>{t('contact_info')}</TableHead>
-                    <TableHead className="text-right">{t('actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow><TableCell colSpan={4} className="text-center">{t('loading')}</TableCell></TableRow>
-                  ) : suppliersList.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center">{t('no_data')}</TableCell></TableRow>
-                  ) : (
-                    suppliersList.map((supplier) => (
-                      <TableRow key={supplier.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center">
-                            <Truck className="h-4 w-4 mr-2 text-muted-foreground" />
-                            {supplier.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {supplier.contact && (
-                            <div className="flex items-center">
-                              <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                              {supplier.contact}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col space-y-1">
-                            {supplier.phone && (
-                              <div className="flex items-center">
-                                <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                                {supplier.phone}
-                              </div>
-                            )}
-                            {supplier.email && (
-                              <div className="flex items-center">
-                                <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                                {supplier.email}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(supplier)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(supplier)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-      
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('edit_supplier')}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-name" className="text-right">{t('supplier_name')}</Label>
-              <Input 
-                id="edit-name" 
-                value={newName} 
-                onChange={(e) => setNewName(e.target.value)} 
-                className="col-span-3" 
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-contact" className="text-right">{t('contact_person')}</Label>
-              <Input 
-                id="edit-contact" 
-                value={newContact} 
-                onChange={(e) => setNewContact(e.target.value)} 
-                className="col-span-3" 
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-phone" className="text-right">{t('phone')}</Label>
-              <Input 
-                id="edit-phone" 
-                value={newPhone} 
-                onChange={(e) => setNewPhone(e.target.value)} 
-                className="col-span-3" 
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-email" className="text-right">{t('email')}</Label>
-              <Input 
-                id="edit-email" 
-                type="email"
-                value={newEmail} 
-                onChange={(e) => setNewEmail(e.target.value)} 
-                className="col-span-3" 
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">{t('cancel')}</Button>
-            </DialogClose>
-            <Button onClick={handleEditSupplier}>{t('save')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -372,7 +203,7 @@ const SuppliersPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSupplier} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               {t('yes_delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -381,5 +212,3 @@ const SuppliersPage = () => {
     </div>
   );
 };
-
-export default SuppliersPage;

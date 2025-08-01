@@ -1,7 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
-import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,7 +12,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { getSupplyTypes } from '@/data/operations/supplyTypeOperations';
-import { 
+import {
   getProductDefinitions,
   addProductDefinition,
   updateProductDefinition,
@@ -23,28 +20,18 @@ import {
 } from '@/data/operations/productDefinitionOperations';
 import Papa from 'papaparse';
 
-const ProductDefinitionsPage = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const { t, direction } = useLanguage();
+export const ProductDefinitionsPageContent = () => {
+  const { t } = useLanguage();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
-  const closeSidebar = () => {
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
-  };
-  
   const [definitions, setDefinitions] = useState<ProductDefinition[]>([]);
   const [supplyTypes, setSupplyTypes] = useState<SupplyTypeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentDefinition, setCurrentDefinition] = useState<ProductDefinition | null>(null);
-  
+
   // Form state
   const [name, setName] = useState('');
   const [typeId, setTypeId] = useState('');
@@ -72,8 +59,6 @@ const ProductDefinitionsPage = () => {
   useEffect(() => {
     loadData();
   }, []);
-
-  // ... (existing functions: handleAddVariant, handleRemoveVariant, resetForm, openDialog, handleSubmit, openDeleteDialog, handleDelete)
 
   const handleAddVariant = (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,7 +142,7 @@ const ProductDefinitionsPage = () => {
       product_name: def.name,
       product_type_id: def.type_id,
       variant_label: def.variant_label,
-      variants: def.variants.map(v => `${v.name}:${v.reorder_point}`).join('|') // Format: name1:point1|name2:point2
+      variants: def.variants.map(v => `${v.name}:${v.reorder_point}`).join('|')
     }));
     const csv = Papa.unparse(dataToExport);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -221,68 +206,59 @@ const ProductDefinitionsPage = () => {
     });
   };
 
+  if (isLoading) {
+    return <div>{t('loading')}...</div>;
+  }
+
   return (
-    <div className="page-container bg-background" dir={direction}>
-      <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
-        toggleSidebar={toggleSidebar}
-        closeSidebar={closeSidebar}
-      />
-      
-      <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">{t('product_definitions')}</h1>
-            <div className="flex gap-2">
-              <Button onClick={() => openDialog()}>{t('add_definition')}</Button>
-              <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />{t('export')}</Button>
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()}><FileUp className="mr-2 h-4 w-4" />{t('import')}</Button>
-              <Input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleFileImport} />
-            </div>
-          </div>
-          <div className="text-right mb-4">
-            <Button variant="link" onClick={handleDownloadTemplate}>{t('download_template')}</Button>
-          </div>
-          
-          <Card>
-            {/* ... existing table ... */}
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="p-4 text-left">{t('product_name')}</th>
-                      <th className="p-4 text-left">{t('product_type')}</th>
-                      <th className="p-4 text-left">{t('variant_label')}</th>
-                      <th className="p-4 text-center">{t('variants_count')}</th>
-                      <th className="p-4 text-right">{t('actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {definitions.map((def) => (
-                      <tr key={def.id} className="border-b">
-                        <td className="p-4 font-medium">{def.name}</td>
-                        <td className="p-4">{supplyTypes.find(st => st.id === def.type_id)?.name || def.type_id}</td>
-                        <td className="p-4">{def.variant_label}</td>
-                        <td className="p-4 text-center">{def.variants.length}</td>
-                        <td className="p-4 text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => openDialog(def)}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(def)}><Trash2 className="h-4 w-4" /></Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+    <>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold">{t('product_definitions')}</h2>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={() => openDialog()}><Plus className="mr-2 h-4 w-4" />{t('add_definition')}</Button>
+          <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />{t('export')}</Button>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}><FileUp className="mr-2 h-4 w-4" />{t('import')}</Button>
+          <Input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleFileImport} />
         </div>
-      </main>
+      </div>
+      <div className="text-right mb-4">
+        <Button variant="link" onClick={handleDownloadTemplate}>{t('download_template')}</Button>
+      </div>
       
-      {/* ... existing dialogs ... */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="p-4 text-left">{t('product_name')}</th>
+                  <th className="p-4 text-left">{t('product_type')}</th>
+                  <th className="p-4 text-left">{t('variant_label')}</th>
+                  <th className="p-4 text-center">{t('variants_count')}</th>
+                  <th className="p-4 text-right">{t('actions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {definitions.map((def) => (
+                  <tr key={def.id} className="border-b">
+                    <td className="p-4 font-medium">{def.name}</td>
+                    <td className="p-4">{supplyTypes.find(st => st.id === def.type_id)?.name || def.type_id}</td>
+                    <td className="p-4">{def.variant_label}</td>
+                    <td className="p-4 text-center">{def.variants.length}</td>
+                    <td className="p-4 text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => openDialog(def)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(def)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+      
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader><DialogTitle>{currentDefinition ? t('edit_definition') : t('add_definition')}</DialogTitle></DialogHeader>
@@ -340,8 +316,6 @@ const ProductDefinitionsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 };
-
-export default ProductDefinitionsPage;
