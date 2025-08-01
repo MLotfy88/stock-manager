@@ -43,28 +43,28 @@ const AdminPage = () => {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">{t('data_settings_nav')}</h1>
           
-          <Tabs defaultValue="definitions" className="w-full" orientation={isMobile ? 'vertical' : 'horizontal'}>
-            <TabsList className="grid w-full md:grid-cols-5">
-              <TabsTrigger value="definitions"><Tag className="mr-2 h-4 w-4" />{t('product_definitions_nav')}</TabsTrigger>
-              <TabsTrigger value="supplyTypes"><Shapes className="mr-2 h-4 w-4" />{t('supply_types_nav')}</TabsTrigger>
-              <TabsTrigger value="manufacturers"><Factory className="mr-2 h-4 w-4" />{t('manufacturers_nav')}</TabsTrigger>
-              <TabsTrigger value="suppliers"><Truck className="mr-2 h-4 w-4" />{t('suppliers_nav')}</TabsTrigger>
-              <TabsTrigger value="stores"><Warehouse className="mr-2 h-4 w-4" />{t('stores_nav')}</TabsTrigger>
+          <Tabs defaultValue="definitions" className="w-full flex flex-col md:flex-row gap-6">
+            <TabsList className="flex flex-col h-auto">
+              <TabsTrigger value="definitions" className="w-full justify-start"><Tag className="mr-2 h-4 w-4" />{t('product_definitions_nav')}</TabsTrigger>
+              <TabsTrigger value="supplyTypes" className="w-full justify-start"><Shapes className="mr-2 h-4 w-4" />{t('supply_types_nav')}</TabsTrigger>
+              <TabsTrigger value="manufacturers" className="w-full justify-start"><Factory className="mr-2 h-4 w-4" />{t('manufacturers_nav')}</TabsTrigger>
+              <TabsTrigger value="suppliers" className="w-full justify-start"><Truck className="mr-2 h-4 w-4" />{t('suppliers_nav')}</TabsTrigger>
+              <TabsTrigger value="stores" className="w-full justify-start"><Warehouse className="mr-2 h-4 w-4" />{t('stores_nav')}</TabsTrigger>
             </TabsList>
-            <div className="mt-6">
-              <TabsContent value="definitions">
+            <div className="flex-1">
+              <TabsContent value="definitions" className="mt-0">
                 <ProductDefinitionsPageContent />
               </TabsContent>
-              <TabsContent value="supplyTypes">
+              <TabsContent value="supplyTypes" className="mt-0">
                 <SupplyTypesManagementPageContent />
               </TabsContent>
-              <TabsContent value="manufacturers">
+              <TabsContent value="manufacturers" className="mt-0">
                 <ManufacturersPageContent />
               </TabsContent>
-              <TabsContent value="suppliers">
+              <TabsContent value="suppliers" className="mt-0">
                 <SuppliersPageContent />
               </TabsContent>
-              <TabsContent value="stores">
+              <TabsContent value="stores" className="mt-0">
                 <StoresPageContent />
               </TabsContent>
             </div>

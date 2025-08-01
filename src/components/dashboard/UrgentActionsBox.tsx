@@ -24,7 +24,7 @@ export const UrgentActionsBox: React.FC<UrgentActionsBoxProps> = ({ expiringSoon
     {
       count: reorderPointCount,
       label: 'items_at_reorder_point',
-      link: '/reports/reorder-point',
+      link: '/reorder-point-report',
       icon: ShoppingCart,
       color: 'text-orange-500',
     },
