@@ -53,20 +53,20 @@ const AdminPage = () => {
                 <TabsTrigger value="stores"><Warehouse className="mr-2 h-4 w-4" />{t('stores_nav')}</TabsTrigger>
               </TabsList>
               
-              <div className="flex-1 w-full">
-                <TabsContent value="definitions" className="mt-6 md:mt-0">
+              <div className="flex-1 w-full mt-6 md:mt-0">
+                <TabsContent value="definitions">
                   <ProductDefinitionsPageContent />
                 </TabsContent>
-                <TabsContent value="supplyTypes" className="mt-6 md:mt-0">
+                <TabsContent value="supplyTypes">
                   <SupplyTypesManagementPageContent />
                 </TabsContent>
-                <TabsContent value="manufacturers" className="mt-6 md:mt-0">
+                <TabsContent value="manufacturers">
                   <ManufacturersPageContent />
                 </TabsContent>
-                <TabsContent value="suppliers" className="mt-6 md:mt-0">
+                <TabsContent value="suppliers">
                   <SuppliersPageContent />
                 </TabsContent>
-                <TabsContent value="stores" className="mt-6 md:mt-0">
+                <TabsContent value="stores">
                   <StoresPageContent />
                 </TabsContent>
               </div>
