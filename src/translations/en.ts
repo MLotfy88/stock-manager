@@ -275,6 +275,7 @@ export default {
   item_added: 'Item added successfully',
   item_updated: 'Item updated successfully',
   item_deleted: 'Item deleted successfully',
+  error_processing_item: 'Error processing item',
   
   // Months
   month_1: 'Month',

@@ -116,3 +116,8 @@ export interface ConsumptionRecord {
   notes?: string;
   created_at: string;
 }
+
+export interface SignInCredentials {
+  email: string;
+  password: string;
+}

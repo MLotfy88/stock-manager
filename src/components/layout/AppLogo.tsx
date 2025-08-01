@@ -2,12 +2,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { cn } from '@/lib/utils';
 
-const AppLogo = () => {
+interface AppLogoProps {
+  className?: string;
+}
+
+const AppLogo: React.FC<AppLogoProps> = ({ className }) => {
   const { t } = useLanguage();
   
   return (
-    <Link to="/" className="flex items-center gap-4">
+    <Link to="/" className={cn("flex items-center gap-4", className)}>
       <div className="relative">
         {/* Heart with heartbeat line */}
         <svg 

@@ -275,6 +275,7 @@ export default {
   item_added: 'تمت إضافة العنصر بنجاح',
   item_updated: 'تم تحديث العنصر بنجاح',
   item_deleted: 'تم حذف العنصر بنجاح',
+  error_processing_item: 'خطأ في معالجة العنصر',
   
   // Months
   month_1: 'شهر',
