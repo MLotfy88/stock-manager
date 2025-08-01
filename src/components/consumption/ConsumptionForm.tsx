@@ -224,6 +224,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
               </div>
             </div>
             
+            {/* Fullscreen scanner for both mobile and desktop in this component */}
             {isScanning && (
               <div className="fixed inset-0 bg-black z-50">
                 <video id={`video-scanner-${activeScannerId}`} className="w-full h-full object-cover"></video>

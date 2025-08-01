@@ -314,7 +314,18 @@ const AddInventoryPage = () => {
                                 </Button>
                               </TableCell>
                             </TableRow>
-                            {isScanning && activeScannerId === item.id && (
+                            {/* Fullscreen scanner for mobile */}
+                            {isMobile && isScanning && activeScannerId === item.id && (
+                              <div className="fixed inset-0 bg-black z-50">
+                                <video id={`video-scanner-${item.id}`} className="w-full h-full object-cover"></video>
+                                <BarcodeScannerViewfinder />
+                                <div className="absolute top-4 right-4">
+                                  <Button variant="destructive" onClick={stopScan}>Stop Scanning</Button>
+                                </div>
+                              </div>
+                            )}
+                            {/* Inline scanner for desktop */}
+                            {!isMobile && isScanning && activeScannerId === item.id && (
                               <TableRow>
                                 <TableCell colSpan={8} className="p-0">
                                   <div className="relative p-4 border rounded-lg bg-black">
