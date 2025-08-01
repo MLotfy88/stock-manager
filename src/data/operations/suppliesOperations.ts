@@ -3,14 +3,14 @@ import { InventoryItem } from '@/types';
 import { format } from 'date-fns';
 
 /**
- * Get all inventory items
+ * Get all inventory items with their dynamic status
  */
 export const getInventoryItems = async (): Promise<InventoryItem[]> => {
   const supabase = getSupabaseClient();
   if (!supabase) return [];
 
   const { data, error } = await supabase
-    .from('inventory_items')
+    .from('inventory_items_with_status') // Use the new VIEW
     .select('*')
     .order('created_at', { ascending: false });
 
@@ -22,14 +22,14 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
 };
 
 /**
- * Get a single inventory item by ID
+ * Get a single inventory item by ID with its dynamic status
  */
 export const getInventoryItemById = async (itemId: string): Promise<InventoryItem | null> => {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
 
   const { data, error } = await supabase
-    .from('inventory_items')
+    .from('inventory_items_with_status') // Use the new VIEW
     .select('*')
     .eq('id', itemId)
     .single();
