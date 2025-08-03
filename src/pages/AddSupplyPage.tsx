@@ -97,21 +97,18 @@ const AddInventoryPage = () => {
     error: scannerError,
     startScanner,
     stopScanner,
-    scanCycle,
-    isTorchOn,
-    toggleTorch,
+    captureAndDecode,
   } = useBarcodeScanner({
     onScanSuccess: (scannedBarcode: string) => {
       if (activeScannerId) {
         handleItemChange(activeScannerId, 'barcode', scannedBarcode);
         toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
         if (navigator.vibrate) navigator.vibrate(150);
-        stopScanner(); // Now it's defined
+        stopScanner();
         setActiveScannerId(null);
       }
     },
     onScanFailure: (error: Error) => {
-      console.error("Scan Error:", error);
       toast({ title: t('scan_error'), description: error.message, variant: 'destructive' });
     },
   });
@@ -393,7 +390,7 @@ const AddInventoryPage = () => {
           {isScannerActive && (
             <div className="fixed inset-0 bg-black z-50">
               <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay />
-              <BarcodeScannerViewfinder scanCycle={scanCycle} isTorchOn={isTorchOn} toggleTorch={toggleTorch} />
+              <BarcodeScannerViewfinder onCapture={captureAndDecode} />
               <div className="absolute top-4 right-4 z-[51]">
                 <Button variant="destructive" onClick={handleStopScan}>{t('stop_scanning')}</Button>
               </div>
