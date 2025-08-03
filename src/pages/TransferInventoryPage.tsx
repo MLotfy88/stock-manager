@@ -66,21 +66,6 @@ const TransferInventoryPage = () => {
     loadData();
   }, [toast, t]);
 
-  const handleBarcodeScanned = (barcode: string) => {
-    const itemInStore = inventory.find(i => i.barcode === barcode && i.store_id === fromStoreId);
-    if (itemInStore) {
-      if (isContinuousScanning) {
-        addItemToTransferList(itemInStore, 1);
-        toast({ title: t('item_added'), description: `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}` });
-      } else {
-        setScannedItem(itemInStore);
-        stopScanner();
-      }
-    } else {
-      toast({ title: t('not_found'), description: t('item_not_in_source_store'), variant: 'destructive' });
-    }
-  };
-
   const addItemToTransferList = (item: InventoryItem, quantity: number) => {
     const existingItem = transferList.find(i => i.id === item.id);
     if (existingItem) {
@@ -96,7 +81,20 @@ const TransferInventoryPage = () => {
     startScanner,
     stopScanner,
   } = useBarcodeScanner({
-    onScanSuccess: handleBarcodeScanned,
+    onScanSuccess: (barcode: string) => {
+      const itemInStore = inventory.find(i => i.barcode === barcode && i.store_id === fromStoreId);
+      if (itemInStore) {
+        if (isContinuousScanning) {
+          addItemToTransferList(itemInStore, 1);
+          toast({ title: t('item_added'), description: `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}` });
+        } else {
+          setScannedItem(itemInStore);
+          stopScanner();
+        }
+      } else {
+        toast({ title: t('not_found'), description: t('item_not_in_source_store'), variant: 'destructive' });
+      }
+    },
     onScanFailure: (error) => toast({ title: t('scan_error'), description: error.message, variant: 'destructive' }),
   });
 

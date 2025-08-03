@@ -91,20 +91,6 @@ const AddInventoryPage = () => {
     setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, [field]: value } : item));
   }, []);
 
-  const handleScanSuccess = useCallback((scannedBarcode: string) => {
-    if (activeScannerId) {
-      handleItemChange(activeScannerId, 'barcode', scannedBarcode);
-      toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
-      if (navigator.vibrate) navigator.vibrate(150);
-      setActiveScannerId(null); // Reset for next scan
-    }
-  }, [activeScannerId, handleItemChange, t, toast]);
-
-  const handleScanFailure = useCallback((error: Error) => {
-    console.error("Scan Error:", error);
-    toast({ title: t('scan_error'), description: error.message, variant: 'destructive' });
-  }, [t, toast]);
-
   const {
     videoRef,
     isScannerActive,
@@ -112,8 +98,19 @@ const AddInventoryPage = () => {
     startScanner,
     stopScanner,
   } = useBarcodeScanner({
-    onScanSuccess: handleScanSuccess,
-    onScanFailure: handleScanFailure,
+    onScanSuccess: (scannedBarcode: string) => {
+      if (activeScannerId) {
+        handleItemChange(activeScannerId, 'barcode', scannedBarcode);
+        toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
+        if (navigator.vibrate) navigator.vibrate(150);
+        stopScanner(); // Now it's defined
+        setActiveScannerId(null);
+      }
+    },
+    onScanFailure: (error: Error) => {
+      console.error("Scan Error:", error);
+      toast({ title: t('scan_error'), description: error.message, variant: 'destructive' });
+    },
   });
 
   // Display scanner error in a toast

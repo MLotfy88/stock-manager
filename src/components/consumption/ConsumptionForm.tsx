@@ -78,30 +78,6 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     }));
   }, [inventory]);
 
-  const handleScanSuccess = useCallback((scannedBarcode: string) => {
-    const foundItem = availableSupplies.find(item => item.barcode === scannedBarcode);
-    if (foundItem) {
-      if (navigator.vibrate) navigator.vibrate(100);
-
-      if (isContinuousScanning) {
-        const newItemId = `item_${Date.now()}`;
-        setItems(prev => [...prev, { id: newItemId, inventory_item_id: foundItem.id, quantity: 1, availableQuantity: foundItem.quantity }]);
-        toast({ title: t('item_added'), description: `${productDefs.find(p => p.id === foundItem.product_definition_id)?.name} - ${foundItem.variant}` });
-      } else if (activeScannerId) {
-        handleItemChange(activeScannerId, 'inventory_item_id', foundItem.id);
-        toast({ title: t('item_found'), description: `${t('item_with_barcode')} ${scannedBarcode} ${t('selected')}.` });
-        stopScanner();
-      }
-    } else {
-      toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${scannedBarcode} ${t('not_found_in_store')}.`, variant: 'destructive' });
-    }
-  }, [availableSupplies, isContinuousScanning, activeScannerId, handleItemChange, toast, t, productDefs]);
-
-  const handleScanFailure = useCallback((error: Error) => {
-    console.error("Scan Error:", error);
-    toast({ title: t('scan_error'), description: error.message, variant: 'destructive' });
-  }, [t, toast]);
-
   const {
     videoRef,
     isScannerActive,
@@ -109,8 +85,28 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     startScanner: startScannerHook,
     stopScanner,
   } = useBarcodeScanner({
-    onScanSuccess: handleScanSuccess,
-    onScanFailure: handleScanFailure,
+    onScanSuccess: (scannedBarcode: string) => {
+      const foundItem = availableSupplies.find(item => item.barcode === scannedBarcode);
+      if (foundItem) {
+        if (navigator.vibrate) navigator.vibrate(100);
+
+        if (isContinuousScanning) {
+          const newItemId = `item_${Date.now()}`;
+          setItems(prev => [...prev, { id: newItemId, inventory_item_id: foundItem.id, quantity: 1, availableQuantity: foundItem.quantity }]);
+          toast({ title: t('item_added'), description: `${productDefs.find(p => p.id === foundItem.product_definition_id)?.name} - ${foundItem.variant}` });
+        } else if (activeScannerId) {
+          handleItemChange(activeScannerId, 'inventory_item_id', foundItem.id);
+          toast({ title: t('item_found'), description: `${t('item_with_barcode')} ${scannedBarcode} ${t('selected')}.` });
+          stopScanner();
+        }
+      } else {
+        toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${scannedBarcode} ${t('not_found_in_store')}.`, variant: 'destructive' });
+      }
+    },
+    onScanFailure: (error: Error) => {
+      console.error("Scan Error:", error);
+      toast({ title: t('scan_error'), description: error.message, variant: 'destructive' });
+    },
   });
 
   useEffect(() => {
