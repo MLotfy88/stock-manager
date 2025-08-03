@@ -26,8 +26,17 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
   useEffect(() => {
     const hints = new Map();
     const formats = [
-      BarcodeFormat.CODE_128, BarcodeFormat.EAN_13, BarcodeFormat.CODE_39,
-      BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E,
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.DATA_MATRIX,
+      BarcodeFormat.ITF,
+      BarcodeFormat.CODABAR,
+      BarcodeFormat.PDF_417,
+      BarcodeFormat.AZTEC,
     ];
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
     hints.set(DecodeHintType.TRY_HARDER, true);
