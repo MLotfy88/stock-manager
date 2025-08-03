@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  MultiFormatReader, // Changed from BrowserMultiFormatReader
+  BrowserMultiFormatReader,
   NotFoundException,
   DecodeHintType,
   BarcodeFormat,
-  BinaryBitmap,
-  HybridBinarizer,
-  RGBLuminanceSource,
 } from '@zxing/library';
 
 interface UseBarcodeScannerProps {
@@ -18,9 +15,7 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
-  const codeReader = useRef(new MultiFormatReader()); // Use the correct reader
-  const scanInterval = useRef<NodeJS.Timeout | null>(null);
+  const codeReader = useRef<BrowserMultiFormatReader | null>(null);
 
   const callbackRef = useRef(props);
   useEffect(() => {
@@ -39,13 +34,18 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     ];
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
     hints.set(DecodeHintType.TRY_HARDER, true);
-    codeReader.current.setHints(hints); // setHints is a method on MultiFormatReader
+    codeReader.current = new BrowserMultiFormatReader(hints);
+
+    return () => {
+      if (codeReader.current) {
+        codeReader.current.reset();
+      }
+    };
   }, []);
 
   const stopScanner = useCallback(() => {
-    if (scanInterval.current) {
-      clearInterval(scanInterval.current);
-      scanInterval.current = null;
+    if (codeReader.current) {
+      codeReader.current.reset();
     }
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -60,8 +60,10 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
       return;
     }
 
+    let isCancelled = false;
+
     const startCamera = async () => {
-      if (!videoRef.current) {
+      if (!videoRef.current || !codeReader.current) {
         return;
       }
 
@@ -81,58 +83,45 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
           },
         });
 
+        if (isCancelled) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
 
-          scanInterval.current = setInterval(() => {
-            if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
-              const video = videoRef.current;
-              const canvas = canvasRef.current;
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
-              const context = canvas.getContext('2d', { willReadFrequently: true });
+          codeReader.current.decodeFromStream(stream, videoRef.current, (result, err) => {
+            if (isCancelled) return;
 
-              if (context) {
-                const cropWidth = canvas.width * 0.8;
-                const cropHeight = canvas.height * 0.3;
-                const cropX = (canvas.width - cropWidth) / 2;
-                const cropY = (canvas.height - cropHeight) / 2;
-                
-                context.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-                const imageData = context.getImageData(0, 0, cropWidth, cropHeight);
-
-                const luminanceSource = new RGBLuminanceSource(imageData.data, imageData.width, imageData.height);
-                const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
-                
-                try {
-                  const result = codeReader.current.decode(binaryBitmap); // This will now work correctly
-                  if (result) {
-                    callbackRef.current.onScanSuccess(result.getText());
-                    stopScanner();
-                  }
-                } catch (err) {
-                  if (!(err instanceof NotFoundException)) {
-                    // console.error("Decode Error:", err);
-                  }
-                }
+            if (result) {
+              callbackRef.current.onScanSuccess(result.getText());
+            }
+            if (err && !(err instanceof NotFoundException)) {
+              const errorMessage = `Barcode scan failed: ${err.message}`;
+              setError(errorMessage);
+              if (callbackRef.current.onScanFailure) {
+                callbackRef.current.onScanFailure(err);
               }
             }
-          }, 500);
+          });
         }
       } catch (err: any) {
+        if (isCancelled) return;
         const errorMessage = `Failed to start scanner: ${err.message}`;
         setError(errorMessage);
         if (callbackRef.current.onScanFailure) {
           callbackRef.current.onScanFailure(err);
         }
-        stopScanner();
+        setIsScannerActive(false);
       }
     };
 
     startCamera();
 
     return () => {
+      isCancelled = true;
       stopScanner();
     };
   }, [isScannerActive, stopScanner]);
