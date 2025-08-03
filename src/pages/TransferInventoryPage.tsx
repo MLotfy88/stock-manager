@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Store, ProductDefinition, InventoryItem } from '@/types';
 import { ArrowRightLeft, ScanBarcode, Trash2, Camera } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { BrowserBarcodeReader, NotFoundException, DecodeHintType, BarcodeFormat } from '@zxing/library';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
@@ -44,23 +44,9 @@ const TransferInventoryPage = () => {
   const [toStoreId, setToStoreId] = useState<string>('');
   const [transferList, setTransferList] = useState<TransferItem[]>([]);
   
-  const [isScanning, setIsScanning] = useState(false);
   const [isContinuousScanning, setIsContinuousScanning] = useState(false);
   const [scannedItem, setScannedItem] = useState<InventoryItem | null>(null);
   const [scannedQuantity, setScannedQuantity] = useState('1');
-
-  // --- Barcode Scanner Optimization ---
-  const hints = new Map();
-  const formats = [
-    BarcodeFormat.CODE_128, 
-    BarcodeFormat.EAN_13, 
-    BarcodeFormat.DATA_MATRIX,
-    BarcodeFormat.CODE_39,
-    BarcodeFormat.UPC_A,
-  ];
-  hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-  const codeReader = new BrowserBarcodeReader();
-  // --- End Optimization ---
 
   useEffect(() => {
     const loadData = async () => {
@@ -80,49 +66,15 @@ const TransferInventoryPage = () => {
     loadData();
   }, [toast, t]);
 
-  const handleScan = () => {
-    if (!fromStoreId || !toStoreId) {
-      toast({ title: t('error'), description: t('select_stores_first'), variant: 'destructive' });
-      return;
-    }
-    if (fromStoreId === toStoreId) {
-      toast({ title: t('error'), description: t('stores_must_be_different'), variant: 'destructive' });
-      return;
-    }
-    setIsScanning(true);
-    
-    const constraints: MediaStreamConstraints = {
-      video: {
-        facingMode: 'environment',
-        height: { ideal: 1080 },
-        advanced: [{ focusMode: 'continuous' } as any]
-      }
-    };
-
-    codeReader.decodeFromConstraints(constraints, 'video-scanner-transfer', (result, err) => {
-      if (result) {
-        const scannedBarcode = result.getText();
-        if (isContinuousScanning) {
-          handleBarcodeScanned(scannedBarcode, true);
-        } else {
-          stopScan();
-          handleBarcodeScanned(scannedBarcode, false);
-        }
-      }
-      if (err && !(err instanceof NotFoundException)) {
-        // Ignore not found errors
-      }
-    });
-  };
-
-  const handleBarcodeScanned = (barcode: string, isContinuous: boolean) => {
+  const handleBarcodeScanned = (barcode: string) => {
     const itemInStore = inventory.find(i => i.barcode === barcode && i.store_id === fromStoreId);
     if (itemInStore) {
-      if (isContinuous) {
+      if (isContinuousScanning) {
         addItemToTransferList(itemInStore, 1);
         toast({ title: t('item_added'), description: `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}` });
       } else {
         setScannedItem(itemInStore);
+        stopScanner();
       }
     } else {
       toast({ title: t('not_found'), description: t('item_not_in_source_store'), variant: 'destructive' });
@@ -138,10 +90,27 @@ const TransferInventoryPage = () => {
     }
   };
 
-  const stopScan = () => {
-    codeReader.reset();
-    setIsScanning(false);
-    setIsContinuousScanning(false);
+  const {
+    videoRef,
+    isScannerActive,
+    startScanner,
+    stopScanner,
+  } = useBarcodeScanner({
+    onScanSuccess: handleBarcodeScanned,
+    onScanFailure: (error) => toast({ title: t('scan_error'), description: error.message, variant: 'destructive' }),
+  });
+
+  const handleStartScan = (continuous: boolean) => {
+    if (!fromStoreId || !toStoreId) {
+      toast({ title: t('error'), description: t('select_stores_first'), variant: 'destructive' });
+      return;
+    }
+    if (fromStoreId === toStoreId) {
+      toast({ title: t('error'), description: t('stores_must_be_different'), variant: 'destructive' });
+      return;
+    }
+    setIsContinuousScanning(continuous);
+    startScanner();
   };
 
   const handleConfirmScan = () => {
@@ -218,21 +187,21 @@ const TransferInventoryPage = () => {
                 </Select>
               </div>
               <div className="flex justify-center gap-4">
-                <Button onClick={handleScan} disabled={isScanning || !fromStoreId || !toStoreId}>
+                <Button onClick={() => handleStartScan(false)} disabled={isScannerActive || !fromStoreId || !toStoreId}>
                   <ScanBarcode className="mr-2 h-5 w-5" />
                   {t('scan_single_item')}
                 </Button>
-                <Button onClick={() => { setIsContinuousScanning(true); handleScan(); }} disabled={isScanning || !fromStoreId || !toStoreId}>
+                <Button onClick={() => handleStartScan(true)} disabled={isScannerActive || !fromStoreId || !toStoreId}>
                   <Camera className="mr-2 h-5 w-5" />
                   {t('scan_continuously')}
                 </Button>
               </div>
-              {isScanning && (
+              {isScannerActive && (
                 <div className="fixed inset-0 bg-black z-50">
-                  <video id="video-scanner-transfer" className="w-full h-full object-cover"></video>
+                  <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay />
                   <BarcodeScannerViewfinder />
                   <div className="absolute top-4 right-4">
-                    <Button variant="destructive" onClick={stopScan}>{t('stop_scanning')}</Button>
+                    <Button variant="destructive" onClick={stopScanner}>{t('stop_scanning')}</Button>
                   </div>
                 </div>
               )}

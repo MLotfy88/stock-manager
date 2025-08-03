@@ -22,7 +22,7 @@ import { getManufacturers } from '@/data/operations/manufacturerOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getStores } from '@/data/operations/storesOperations';
 import { addInventoryItems } from '@/data/operations/suppliesOperations';
-import { MultiFormatReader, NotFoundException, DecodeHintType, BarcodeFormat, RGBLuminanceSource, BinaryBitmap, HybridBinarizer } from '@zxing/library';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 
@@ -57,24 +57,7 @@ const AddInventoryPage = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [manufacturersList, setManufacturersList] = useState<Manufacturer[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
-  const [isScanning, setIsScanning] = useState(false);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  
-  // --- Barcode Scanner Optimization ---
-  const hints = new Map();
-  const formats = [
-    BarcodeFormat.CODE_128, 
-    BarcodeFormat.EAN_13, 
-    BarcodeFormat.DATA_MATRIX,
-    BarcodeFormat.CODE_39,
-    BarcodeFormat.UPC_A,
-  ];
-  hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-  const codeReader = new MultiFormatReader();
-  // --- End Optimization ---
 
   // Form State
   const [supplierId, setSupplierId] = useState('');
@@ -108,104 +91,47 @@ const AddInventoryPage = () => {
     setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, [field]: value } : item));
   }, []);
 
-  const playBeep = useCallback(() => {
-    if (!audioContextRef.current) {
-      try {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      } catch (e) {
-        console.error("Web Audio API is not supported in this browser");
-        return;
-      }
+  const handleScanSuccess = useCallback((scannedBarcode: string) => {
+    if (activeScannerId) {
+      handleItemChange(activeScannerId, 'barcode', scannedBarcode);
+      toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
+      if (navigator.vibrate) navigator.vibrate(150);
+      setActiveScannerId(null); // Reset for next scan
     }
-    const oscillator = audioContextRef.current.createOscillator();
-    const gainNode = audioContextRef.current.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContextRef.current.destination);
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, audioContextRef.current.currentTime); // A5 note
-    gainNode.gain.setValueAtTime(0.5, audioContextRef.current.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.1);
-    oscillator.start(audioContextRef.current.currentTime);
-    oscillator.stop(audioContextRef.current.currentTime + 0.1);
-  }, []);
+  }, [activeScannerId, handleItemChange, t, toast]);
 
-  const stopScan = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    setIsScanning(false);
-    setActiveScannerId(null);
-  }, []);
+  const handleScanFailure = useCallback((error: Error) => {
+    console.error("Scan Error:", error);
+    toast({ title: t('scan_error'), description: error.message, variant: 'destructive' });
+  }, [t, toast]);
 
+  const {
+    videoRef,
+    isScannerActive,
+    error: scannerError,
+    startScanner,
+    stopScanner,
+  } = useBarcodeScanner({
+    onScanSuccess: handleScanSuccess,
+    onScanFailure: handleScanFailure,
+  });
+
+  // Display scanner error in a toast
   useEffect(() => {
-    if (isScanning && activeScannerId && videoRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas?.getContext('2d');
-
-      const constraints = {
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          advanced: [{ focusMode: 'continuous' } as any]
-        }
-      };
-
-      navigator.mediaDevices.getUserMedia(constraints)
-        .then(stream => {
-          video.srcObject = stream;
-          video.setAttribute('playsinline', 'true'); // Required for iOS
-          video.play();
-
-          const scanInterval = setInterval(() => {
-            if (video.readyState === video.HAVE_ENOUGH_DATA && canvas && context) {
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
-              context.drawImage(video, 0, 0, canvas.width, canvas.height);
-              
-              try {
-                const luminanceSource = new RGBLuminanceSource(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
-                const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
-                const result = codeReader.decode(binaryBitmap, hints);
-                if (result) {
-                  clearInterval(scanInterval);
-                  const scannedBarcode = result.getText();
-                  
-                  playBeep();
-                  if (navigator.vibrate) navigator.vibrate(150);
-                  
-                  stopScan();
-                  handleItemChange(activeScannerId, 'barcode', scannedBarcode);
-                  toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
-                }
-              } catch (err) {
-                if (!(err instanceof NotFoundException)) {
-                  console.error('Scan Error:', err);
-                }
-              }
-            }
-          }, 500); // Scan every 500ms
-
-          return () => {
-            clearInterval(scanInterval);
-            stream.getTracks().forEach(track => track.stop());
-          };
-        })
-        .catch(err => {
-          console.error("Camera access error:", err);
-          toast({ title: t('error'), description: t('failed_to_start_camera'), variant: 'destructive' });
-          stopScan();
-        });
+    if (scannerError) {
+      toast({ title: t('scanner_error'), description: scannerError, variant: 'destructive' });
     }
-  }, [isScanning, activeScannerId, codeReader, handleItemChange, stopScan, t, toast, playBeep]);
+  }, [scannerError, toast, t]);
 
-  const startScan = useCallback((itemId: string) => {
+  const handleStartScan = (itemId: string) => {
     setActiveScannerId(itemId);
-    setIsScanning(true);
-  }, []);
+    startScanner();
+  };
+
+  const handleStopScan = () => {
+    stopScanner();
+    setActiveScannerId(null);
+  };
 
   const addNewItem = () => {
     setItems(prevItems => [
@@ -343,7 +269,7 @@ const AddInventoryPage = () => {
                                     onChange={(e) => handleItemChange(item.id, 'barcode', e.target.value)}
                                     placeholder={t('scan_or_enter_barcode')}
                                   />
-                                  <Button type="button" size="icon" variant="ghost" onClick={() => startScan(item.id)}><ScanBarcode className="h-5 w-5" /></Button>
+                                  <Button type="button" size="icon" variant="ghost" onClick={() => handleStartScan(item.id)}><ScanBarcode className="h-5 w-5" /></Button>
                                 </div>
                               </TableCell>
                               <TableCell className="min-w-[250px] p-2 md:p-4" data-label={t('product')}>
@@ -399,7 +325,7 @@ const AddInventoryPage = () => {
                       <MobileSupplyItemCard
                         key={item.id}
                         itemId={item.id}
-                        onScan={() => startScan(item.id)}
+                        onScan={() => handleStartScan(item.id)}
                         onRemove={() => removeItem(item.id)}
                         onDuplicate={() => duplicateItem(item.id)}
                         canRemove={items.length > 1}
@@ -464,13 +390,12 @@ const AddInventoryPage = () => {
           </form>
 
           {/* Fullscreen scanner, rendered at the top level */}
-          {isScanning && activeScannerId && (
+          {isScannerActive && (
             <div className="fixed inset-0 bg-black z-50">
-              <video ref={videoRef} className="w-full h-full object-cover"></video>
-              <canvas ref={canvasRef} className="hidden"></canvas>
+              <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay />
               <BarcodeScannerViewfinder />
               <div className="absolute top-4 right-4 z-[51]">
-                <Button variant="destructive" onClick={stopScan}>{t('stop_scanning')}</Button>
+                <Button variant="destructive" onClick={handleStopScan}>{t('stop_scanning')}</Button>
               </div>
             </div>
           )}

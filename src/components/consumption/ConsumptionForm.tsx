@@ -7,7 +7,7 @@ import { Plus, ScanBarcode, Camera } from 'lucide-react';
 import { ConsumptionRecord, ConsumptionItem, InventoryItem, ProductDefinition, Store } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { MultiFormatReader, NotFoundException, DecodeHintType, BarcodeFormat, RGBLuminanceSource, BinaryBitmap, HybridBinarizer } from '@zxing/library';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 import { addConsumptionRecord } from '@/data/operations/consumptionOperations';
@@ -37,26 +37,8 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<(Partial<ConsumptionItem> & { id: string; availableQuantity?: number })[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
-  
-  const [isScanning, setIsScanning] = useState(false);
   const [isContinuousScanning, setIsContinuousScanning] = useState(false);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-
-  // --- Barcode Scanner Optimization ---
-  const hints = new Map();
-  const formats = [
-    BarcodeFormat.CODE_128, 
-    BarcodeFormat.EAN_13, 
-    BarcodeFormat.DATA_MATRIX,
-    BarcodeFormat.CODE_39,
-    BarcodeFormat.UPC_A,
-  ];
-  hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-  const codeReader = new MultiFormatReader();
-  // --- End Optimization ---
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,40 +78,8 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     }));
   }, [inventory]);
 
-  const playBeep = useCallback(() => {
-    if (!audioContextRef.current) {
-      try {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      } catch (e) {
-        console.error("Web Audio API is not supported in this browser");
-        return;
-      }
-    }
-    const oscillator = audioContextRef.current.createOscillator();
-    const gainNode = audioContextRef.current.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContextRef.current.destination);
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, audioContextRef.current.currentTime);
-    gainNode.gain.setValueAtTime(0.5, audioContextRef.current.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.1);
-    oscillator.start(audioContextRef.current.currentTime);
-    oscillator.stop(audioContextRef.current.currentTime + 0.1);
-  }, []);
-
-  const stopScan = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    setIsScanning(false);
-    setActiveScannerId(null);
-    setIsContinuousScanning(false);
-  }, []);
-
-  const handleBarcodeScanned = useCallback((barcode: string) => {
-    const foundItem = availableSupplies.find(item => item.barcode === barcode);
+  const handleScanSuccess = useCallback((scannedBarcode: string) => {
+    const foundItem = availableSupplies.find(item => item.barcode === scannedBarcode);
     if (foundItem) {
       if (navigator.vibrate) navigator.vibrate(100);
 
@@ -137,71 +87,37 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
         const newItemId = `item_${Date.now()}`;
         setItems(prev => [...prev, { id: newItemId, inventory_item_id: foundItem.id, quantity: 1, availableQuantity: foundItem.quantity }]);
         toast({ title: t('item_added'), description: `${productDefs.find(p => p.id === foundItem.product_definition_id)?.name} - ${foundItem.variant}` });
-      } else {
-        handleItemChange(activeScannerId!, 'inventory_item_id', foundItem.id);
-        toast({ title: t('item_found'), description: `${t('item_with_barcode')} ${barcode} ${t('selected')}.` });
-        stopScan();
+      } else if (activeScannerId) {
+        handleItemChange(activeScannerId, 'inventory_item_id', foundItem.id);
+        toast({ title: t('item_found'), description: `${t('item_with_barcode')} ${scannedBarcode} ${t('selected')}.` });
+        stopScanner();
       }
     } else {
-      toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${barcode} ${t('not_found_in_store')}.`, variant: 'destructive' });
+      toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${scannedBarcode} ${t('not_found_in_store')}.`, variant: 'destructive' });
     }
-  }, [availableSupplies, isContinuousScanning, activeScannerId, stopScan, handleItemChange, toast, t, productDefs]);
+  }, [availableSupplies, isContinuousScanning, activeScannerId, handleItemChange, toast, t, productDefs]);
+
+  const handleScanFailure = useCallback((error: Error) => {
+    console.error("Scan Error:", error);
+    toast({ title: t('scan_error'), description: error.message, variant: 'destructive' });
+  }, [t, toast]);
+
+  const {
+    videoRef,
+    isScannerActive,
+    error: scannerError,
+    startScanner: startScannerHook,
+    stopScanner,
+  } = useBarcodeScanner({
+    onScanSuccess: handleScanSuccess,
+    onScanFailure: handleScanFailure,
+  });
 
   useEffect(() => {
-    if (isScanning && activeScannerId && videoRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas?.getContext('2d');
-
-      const constraints = {
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          advanced: [{ focusMode: 'continuous' } as any]
-        }
-      };
-
-      navigator.mediaDevices.getUserMedia(constraints)
-        .then(stream => {
-          video.srcObject = stream;
-          video.setAttribute('playsinline', 'true');
-          video.play();
-
-          const scanInterval = setInterval(() => {
-            if (video.readyState === video.HAVE_ENOUGH_DATA && canvas && context) {
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
-              context.drawImage(video, 0, 0, canvas.width, canvas.height);
-              
-              try {
-                const luminanceSource = new RGBLuminanceSource(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
-                const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
-                const result = codeReader.decode(binaryBitmap, hints);
-                if (result) {
-                  if (!isContinuousScanning) clearInterval(scanInterval);
-                  handleBarcodeScanned(result.getText());
-                }
-              } catch (err) {
-                if (!(err instanceof NotFoundException)) {
-                  // console.error('Scan Error:', err);
-                }
-              }
-            }
-          }, 500);
-
-          return () => {
-            clearInterval(scanInterval);
-            stream.getTracks().forEach(track => track.stop());
-          };
-        })
-        .catch(err => {
-          console.error("Camera access error:", err);
-          toast({ title: t('error'), description: t('failed_to_start_camera'), variant: 'destructive' });
-          stopScan();
-        });
+    if (scannerError) {
+      toast({ title: t('scanner_error'), description: scannerError, variant: 'destructive' });
     }
-  }, [isScanning, activeScannerId, codeReader, stopScan, handleBarcodeScanned, t, toast, isContinuousScanning]);
+  }, [scannerError, toast, t]);
 
   const startScan = useCallback((itemId: string, continuous = false) => {
     if (!selectedStoreId) {
@@ -210,8 +126,8 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     }
     setIsContinuousScanning(continuous);
     setActiveScannerId(itemId);
-    setIsScanning(true);
-  }, [selectedStoreId, toast, t]);
+    startScannerHook();
+  }, [selectedStoreId, toast, t, startScannerHook]);
 
   const addNewItem = () => {
     setItems(prevItems => [...prevItems, { id: `item_${Date.now()}`, quantity: 1, inventory_item_id: '' }]);
@@ -286,14 +202,12 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
                 </Button>
               </div>
             </div>
-            
-            {isScanning && activeScannerId && (
+            {isScannerActive && (
               <div className="fixed inset-0 bg-black z-50">
-                <video ref={videoRef} className="w-full h-full object-cover"></video>
-                <canvas ref={canvasRef} className="hidden"></canvas>
+                <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay />
                 <BarcodeScannerViewfinder />
                 <div className="absolute top-4 right-4 z-[51]">
-                  <Button variant="destructive" onClick={stopScan}>{t('stop_scanning')}</Button>
+                  <Button variant="destructive" onClick={stopScanner}>{t('stop_scanning')}</Button>
                 </div>
               </div>
             )}
