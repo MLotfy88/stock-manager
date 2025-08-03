@@ -85,6 +85,8 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     startScanner: startScannerHook,
     stopScanner,
     scanCycle,
+    isTorchOn,
+    toggleTorch,
   } = useBarcodeScanner({
     onScanSuccess: (scannedBarcode: string) => {
       const foundItem = availableSupplies.find(item => item.barcode === scannedBarcode);
@@ -202,7 +204,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
             {isScannerActive && (
               <div className="fixed inset-0 bg-black z-50">
                 <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay />
-                <BarcodeScannerViewfinder scanCycle={scanCycle} />
+                <BarcodeScannerViewfinder scanCycle={scanCycle} isTorchOn={isTorchOn} toggleTorch={toggleTorch} />
                 <div className="absolute top-4 right-4 z-[51]">
                   <Button variant="destructive" onClick={stopScanner}>{t('stop_scanning')}</Button>
                 </div>
