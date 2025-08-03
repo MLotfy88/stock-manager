@@ -40,7 +40,7 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
 
   const captureAndDecode = useCallback(() => {
     if (!videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
-      console.warn("Video not ready for capture.");
+      callbackRef.current.onScanFailure?.(new Error("Video not ready."));
       return;
     }
 
@@ -50,32 +50,49 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     canvas.height = video.videoHeight;
     const context = canvas.getContext('2d');
 
-    if (context) {
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const luminanceSource = new RGBLuminanceSource(imageData.data, imageData.width, imageData.height);
-      const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+    if (!context) {
+      callbackRef.current.onScanFailure?.(new Error("Could not get canvas context."));
+      return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // --- Attempt 1: Decode Full Image ---
+    try {
+      const fullImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const fullLuminanceSource = new RGBLuminanceSource(fullImageData.data, fullImageData.width, fullImageData.height);
+      const fullBinaryBitmap = new BinaryBitmap(new HybridBinarizer(fullLuminanceSource));
+      const result = codeReader.current.decode(fullBinaryBitmap);
+      callbackRef.current.onScanSuccess(result.getText());
+      return; // Success!
+    } catch (err) {
+      // Expected to fail if barcode is small or not centered, continue to next attempt.
+    }
+
+    // --- Attempt 2: Decode Cropped Center Image ---
+    try {
+      const cropWidth = canvas.width * 0.9;
+      const cropHeight = canvas.height * 0.4;
+      const cropX = (canvas.width - cropWidth) / 2;
+      const cropY = (canvas.height - cropHeight) / 2;
+      const croppedImageData = context.getImageData(cropX, cropY, cropWidth, cropHeight);
       
-      try {
-        const result = codeReader.current.decode(binaryBitmap);
-        callbackRef.current.onScanSuccess(result.getText());
-      } catch (err) {
-        if (err instanceof NotFoundException) {
-          if (callbackRef.current.onScanFailure) {
-            callbackRef.current.onScanFailure(new Error("Barcode not found in the captured image."));
-          }
-        } else {
-          if (callbackRef.current.onScanFailure) {
-            callbackRef.current.onScanFailure(err as Error);
-          }
-        }
+      const croppedLuminanceSource = new RGBLuminanceSource(croppedImageData.data, croppedImageData.width, croppedImageData.height);
+      const croppedBinaryBitmap = new BinaryBitmap(new HybridBinarizer(croppedLuminanceSource));
+      const result = codeReader.current.decode(croppedBinaryBitmap);
+      callbackRef.current.onScanSuccess(result.getText());
+      return; // Success!
+    } catch (err) {
+      if (err instanceof NotFoundException) {
+        callbackRef.current.onScanFailure?.(new Error("Barcode not found. Please try again."));
+      } else {
+        callbackRef.current.onScanFailure?.(err as Error);
       }
     }
   }, []);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
-
     const startCamera = async () => {
       try {
         setError(null);
