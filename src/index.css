@@ -206,18 +206,9 @@
   }
 }
 
-@keyframes laser-scan {
-  0% {
-    transform: translateY(-100%);
-  }
-  100% {
-    transform: translateY(100%);
-  }
-}
-
-.animate-laser-scan {
-  animation: laser-scan 2s infinite alternate;
+.laser-scan-line {
   box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0.6);
+  transition: transform 0.1s ease-out;
 }
 
 @keyframes pulse-border {

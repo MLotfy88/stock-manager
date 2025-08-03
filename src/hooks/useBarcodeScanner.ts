@@ -14,8 +14,10 @@ interface UseBarcodeScannerProps {
 export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanCycle, setScanCycle] = useState(0); // New state for visual feedback
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
+  const scanInterval = useRef<NodeJS.Timeout | null>(null);
 
   const callbackRef = useRef(props);
   useEffect(() => {
@@ -44,6 +46,10 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
   }, []);
 
   const stopScanner = useCallback(() => {
+    if (scanInterval.current) {
+      clearInterval(scanInterval.current);
+      scanInterval.current = null;
+    }
     if (codeReader.current) {
       codeReader.current.reset();
     }
@@ -59,8 +65,6 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     if (!isScannerActive) {
       return;
     }
-
-    let isCancelled = false;
 
     const startCamera = async () => {
       if (!videoRef.current || !codeReader.current) {
@@ -83,45 +87,40 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
           },
         });
 
-        if (isCancelled) {
-          stream.getTracks().forEach(track => track.stop());
-          return;
-        }
-
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
 
-          codeReader.current.decodeFromStream(stream, videoRef.current, (result, err) => {
-            if (isCancelled) return;
-
-            if (result) {
-              callbackRef.current.onScanSuccess(result.getText());
-            }
-            if (err && !(err instanceof NotFoundException)) {
-              const errorMessage = `Barcode scan failed: ${err.message}`;
-              setError(errorMessage);
-              if (callbackRef.current.onScanFailure) {
-                callbackRef.current.onScanFailure(err);
+          scanInterval.current = setInterval(async () => {
+            setScanCycle(prev => prev + 1); // Update cycle for visual feedback
+            if (codeReader.current && videoRef.current) {
+              try {
+                const result = await codeReader.current.decodeFromVideoElement(videoRef.current);
+                if (result) {
+                  callbackRef.current.onScanSuccess(result.getText());
+                  stopScanner();
+                }
+              } catch (err) {
+                if (!(err instanceof NotFoundException)) {
+                  // console.error("Decode Error:", err);
+                }
               }
             }
-          });
+          }, 500);
         }
       } catch (err: any) {
-        if (isCancelled) return;
         const errorMessage = `Failed to start scanner: ${err.message}`;
         setError(errorMessage);
         if (callbackRef.current.onScanFailure) {
           callbackRef.current.onScanFailure(err);
         }
-        setIsScannerActive(false);
+        stopScanner();
       }
     };
 
     startCamera();
 
     return () => {
-      isCancelled = true;
       stopScanner();
     };
   }, [isScannerActive, stopScanner]);
@@ -136,5 +135,6 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     error,
     startScanner,
     stopScanner,
+    scanCycle, // Expose the cycle state
   };
 };
