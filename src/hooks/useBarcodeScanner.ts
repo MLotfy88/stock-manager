@@ -1,13 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  MultiFormatReader,
-  NotFoundException,
-  DecodeHintType,
-  BarcodeFormat,
-  BinaryBitmap,
-  HybridBinarizer,
-  RGBLuminanceSource,
-} from '@zxing/library';
+
+// Define the structure of the BarcodeDetector, as it might not be in all TypeScript lib versions
+declare global {
+  interface Window {
+    BarcodeDetector: new (options?: { formats: string[] }) => BarcodeDetector;
+  }
+  interface BarcodeDetector {
+    detect(image: ImageBitmapSource): Promise<DetectedBarcode[]>;
+  }
+  interface DetectedBarcode {
+    rawValue: string;
+    format: string;
+  }
+}
 
 interface UseBarcodeScannerProps {
   onScanSuccess: (text: string) => void;
@@ -17,9 +22,9 @@ interface UseBarcodeScannerProps {
 export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSupported, setIsSupported] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
-  const codeReader = useRef(new MultiFormatReader());
+  const barcodeDetector = useRef<BarcodeDetector | null>(null);
 
   const callbackRef = useRef(props);
   useEffect(() => {
@@ -27,67 +32,35 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
   }, [props]);
 
   useEffect(() => {
-    const hints = new Map();
-    const formats = [
-      BarcodeFormat.CODE_128, BarcodeFormat.EAN_13, BarcodeFormat.CODE_39,
-      BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E,
-      BarcodeFormat.DATA_MATRIX, BarcodeFormat.ITF, BarcodeFormat.CODABAR,
-    ];
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-    hints.set(DecodeHintType.TRY_HARDER, true);
-    codeReader.current.setHints(hints);
+    if (!('BarcodeDetector' in window)) {
+      setIsSupported(false);
+      setError("Barcode Detector API is not supported in this browser.");
+      return;
+    }
+    barcodeDetector.current = new window.BarcodeDetector({
+      formats: ['code_128', 'ean_13', 'code_39', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar'],
+    });
   }, []);
 
-  const captureAndDecode = useCallback(() => {
+  const captureAndDecode = useCallback(async () => {
     if (!videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
       callbackRef.current.onScanFailure?.(new Error("Video not ready."));
       return;
     }
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext('2d');
-
-    if (!context) {
-      callbackRef.current.onScanFailure?.(new Error("Could not get canvas context."));
+    if (!barcodeDetector.current) {
+      callbackRef.current.onScanFailure?.(new Error("Barcode Detector not initialized."));
       return;
     }
 
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // --- Attempt 1: Decode Full Image ---
     try {
-      const fullImageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const fullLuminanceSource = new RGBLuminanceSource(fullImageData.data, fullImageData.width, fullImageData.height);
-      const fullBinaryBitmap = new BinaryBitmap(new HybridBinarizer(fullLuminanceSource));
-      const result = codeReader.current.decode(fullBinaryBitmap);
-      callbackRef.current.onScanSuccess(result.getText());
-      return; // Success!
-    } catch (err) {
-      // Expected to fail if barcode is small or not centered, continue to next attempt.
-    }
-
-    // --- Attempt 2: Decode Cropped Center Image ---
-    try {
-      const cropWidth = canvas.width * 0.9;
-      const cropHeight = canvas.height * 0.4;
-      const cropX = (canvas.width - cropWidth) / 2;
-      const cropY = (canvas.height - cropHeight) / 2;
-      const croppedImageData = context.getImageData(cropX, cropY, cropWidth, cropHeight);
-      
-      const croppedLuminanceSource = new RGBLuminanceSource(croppedImageData.data, croppedImageData.width, croppedImageData.height);
-      const croppedBinaryBitmap = new BinaryBitmap(new HybridBinarizer(croppedLuminanceSource));
-      const result = codeReader.current.decode(croppedBinaryBitmap);
-      callbackRef.current.onScanSuccess(result.getText());
-      return; // Success!
-    } catch (err) {
-      if (err instanceof NotFoundException) {
-        callbackRef.current.onScanFailure?.(new Error("Barcode not found. Please try again."));
+      const barcodes = await barcodeDetector.current.detect(videoRef.current);
+      if (barcodes.length > 0) {
+        callbackRef.current.onScanSuccess(barcodes[0].rawValue);
       } else {
-        callbackRef.current.onScanFailure?.(err as Error);
+        callbackRef.current.onScanFailure?.(new Error("No barcode detected."));
       }
+    } catch (err) {
+      callbackRef.current.onScanFailure?.(err as Error);
     }
   }, []);
 
@@ -127,7 +100,14 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     };
   }, [isScannerActive]);
 
-  const startScanner = useCallback(() => setIsScannerActive(true), []);
+  const startScanner = useCallback(() => {
+    if (!isSupported) {
+      alert("Barcode scanning is not supported on this browser.");
+      return;
+    }
+    setIsScannerActive(true);
+  }, [isSupported]);
+  
   const stopScanner = useCallback(() => setIsScannerActive(false), []);
 
   return {
