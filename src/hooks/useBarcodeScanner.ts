@@ -11,14 +11,17 @@ interface UseBarcodeScannerProps {
   onScanFailure?: (error: Error) => void;
 }
 
-export const useBarcodeScanner = ({
-  onScanSuccess,
-  onScanFailure,
-}: UseBarcodeScannerProps) => {
+export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
+
+  // Use a ref to store the callbacks to prevent useEffect re-runs
+  const callbackRef = useRef(props);
+  useEffect(() => {
+    callbackRef.current = props;
+  }, [props]);
 
   useEffect(() => {
     const hints = new Map();
@@ -56,55 +59,71 @@ export const useBarcodeScanner = ({
   }, []);
 
   useEffect(() => {
-    if (isScannerActive && videoRef.current) {
-      const startCamera = async () => {
-        try {
-          setError(null);
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              // @ts-ignore
-              advanced: [{ autoFocus: 'continuous' }],
-            },
-          });
-
-          if (videoRef.current && codeReader.current) {
-            videoRef.current.srcObject = stream;
-            await videoRef.current.play();
-
-            codeReader.current.decodeFromStream(stream, videoRef.current, (result, err) => {
-              if (result) {
-                onScanSuccess(result.getText());
-              }
-              if (err && !(err instanceof NotFoundException)) {
-                const errorMessage = `Barcode scan failed: ${err.message}`;
-                setError(errorMessage);
-                if (onScanFailure) {
-                  onScanFailure(err);
-                }
-              }
-            });
-          }
-        } catch (err: any) {
-          const errorMessage = `Failed to start scanner: ${err.message}`;
-          setError(errorMessage);
-          if (onScanFailure) {
-            onScanFailure(err);
-          }
-          setIsScannerActive(false);
-        }
-      };
-      startCamera();
+    if (!isScannerActive) {
+      return;
     }
-    
-    return () => {
-      if (!isScannerActive) {
-        stopScanner();
+
+    let isCancelled = false;
+
+    const startCamera = async () => {
+      if (!videoRef.current || !codeReader.current) {
+        return;
+      }
+
+      try {
+        setError(null);
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            // @ts-ignore
+            advanced: [{ autoFocus: 'continuous' }],
+          },
+        });
+
+        if (isCancelled) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+
+          codeReader.current.decodeFromStream(stream, videoRef.current, (result, err) => {
+            if (isCancelled) return;
+
+            if (result) {
+              callbackRef.current.onScanSuccess(result.getText());
+            }
+            if (err && !(err instanceof NotFoundException)) {
+              const errorMessage = `Barcode scan failed: ${err.message}`;
+              setError(errorMessage);
+              if (callbackRef.current.onScanFailure) {
+                callbackRef.current.onScanFailure(err);
+              }
+            }
+          });
+        }
+      } catch (err: any) {
+        if (isCancelled) return;
+        const errorMessage = `Failed to start scanner: ${err.message}`;
+        setError(errorMessage);
+        if (callbackRef.current.onScanFailure) {
+          callbackRef.current.onScanFailure(err);
+        }
+        setIsScannerActive(false);
       }
     };
-  }, [isScannerActive, onScanSuccess, onScanFailure, stopScanner]);
+
+    startCamera();
+
+    return () => {
+      isCancelled = true;
+      stopScanner();
+    };
+  }, [isScannerActive, stopScanner]);
 
   const startScanner = useCallback(() => {
     setIsScannerActive(true);
