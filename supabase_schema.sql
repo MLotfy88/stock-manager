@@ -5,6 +5,7 @@
 -- Drop functions and views first to remove dependencies
 DROP FUNCTION IF EXISTS delete_consumption_record(uuid);
 DROP FUNCTION IF EXISTS create_consumption_record(date, text, text, text, text, jsonb);
+DROP FUNCTION IF EXISTS transfer_inventory(jsonb);
 DROP FUNCTION IF EXISTS get_public_tables();
 DROP VIEW IF EXISTS inventory_items_with_status;
 
@@ -223,5 +224,103 @@ BEGIN
     END LOOP;
 
     DELETE FROM consumption_records WHERE id = p_record_id;
+END;
+$$;
+
+-- Function to transfer inventory between stores atomically
+CREATE OR REPLACE FUNCTION transfer_inventory(
+    items_to_transfer JSONB
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    item RECORD;
+    source_item RECORD;
+    destination_item_id UUID;
+BEGIN
+    -- Loop through each item in the transfer list
+    -- The JSONB object should be an array of objects with keys: "itemId", "quantity", "fromStoreId", "toStoreId"
+    FOR item IN SELECT * FROM jsonb_to_recordset(items_to_transfer) AS x(
+        "itemId" UUID, 
+        "quantity" INT, 
+        "fromStoreId" UUID, 
+        "toStoreId" UUID
+    )
+    LOOP
+        -- 1. Get the source item and lock the row for update to prevent race conditions
+        SELECT * INTO source_item FROM inventory_items WHERE id = item."itemId" FOR UPDATE;
+
+        -- 2. Perform validations
+        IF source_item IS NULL THEN
+            RAISE EXCEPTION 'Source item with ID % not found.', item."itemId";
+        END IF;
+
+        IF source_item.store_id <> item."fromStoreId" THEN
+            RAISE EXCEPTION 'Item % does not belong to the specified source store %.', item."itemId", item."fromStoreId";
+        END IF;
+
+        IF source_item.quantity < item."quantity" THEN
+            RAISE EXCEPTION 'Insufficient quantity for item %. Available: %, Required: %', 
+                source_item.id, source_item.quantity, item."quantity";
+        END IF;
+
+        -- 3. Find if a perfectly matching item (same product, variant, batch, expiry, price) exists in the destination store
+        SELECT id INTO destination_item_id
+        FROM inventory_items
+        WHERE product_definition_id = source_item.product_definition_id
+          AND variant = source_item.variant
+          AND store_id = item."toStoreId"
+          AND batch_number = source_item.batch_number
+          AND expiry_date = source_item.expiry_date
+          AND purchase_price IS NOT DISTINCT FROM source_item.purchase_price -- Handles NULL prices
+        LIMIT 1;
+
+        -- 4. Update or create item in the destination store
+        IF destination_item_id IS NOT NULL THEN
+            -- A matching item exists, so just increase its quantity
+            UPDATE inventory_items
+            SET quantity = quantity + item."quantity",
+                updated_at = now()
+            WHERE id = destination_item_id;
+        ELSE
+            -- No matching item exists, so create a new inventory item record
+            -- NOTE: Setting barcode to NULL to avoid violating the UNIQUE constraint.
+            -- This is a workaround for the schema design issue where 'barcode' is unique.
+            INSERT INTO inventory_items (
+                product_definition_id,
+                variant,
+                barcode, -- Set to NULL
+                quantity,
+                store_id,
+                manufacturer_id,
+                supplier_id,
+                batch_number,
+                expiry_date,
+                purchase_price,
+                notes
+            )
+            VALUES (
+                source_item.product_definition_id,
+                source_item.variant,
+                NULL, -- Workaround for UNIQUE barcode constraint
+                item."quantity",
+                item."toStoreId",
+                source_item.manufacturer_id,
+                source_item.supplier_id,
+                source_item.batch_number,
+                source_item.expiry_date,
+                source_item.purchase_price,
+                'Transferred from store ' || item."fromStoreId"::text || '. Original item ID: ' || source_item.id::text
+            );
+        END IF;
+
+        -- 5. Decrease the quantity from the source item
+        UPDATE inventory_items
+        SET quantity = quantity - item."quantity",
+            updated_at = now()
+        WHERE id = source_item.id;
+
+    END LOOP;
 END;
 $$;

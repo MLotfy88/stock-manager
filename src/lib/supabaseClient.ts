@@ -7,8 +7,15 @@ export const getSupabaseClient = (): SupabaseClient | null => {
     return supabaseInstance;
   }
 
-  const supabaseUrl = localStorage.getItem('supabaseUrl');
-  const supabaseKey = localStorage.getItem('supabaseKey');
+  let supabaseUrl = localStorage.getItem('supabaseUrl');
+  let supabaseKey = localStorage.getItem('supabaseKey');
+
+  // Fallback to hardcoded values if not found in localStorage
+  if (!supabaseUrl || !supabaseKey) {
+    supabaseUrl = 'https://hmpsdmovolevivkqkhba.supabase.co';
+    supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtcHNkbW92b2xldml2a3FraGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwNjE2NDEsImV4cCI6MjA2OTYzNzY0MX0.c3lvcvGO55ursK-Kiq1T2iIZSuXAYlgKXNdLZmagHnE';
+  }
+
 
   if (supabaseUrl && supabaseKey) {
     try {
