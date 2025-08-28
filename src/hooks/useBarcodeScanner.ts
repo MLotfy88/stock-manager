@@ -1,5 +1,66 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
+const parseGS1Barcode = (rawValue: string): string => {
+  // GS1-128 barcodes scanned by some devices start with ]C1
+  if (!rawValue.startsWith(']C1')) {
+    return rawValue; // Not a GS1-128 barcode, return as is
+  }
+
+  let data = rawValue.substring(3); // Remove the GS1 prefix
+  let result = '';
+  
+  // A simplified map of Application Identifiers (AIs) and their fixed lengths.
+  // -1 indicates a variable length field.
+  const aiRules: { [key: string]: number } = {
+    '01': 14, // GTIN
+    '17': 6,  // Expiration Date (YYMMDD)
+    '10': -1, // Batch/Lot Number (variable length up to 20 chars)
+    '30': -1, // Count of items (variable length up to 8 digits)
+  };
+
+  while (data.length > 0) {
+    const ai = data.substring(0, 2);
+    data = data.substring(2);
+
+    if (aiRules[ai] !== undefined) {
+      let value = '';
+      const length = aiRules[ai];
+
+      if (length > 0) {
+        // Fixed length AI
+        value = data.substring(0, length);
+        data = data.substring(length);
+      } else {
+        // Variable length AI. GS1 uses FNC1 as a separator, which is often not present in raw data.
+        // We'll look for the next AI as a delimiter. This is a simplification.
+        let nextAiIndex = -1;
+        for (let i = 1; i < data.length - 1; i++) {
+            const nextPotentialAi = data.substring(i, i + 2);
+            if(aiRules[nextPotentialAi] !== undefined) {
+                nextAiIndex = i;
+                break;
+            }
+        }
+
+        if (nextAiIndex !== -1) {
+          value = data.substring(0, nextAiIndex);
+          data = data.substring(nextAiIndex);
+        } else {
+          value = data; // Assume it's the last field
+          data = '';
+        }
+      }
+      result += `(${ai})${value} `;
+    } else {
+      // If we encounter an AI not in our rules, we stop parsing.
+      // This is a safeguard against incorrect parsing of variable length fields.
+      break;
+    }
+  }
+
+  return result.trim();
+};
+
 // Define the structure of the BarcodeDetector, as it might not be in all TypeScript lib versions
 declare global {
   interface Window {
@@ -55,7 +116,8 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     try {
       const barcodes = await barcodeDetector.current.detect(videoRef.current);
       if (barcodes.length > 0) {
-        callbackRef.current.onScanSuccess(barcodes[0].rawValue);
+        const parsedValue = parseGS1Barcode(barcodes[0].rawValue);
+        callbackRef.current.onScanSuccess(parsedValue);
       } else {
         callbackRef.current.onScanFailure?.(new Error("No barcode detected."));
       }

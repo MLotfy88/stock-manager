@@ -1,7 +1,7 @@
 # نقطة المراجعة (Checkpoint)
 
 ## تاريخ التحديث
-10:18 AM, August 28, 2025
+10:17 AM, August 28, 2025
 
 ## الإنجاز الأخير
-**معالجة خطأ عدم دعم Barcode Detector API.** تم تعديل `src/hooks/useBarcodeScanner.ts` و `src/pages/AddSupplyPage.tsx` و `src/components/supplies/MobileSupplyItemCard.tsx` للتعامل بشكل رشيق مع حالة عدم دعم `Barcode Detector API` في المتصفح. يتضمن ذلك تعطيل وظيفة المسح الضوئي في الواجهة الأمامية وعرض رسالة توضيحية للمستخدم، مما يمنع ظهور الخطأ "scanner_error Barcode Detector API is not supported in this browser."
+**إضافة محلل باركود GS1-128.** تم تعديل `src/hooks/useBarcodeScanner.ts` لإضافة دالة `parseGS1Barcode` التي تقوم بتحليل البيانات الخام من باركود GS1-128 (الذي يبدأ بـ `]C1`) وتعيد تنسيقها بالشكل الصحيح مع الأقواس ومعرفات التطبيق (AIs). هذا الحل يعالج مشكلة قراءة الباركود بشكل غير صحيح وتجاهل الأقواس.

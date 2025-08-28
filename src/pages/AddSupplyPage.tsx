@@ -95,7 +95,6 @@ const AddInventoryPage = () => {
     videoRef,
     isScannerActive,
     error: scannerError,
-    isSupported, // استخراج isSupported
     startScanner,
     stopScanner,
     captureAndDecode,
@@ -266,9 +265,8 @@ const AddInventoryPage = () => {
                                     value={item.barcode}
                                     onChange={(e) => handleItemChange(item.id, 'barcode', e.target.value)}
                                     placeholder={t('scan_or_enter_barcode')}
-                                    disabled={!isSupported} // تعطيل الحقل إذا لم يكن الماسح مدعومًا
                                   />
-                                  <Button type="button" size="icon" variant="ghost" onClick={() => handleStartScan(item.id)} disabled={!isSupported}><ScanBarcode className="h-5 w-5" /></Button>
+                                  <Button type="button" size="icon" variant="ghost" onClick={() => handleStartScan(item.id)}><ScanBarcode className="h-5 w-5" /></Button>
                                 </div>
                               </TableCell>
                               <TableCell className="min-w-[250px] p-2 md:p-4" data-label={t('product')}>
@@ -328,13 +326,11 @@ const AddInventoryPage = () => {
                         onRemove={() => removeItem(item.id)}
                         onDuplicate={() => duplicateItem(item.id)}
                         canRemove={items.length > 1}
-                        isScannerSupported={isSupported} // تمرير isSupported إلى MobileSupplyItemCard
                       >
                         <div className="space-y-4">
                           {/* Barcode */}
                           <div className="flex items-center gap-2">
-                            <Input value={item.barcode} onChange={(e) => handleItemChange(item.id, 'barcode', e.target.value)} placeholder={t('scan_or_enter_barcode')} disabled={!isSupported} />
-                            {!isSupported && <span className="text-sm text-destructive">{t('scanner_not_supported')}</span>} {/* رسالة للموبايل */}
+                            <Input value={item.barcode} onChange={(e) => handleItemChange(item.id, 'barcode', e.target.value)} placeholder={t('scan_or_enter_barcode')} />
                           </div>
                           {/* Product */}
                           <Select value={item.productDefinitionId} onValueChange={(val) => handleItemChange(item.id, 'productDefinitionId', val)}>
