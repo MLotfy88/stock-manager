@@ -74,6 +74,9 @@ export interface InventoryItem {
   notes?: string;
   created_at: string;
   updated_at: string;
+  manufacturers: { // Added from join
+    name: string;
+  };
 }
 
 export interface DashboardStats {

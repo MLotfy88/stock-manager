@@ -22,6 +22,7 @@ const ConsumptionReportPage = lazy(() => import('./pages/ConsumptionReportPage')
 const ImportExportPage = lazy(() => import('./pages/ImportExportPage'));
 const ConsumptionPage = lazy(() => import('./pages/ConsumptionPage'));
 const ManagementPage = lazy(() => import('./pages/ManagementPage'));
+const AllSuppliesPage = lazy(() => import('./pages/AllSuppliesPage'));
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/supplies" element={<SuppliesPage />} />
+              <Route path="/all-supplies" element={<AllSuppliesPage />} />
               <Route path="/add-supply" element={<AddInventoryPage />} />
               <Route path="/consumption" element={<ConsumptionPage />} />
               <Route path="/calendar" element={<CalendarPage />} />

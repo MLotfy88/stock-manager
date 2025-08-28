@@ -10,7 +10,8 @@ export const calculateDashboardStats = async () => {
 
   const { data: allItems, error: allItemsError } = await supabase
     .from('inventory_items_with_status')
-    .select('id, status, quantity, product_definition_id, variant');
+    .select('id, status, quantity, product_definition_id, variant')
+    .gt('quantity', 0); // Only fetch items with quantity > 0
 
   if (allItemsError) {
     console.error("Error fetching items for stats:", allItemsError);
@@ -18,15 +19,18 @@ export const calculateDashboardStats = async () => {
   }
 
   const productDefs = await getProductDefinitions();
-
-  const totalSupplies = allItems?.reduce((sum, item) => sum + item.quantity, 0) || 0;
   
-  const expiringSupplies = allItems?.filter(i => i.status === 'expiring_soon').length || 0;
-  const expiredSupplies = allItems?.filter(i => i.status === 'expired').length || 0;
-  const validSupplies = allItems?.filter(i => i.status === 'valid').length || 0;
+  // Filter items with quantity > 0, as the view might still return them before a refresh
+  const itemsInStock = allItems?.filter(item => item.quantity > 0) || [];
+
+  const totalSupplies = itemsInStock.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  
+  const expiringSupplies = itemsInStock.filter(i => i.status === 'expiring_soon').length || 0;
+  const expiredSupplies = itemsInStock.filter(i => i.status === 'expired').length || 0;
+  const validSupplies = itemsInStock.filter(i => i.status === 'valid').length || 0;
 
   // Calculate reorder point items
-  const inventoryByProductVariant = allItems.reduce((acc, item) => {
+  const inventoryByProductVariant = itemsInStock.reduce((acc, item) => {
     const key = `${item.product_definition_id}-${item.variant}`;
     acc[key] = (acc[key] || 0) + item.quantity;
     return acc;
@@ -44,7 +48,7 @@ export const calculateDashboardStats = async () => {
   }
 
   // Calculate type counts
-  const typeCounts = allItems.reduce((acc, item) => {
+  const typeCounts = itemsInStock.reduce((acc, item) => {
     const def = productDefs.find(p => p.id === item.product_definition_id);
     if (def) {
       // This assumes a mapping from type_id to a type name/key.

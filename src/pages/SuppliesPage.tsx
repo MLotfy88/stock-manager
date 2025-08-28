@@ -7,14 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
-  Package, Search, Plus, Filter, ArrowUpDown, AlertTriangle, Clock, CheckCircle
+  Package, Search, Plus, Filter, ArrowUpDown, AlertTriangle, Clock, CheckCircle, Eye
 } from 'lucide-react';
 import SupplyCard from '@/components/supplies/SupplyCard';
 import { InventoryItem, ProductDefinition, SupplyTypeItem } from '@/types';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getInventoryItems } from '@/data/operations/suppliesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getSupplyTypes } from '@/data/operations/supplyTypeOperations';
@@ -75,6 +75,8 @@ const SuppliesPage = () => {
         ...item,
         name: definition?.name || 'Unknown',
         type_id: definition?.type_id || 'other',
+        // The manufacturer name is now directly available on the item from the query
+        manufacturerName: item.manufacturers?.name || 'Unknown Manufacturer',
       };
     });
   }, [inventoryItems, productDefinitions]);
@@ -115,7 +117,9 @@ const SuppliesPage = () => {
 
   const statusCounts = useMemo(() => {
     return inventoryItems.reduce((acc, item) => {
-      acc[item.status] = (acc[item.status] || 0) + 1;
+      if (item.quantity > 0) { // Only count items with quantity > 0
+        acc[item.status] = (acc[item.status] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>);
   }, [inventoryItems]);
@@ -136,10 +140,20 @@ const SuppliesPage = () => {
               <h1 className="text-2xl md:text-3xl font-bold mb-1">{t('supplies_nav')}</h1>
               <p className="text-muted-foreground text-sm md:text-base">{t('supplies_overview')}</p>
             </div>
-            <Button className="gap-2 w-full md:w-auto" onClick={() => navigate('/add-supply')}>
-              <Plus className="h-4 w-4" />
-              {t('add_new_supply')}
-            </Button>
+            <div className="flex gap-2">
+              <Button asChild variant="outline">
+                <Link to="/all-supplies">
+                  <Eye className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">{t('view_all')}</span>
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link to="/add-supply">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">{t('add_new_supply')}</span>
+                </Link>
+              </Button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

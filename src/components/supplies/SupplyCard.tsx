@@ -8,10 +8,17 @@ import { deleteInventoryItem } from '@/data/operations/suppliesOperations';
 import { useToast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Clock, Calendar, Package2, Tag, Building2, Truck, Trash2 } from 'lucide-react';
+import { InventoryItem } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
+// Define a more specific type for the enriched supply item
+type EnrichedSupplyItem = InventoryItem & {
+  name: string;
+  manufacturerName: string;
+};
+
 interface SupplyCardProps {
-  supply: any; // Using any because the parent component (SupplyList) is creating a synthetic object
+  supply: EnrichedSupplyItem;
   onDelete?: () => void;
 }
 
@@ -70,15 +77,8 @@ const SupplyCard: React.FC<SupplyCardProps> = ({ supply, onDelete }) => {
               
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
-                <span>{supply.manufacturerName}</span>
+                <span>{supply.manufacturers?.name || t('unknown_manufacturer')}</span>
               </div>
-              
-              {supply.supplierName && (
-                <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4" />
-                  <span>{supply.supplierName}</span>
-                </div>
-              )}
               
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />

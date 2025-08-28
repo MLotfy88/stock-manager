@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
@@ -26,6 +27,14 @@ const AlertsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
+  const navigate = useNavigate();
+
+  const handleViewDetails = (supplyId: string) => {
+    // Navigate to the supplies page, in the future this could be a specific item details page
+    // For now, we can just go to the main supplies list.
+    // A more advanced implementation could be: navigate(`/supplies/${supplyId}`);
+    navigate('/supplies');
+  };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -182,7 +191,7 @@ const AlertsPage = () => {
                             {t('batch')}: {supply.batch_number} | {t('manufacturer')}: {supply.manufacturerName}
                           </p>
                         </div>
-                        <Button size="sm" variant="outline" className="text-xs">
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleViewDetails(supply.id)}>
                           {t('view_details')}
                         </Button>
                       </div>
@@ -230,7 +239,7 @@ const AlertsPage = () => {
                             {t('batch')}: {supply.batch_number} | {t('manufacturer')}: {supply.manufacturerName}
                           </p>
                         </div>
-                        <Button size="sm" variant="outline" className="text-xs">
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleViewDetails(supply.id)}>
                           {t('view_details')}
                         </Button>
                       </div>
@@ -278,7 +287,7 @@ const AlertsPage = () => {
                             {t('batch')}: {supply.batch_number} | {t('manufacturer')}: {supply.manufacturerName}
                           </p>
                         </div>
-                        <Button size="sm" variant="outline" className="text-xs">
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleViewDetails(supply.id)}>
                           {t('view_details')}
                         </Button>
                       </div>

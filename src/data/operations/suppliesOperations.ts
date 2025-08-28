@@ -11,7 +11,12 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
 
   const { data, error } = await supabase
     .from('inventory_items_with_status') // Use the new VIEW
-    .select('*')
+    .select(`
+      *,
+      manufacturers (
+        name
+      )
+    `)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -53,7 +58,12 @@ export const getInventoryItemById = async (itemId: string): Promise<InventoryIte
 
   const { data, error } = await supabase
     .from('inventory_items_with_status') // Use the new VIEW
-    .select('*')
+    .select(`
+      *,
+      manufacturers (
+        name
+      )
+    `)
     .eq('id', itemId)
     .single();
 
