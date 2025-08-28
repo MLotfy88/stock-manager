@@ -38,7 +38,24 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
       return;
     }
     barcodeDetector.current = new window.BarcodeDetector({
-      formats: ['code_128', 'ean_13', 'code_39', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar'],
+      formats: [
+        'code_128',
+        'ean_13',
+        'code_39',
+        'ean_8',
+        'upc_a',
+        'upc_e',
+        'itf',
+        'codabar',
+        'qr_code',
+        'data_matrix',
+        'aztec',
+        'pdf417',
+        'maxicode',
+        'rss_14',
+        'rss_expanded',
+        'upc_ean_extension',
+      ],
     });
   }, []);
 
