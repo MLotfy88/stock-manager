@@ -131,6 +131,7 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     videoRef,
     isScannerActive,
     error,
+    isSupported, // إضافة isSupported هنا
     startScanner,
     stopScanner,
     captureAndDecode,

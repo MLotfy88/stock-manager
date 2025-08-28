@@ -1,7 +1,7 @@
 # نقطة المراجعة (Checkpoint)
 
 ## تاريخ التحديث
-10:31 AM, August 28, 2025
+10:18 AM, August 28, 2025
 
 ## الإنجاز الأخير
-**تحسين دعم قارئ الباركود للأقواس والمسافات والشرطات.** تم توسيع قائمة تنسيقات الباركود المدعومة في `src/hooks/useBarcodeScanner.ts` لزيادة فرص الكشف عن الباركود الذي يحتوي على هذه الرموز. هذا التعديل يهدف إلى معالجة مشكلة تفسير القوس `(` كحرف `C`، من خلال تمكين `Native Barcode Detection API` من محاولة التعرف على الباركود بتنسيقات أكثر شمولاً مثل `Code 128` و `QR Code` التي تدعم مجموعة أوسع من الأحرف.
+**معالجة خطأ عدم دعم Barcode Detector API.** تم تعديل `src/hooks/useBarcodeScanner.ts` و `src/pages/AddSupplyPage.tsx` و `src/components/supplies/MobileSupplyItemCard.tsx` للتعامل بشكل رشيق مع حالة عدم دعم `Barcode Detector API` في المتصفح. يتضمن ذلك تعطيل وظيفة المسح الضوئي في الواجهة الأمامية وعرض رسالة توضيحية للمستخدم، مما يمنع ظهور الخطأ "scanner_error Barcode Detector API is not supported in this browser."

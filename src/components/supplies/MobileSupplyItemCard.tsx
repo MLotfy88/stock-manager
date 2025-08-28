@@ -10,6 +10,7 @@ interface MobileSupplyItemCardProps {
   onRemove: () => void;
   onDuplicate?: () => void;
   canRemove: boolean;
+  isScannerSupported: boolean; // إضافة الخاصية الجديدة
 }
 
 export const MobileSupplyItemCard: React.FC<MobileSupplyItemCardProps> = ({
@@ -19,13 +20,14 @@ export const MobileSupplyItemCard: React.FC<MobileSupplyItemCardProps> = ({
   onRemove,
   onDuplicate,
   canRemove,
+  isScannerSupported, // استخراج الخاصية الجديدة
 }) => {
   return (
     <Card className="md:hidden mb-4 border-primary/20">
       <CardContent className="p-4 space-y-4">
         {children}
         <div className="flex justify-end items-center gap-2 pt-2 border-t border-dashed">
-          <Button type="button" size="icon" variant="ghost" onClick={onScan}>
+          <Button type="button" size="icon" variant="ghost" onClick={onScan} disabled={!isScannerSupported}>
             <ScanBarcode className="h-5 w-5 text-primary" />
           </Button>
           {onDuplicate && (
