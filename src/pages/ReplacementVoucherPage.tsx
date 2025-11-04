@@ -19,6 +19,9 @@ import InventoryItemForm, { PurchaseOrderItem } from '@/components/supplies/Inve
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { format } from 'date-fns';
 import { useEffect } from 'react';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
+import { ScanBarcode } from 'lucide-react';
 
 const Step1Content = ({ 
   productDefs,
@@ -26,26 +29,61 @@ const Step1Content = ({
   selectedSupplier, 
   setSelectedSupplier,
   handleAddItem,
-  returnedItems
+  returnedItems,
+  inventory
 }: {
   productDefs: ProductDefinition[],
   suppliers: Supplier[],
   selectedSupplier: string | null,
   setSelectedSupplier: (id: string) => void,
   handleAddItem: (barcode: string) => void,
-  returnedItems: InventoryItem[]
+  returnedItems: InventoryItem[],
+  inventory: InventoryItem[]
 }) => {
   const { t } = useLanguage();
-  const [barcode, setBarcode] = useState('');
+  const { toast } = useToast();
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [selectedManualItem, setSelectedManualItem] = useState('');
+
+  const {
+    videoRef,
+    isScannerActive,
+    startScanner,
+    stopScanner,
+    captureAndDecode,
+  } = useBarcodeScanner({
+    onScanSuccess: (scannedBarcode: string) => {
+      handleAddItem(scannedBarcode);
+      toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
+      if (navigator.vibrate) navigator.vibrate(150);
+      stopScanner();
+    },
+    onScanFailure: (error: Error) => {
+      toast({ title: t('scan_error'), description: error.message, variant: 'destructive' });
+    },
+  });
 
   const onAddItem = () => {
-    if (barcode.trim()) {
-      handleAddItem(barcode.trim());
-      setBarcode('');
+    if (barcodeInput.trim()) {
+      handleAddItem(barcodeInput.trim());
+      setBarcodeInput('');
+    }
+  };
+  
+  const handleManualAdd = () => {
+    if (selectedManualItem) {
+      const item = inventory.find(i => i.id === selectedManualItem);
+      if (item && item.barcode) {
+        handleAddItem(item.barcode);
+      }
+      setSelectedManualItem('');
     }
   };
 
+  const availableItems = inventory.filter(i => i.supplier_id === selectedSupplier && !returnedItems.some(r => r.id === i.id));
+
   return (
+    <>
     <div className="space-y-4">
       <div>
         <Label>{t('supplier')}</Label>
@@ -59,18 +97,38 @@ const Step1Content = ({
         </Select>
       </div>
       
-      <div className="flex items-end gap-2">
-        <div className="flex-grow">
-          <Label htmlFor="barcode">{t('scan_or_enter_barcode')}</Label>
-          <Input 
-            id="barcode" 
-            value={barcode} 
-            onChange={(e) => setBarcode(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && onAddItem()}
-            disabled={!selectedSupplier}
-          />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex items-end gap-2">
+          <div className="flex-grow">
+            <Label htmlFor="barcode">{t('scan_or_enter_barcode')}</Label>
+            <Input 
+              id="barcode" 
+              value={barcodeInput} 
+              onChange={(e) => setBarcodeInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && onAddItem()}
+              disabled={!selectedSupplier}
+            />
+          </div>
+          <Button onClick={() => startScanner()} disabled={!selectedSupplier} size="icon" variant="outline"><ScanBarcode /></Button>
+          <Button onClick={onAddItem} disabled={!selectedSupplier}>{t('add')}</Button>
         </div>
-        <Button onClick={onAddItem} disabled={!selectedSupplier}>{t('add_item')}</Button>
+        <div className="flex items-end gap-2">
+          <div className="flex-grow">
+            <Label>{t('select_item_manually')}</Label>
+            <Select value={selectedManualItem} onValueChange={setSelectedManualItem} disabled={!selectedSupplier}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('select_item')} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableItems.map(item => {
+                  const def = productDefs.find(d => d.id === item.product_definition_id);
+                  return <SelectItem key={item.id} value={item.id}>{`${def?.name} (${item.variant}) - ${t('batch')}: ${item.batch_number}`}</SelectItem>
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={handleManualAdd} disabled={!selectedSupplier || !selectedManualItem}>{t('add')}</Button>
+        </div>
       </div>
 
       <Card>
@@ -102,6 +160,16 @@ const Step1Content = ({
         </Table>
       </Card>
     </div>
+    {isScannerActive && (
+      <div className="fixed inset-0 bg-black z-50">
+        <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay />
+        <BarcodeScannerViewfinder onCapture={captureAndDecode} />
+        <div className="absolute top-4 right-4 z-[51]">
+          <Button variant="destructive" onClick={stopScanner}>{t('stop_scanning')}</Button>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
@@ -335,6 +403,7 @@ const ReplacementVoucherPage = () => {
           setSelectedSupplier={setSelectedSupplier}
           handleAddItem={handleAddItem}
           returnedItems={returnedItems}
+          inventory={inventory}
         />;
       case 1:
         return <Step2Content items={newItems} onItemsChange={setNewItems} />;
