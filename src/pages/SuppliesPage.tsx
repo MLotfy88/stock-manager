@@ -10,7 +10,7 @@ import {
   Package, Search, Plus, Filter, ArrowUpDown, AlertTriangle, Clock, CheckCircle, Eye
 } from 'lucide-react';
 import SupplyCard from '@/components/supplies/SupplyCard';
-import { InventoryItem, ProductDefinition, SupplyTypeItem } from '@/types';
+import { InventoryItem, ProductDefinition, SupplyTypeItem, Store } from '@/types';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
@@ -18,6 +18,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { getInventoryItems } from '@/data/operations/suppliesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getSupplyTypes } from '@/data/operations/supplyTypeOperations';
+import { getStores } from '@/data/operations/storesOperations';
 import { useToast } from '@/components/ui/use-toast';
 
 const SuppliesPage = () => {
@@ -30,12 +31,14 @@ const SuppliesPage = () => {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [productDefinitions, setProductDefinitions] = useState<ProductDefinition[]>([]);
   const [supplyTypes, setSupplyTypes] = useState<SupplyTypeItem[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // States for filtering and sorting
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [storeFilter, setStoreFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState('name-asc');
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -49,14 +52,16 @@ const SuppliesPage = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [items, definitions, types] = await Promise.all([
+      const [items, definitions, types, storesData] = await Promise.all([
         getInventoryItems(),
         getProductDefinitions(),
-        getSupplyTypes()
+        getSupplyTypes(),
+        getStores()
       ]);
       setInventoryItems(items);
       setProductDefinitions(definitions);
       setSupplyTypes(types);
+      setStores(storesData);
     } catch (error) {
       toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
     } finally {
@@ -75,8 +80,9 @@ const SuppliesPage = () => {
         ...item,
         name: definition?.name || 'Unknown',
         type_id: definition?.type_id || 'other',
-        // The manufacturer name is now directly available on the item from the query
+        // The manufacturer and supplier names are now directly available on the item from the query
         manufacturerName: item.manufacturers?.name || 'Unknown Manufacturer',
+        supplierName: item.suppliers?.name || 'Unknown Supplier',
       };
     });
   }, [inventoryItems, productDefinitions]);
@@ -89,10 +95,11 @@ const SuppliesPage = () => {
       
       const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
       const matchesType = typeFilter === 'all' || item.type_id === typeFilter;
+      const matchesStore = storeFilter === 'all' || item.store_id === storeFilter;
       
-      return matchesSearch && matchesStatus && matchesType;
+      return matchesSearch && matchesStatus && matchesType && matchesStore;
     });
-  }, [enrichedItems, searchQuery, statusFilter, typeFilter]);
+  }, [enrichedItems, searchQuery, statusFilter, typeFilter, storeFilter]);
 
   const sortedItems = useMemo(() => {
     return [...filteredItems].sort((a, b) => {
@@ -164,13 +171,14 @@ const SuppliesPage = () => {
           
           <Card className="mb-6">
             <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="relative lg:col-span-2">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input placeholder={t('search_supplies')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger><div className="flex items-center gap-2"><Filter className="h-4 w-4" /><SelectValue placeholder={t('filter_by_status')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_statuses')}</SelectItem><SelectItem value="valid">{t('valid')}</SelectItem><SelectItem value="expiring_soon">{t('expiring_soon_status')}</SelectItem><SelectItem value="expired">{t('expired_status')}</SelectItem></SelectContent></Select>
                 <Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger><div className="flex items-center gap-2"><Package className="h-4 w-4" /><SelectValue placeholder={t('filter_by_type')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_types')}</SelectItem>{supplyTypes.map((type) => (<SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>))}</SelectContent></Select>
+                <Select value={storeFilter} onValueChange={setStoreFilter}><SelectTrigger><div className="flex items-center gap-2"><Package className="h-4 w-4" /><SelectValue placeholder={t('filter_by_store')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_stores')}</SelectItem>{stores.map((store) => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent></Select>
               </div>
               <div className="flex justify-between items-center mt-4">
                 <p className="text-sm text-muted-foreground">{t('showing')} <span className="font-medium">{sortedItems.length}</span> {t('of')} <span className="font-medium">{inventoryItems.length}</span> {t('supplies')}</p>
@@ -188,7 +196,7 @@ const SuppliesPage = () => {
               ))}
             </div>
           ) : (
-            <Card className="p-8 text-center"><Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><h3 className="font-medium text-lg mb-1">{t('no_supplies_found')}</h3><p className="text-muted-foreground mb-4">{t('try_different_filters')}</p><Button size="sm" variant="outline" onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all'); }}>{t('clear_filters')}</Button></Card>
+            <Card className="p-8 text-center"><Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><h3 className="font-medium text-lg mb-1">{t('no_supplies_found')}</h3><p className="text-muted-foreground mb-4">{t('try_different_filters')}</p><Button size="sm" variant="outline" onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all'); setStoreFilter('all'); }}>{t('clear_filters')}</Button></Card>
           )}
         </div>
       </main>

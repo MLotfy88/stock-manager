@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 type EnrichedSupplyItem = InventoryItem & {
   name: string;
   manufacturerName: string;
+  supplierName?: string;
 };
 
 interface SupplyCardProps {
@@ -77,7 +78,12 @@ const SupplyCard: React.FC<SupplyCardProps> = ({ supply, onDelete }) => {
               
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
-                <span>{supply.manufacturers?.name || t('unknown_manufacturer')}</span>
+                <span>{supply.manufacturerName || t('unknown_manufacturer')}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                <span>{supply.supplierName || t('unknown_supplier')}</span>
               </div>
               
               <div className="flex items-center gap-2">

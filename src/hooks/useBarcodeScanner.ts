@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 const parseGS1Barcode = (rawValue: string): string => {
   // GS1-128 barcodes scanned by some devices start with ]C1
@@ -162,12 +164,48 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     };
   }, [isScannerActive]);
 
-  const startScanner = useCallback(() => {
+  const startScanner = useCallback(async () => {
     if (!isSupported) {
       alert("Barcode scanning is not supported on this browser.");
       return;
     }
-    setIsScannerActive(true);
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        // Request camera permission
+        await Camera.requestPermissions();
+
+        const image = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Camera,
+        });
+
+        if (image.webPath && barcodeDetector.current) {
+          const img = new Image();
+          img.onload = async () => {
+            try {
+              const barcodes = await barcodeDetector.current.detect(img);
+              if (barcodes.length > 0) {
+                const parsedValue = parseGS1Barcode(barcodes[0].rawValue);
+                callbackRef.current.onScanSuccess(parsedValue);
+              } else {
+                callbackRef.current.onScanFailure?.(new Error("No barcode detected in the image."));
+              }
+            } catch (err) {
+              callbackRef.current.onScanFailure?.(err as Error);
+            }
+          };
+          img.src = image.webPath;
+        }
+      } catch (err: any) {
+        setError(`Failed to use camera: ${err.message}`);
+      }
+    } else {
+      // Web-based scanner
+      setIsScannerActive(true);
+    }
   }, [isSupported]);
   
   const stopScanner = useCallback(() => setIsScannerActive(false), []);

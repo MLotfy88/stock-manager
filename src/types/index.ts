@@ -77,6 +77,9 @@ export interface InventoryItem {
   manufacturers: { // Added from join
     name: string;
   };
+  suppliers?: { // Added from join
+    name: string;
+  };
 }
 
 export interface DashboardStats {

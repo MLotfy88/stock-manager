@@ -94,6 +94,28 @@ const InventoryReportPage = () => {
     return Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name));
   }, [filteredInventory, productDefs]);
 
+  const handleExportCSV = () => {
+    const headers = [t('product'), t('variant'), t('quantity'), t('total_value')];
+    const rows = groupedByProduct.map(item => [
+      `"${item.name.replace(/"/g, '""')}"`, // Handle quotes in names
+      `"${item.variant.replace(/"/g, '""')}"`,
+      item.quantity,
+      item.value.toFixed(2)
+    ].join(','));
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(',') + "\n" 
+      + rows.join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "inventory_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50" dir={direction}>
       <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
@@ -127,8 +149,11 @@ const InventoryReportPage = () => {
                   <Select value={selectedType} onValueChange={setSelectedType}><SelectTrigger><div className="flex items-center gap-2"><Tag className="h-4 w-4" /><SelectValue placeholder={t('filter_by_type')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_types')}</SelectItem>{supplyTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2"><FileDown className="h-4 w-4" />{t('export_pdf')}</Button>
-                  <Button variant="outline" size="sm" className="gap-2"><FileSpreadsheet className="h-4 w-4" />{t('export_csv')}</Button>
+                  <Button variant="outline" size="sm" className="gap-2" disabled>{t('export_pdf')}</Button>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={handleExportCSV} disabled={isLoading || groupedByProduct.length === 0}>
+                    <FileSpreadsheet className="h-4 w-4" />
+                    {t('export_csv')}
+                  </Button>
                 </div>
               </div>
             </CardHeader>

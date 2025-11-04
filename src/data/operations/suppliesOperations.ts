@@ -13,9 +13,8 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
     .from('inventory_items_with_status') // Use the new VIEW
     .select(`
       *,
-      manufacturers (
-        name
-      )
+      manufacturers ( name ),
+      suppliers ( name )
     `)
     .order('created_at', { ascending: false });
 
@@ -60,9 +59,8 @@ export const getInventoryItemById = async (itemId: string): Promise<InventoryIte
     .from('inventory_items_with_status') // Use the new VIEW
     .select(`
       *,
-      manufacturers (
-        name
-      )
+      manufacturers ( name ),
+      suppliers ( name )
     `)
     .eq('id', itemId)
     .single();
@@ -85,9 +83,8 @@ export const getInventoryItemByBarcode = async (barcode: string): Promise<Invent
     .from('inventory_items_with_status')
     .select(`
       *,
-      manufacturers (
-        name
-      )
+      manufacturers ( name ),
+      suppliers ( name )
     `)
     .eq('barcode', barcode)
     .single();

@@ -71,7 +71,9 @@ const AlertsPage = () => {
   }, []);
 
   // Filter supplies by their expiration date and calculate days remaining
-  const suppliesWithAlerts = inventory.map((item) => {
+  const suppliesWithAlerts = inventory
+  .filter(item => item.quantity > 0) // Exclude items with zero quantity
+  .map((item) => {
     const expiryDate = new Date(item.expiry_date);
     const today = new Date();
     const timeDiff = expiryDate.getTime() - today.getTime();
@@ -180,7 +182,7 @@ const AlertsPage = () => {
                       <div className="flex justify-between items-center mb-2">
                         <div>
                           <h3 className="font-medium flex items-center gap-2">
-                            {supply.name}
+                            {`${supply.name} (${supply.variant})`}
                             <Badge variant="destructive" className="ml-2">
                               {supply.daysRemaining <= 0 
                                 ? t('expired') 
@@ -230,7 +232,7 @@ const AlertsPage = () => {
                       <div className="flex justify-between items-center mb-2">
                         <div>
                           <h3 className="font-medium flex items-center gap-2">
-                            {supply.name}
+                            {`${supply.name} (${supply.variant})`}
                             <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 border-amber-200">
                               {supply.daysRemaining} {t('days_remaining')}
                             </Badge>
@@ -278,7 +280,7 @@ const AlertsPage = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           <h3 className="font-medium flex items-center gap-2">
-                            {supply.name}
+                            {`${supply.name} (${supply.variant})`}
                             <Badge variant="destructive" className="ml-2">
                               {t('expired_status')}
                             </Badge>
