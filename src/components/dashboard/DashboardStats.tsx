@@ -1,13 +1,22 @@
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Package, Clock, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Package, Clock, CheckCircle2, PlusCircle, MinusCircle } from 'lucide-react';
 import { calculateDashboardStats } from '@/data/operations/statsOperations';
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from '@/contexts/LanguageContext';
+import { timeSince } from '@/utils/dateUtils'; 
+import { DashboardStats as DashboardStatsType } from '@/types';
 
 const DashboardStats = () => {
-  const [stats, setStats] = useState({ totalSupplies: 0, expiringSupplies: 0, expiredSupplies: 0, validSupplies: 0, typeCounts: {} });
-  const { t, getLocalizedName } = useLanguage();
+  const [stats, setStats] = useState<Partial<DashboardStatsType>>({ 
+    totalSupplies: 0, 
+    expiringSupplies: 0, 
+    expiredSupplies: 0, 
+    validSupplies: 0, 
+    typeCounts: {},
+    recentActivities: [] 
+  });
+  const { t, getLocalizedName, language } = useLanguage();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -103,17 +112,29 @@ const DashboardStats = () => {
               {t('recent_activities')}
             </h3>
             <div className="space-y-4">
-              {[1, 2, 3].map((_, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0">
-                    <Package className="w-4 h-4 text-secondary" />
+              {stats.recentActivities && stats.recentActivities.length > 0 ? (
+                stats.recentActivities.map((activity, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-full ${activity.type === 'supply' ? 'bg-green-100' : 'bg-amber-100'} flex items-center justify-center flex-shrink-0`}>
+                      {activity.type === 'supply' ? (
+                        <PlusCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <MinusCircle className="w-4 h-4 text-amber-500" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {activity.type === 'supply' ? t('new_supplies_added') : t('new_consumption_recorded')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {timeSince(activity.date, language)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">{t('new_supplies_added')}</p>
-                    <p className="text-xs text-muted-foreground">{t('hours_ago').replace('{0}', String(5 - i))}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">{t('no_recent_activity')}</p>
+              )}
             </div>
           </CardContent>
         </Card>

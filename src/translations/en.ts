@@ -372,4 +372,11 @@ export default {
   department: 'Department',
   actions: 'Actions',
   items_count: 'Items Count',
+
+  // Inventory Report V2
+  cost: "Cost",
+  all_suppliers: "All Suppliers",
+  filter_by_product_name: "Filter by product name...",
+  filter_by_variant: "Filter by variant...",
+  columns: "Columns",
 };

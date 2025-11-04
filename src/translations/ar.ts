@@ -371,5 +371,12 @@ export default {
   date: 'التاريخ',
   department: 'القسم',
   actions: 'الإجراءات',
-  items_count: 'عدد العناصر',
+  items_count: 'عدد الأصناف',
+
+  // Inventory Report V2
+  cost: "التكلفة",
+  all_suppliers: "كل الموردين",
+  filter_by_product_name: "فلترة باسم المنتج...",
+  filter_by_variant: "فلترة بالمتغير...",
+  columns: "الأعمدة",
 };

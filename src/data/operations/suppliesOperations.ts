@@ -16,6 +16,7 @@ export const getInventoryItems = async (): Promise<InventoryItem[]> => {
       manufacturers ( name ),
       suppliers ( name )
     `)
+    .gt('quantity', 0)
     .order('created_at', { ascending: false });
 
   if (error) {

@@ -53,43 +53,48 @@ export interface ProductDefinition {
   type_id: string;
   variant_label: string; // e.g., "Size", "Curve"
   variants: ProductVariant[]; // e.g., [{ name: "2x10", reorder_point: 5 }]
+  reorder_point: number;
   created_at: string;
   updated_at: string;
 }
 
 export interface InventoryItem {
   id: string;
-  product_definition_id: string;
-  variant: string;
-  barcode?: string;
-  quantity: number;
-  store_id: string;
-  manufacturer_id: string;
-  supplier_id?: string;
-  batch_number: string;
-  production_date?: string;
-  purchase_price?: number;
+  barcode: string | null;
+  batch_number: string | null;
   expiry_date: string;
-  image?: string;
-  status: SupplyStatus;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  manufacturers: { // Added from join
-    name: string;
-  };
-  suppliers?: { // Added from join
-    name: string;
-  };
+  quantity: number;
+  purchase_price: number | null;
+  variant: string;
+  product_definition_id: string;
+  store_id: string;
+  manufacturer_id: string | null;
+  supplier_id: string | null;
+  
+  // Joined fields from the new view
+  store_name: string;
+  product_name: string;
+  reorder_point: number;
+  supply_type_name: string;
+  manufacturer_name: string;
+  supplier_name: string;
+  status: string;
+}
+
+export interface RecentActivity {
+  type: 'supply' | 'consumption';
+  date: Date;
+  description: string;
 }
 
 export interface DashboardStats {
   totalSupplies: number;
   expiringSupplies: number;
   expiredSupplies: number;
-  reorderPointItems: number; // Added for urgent actions
-  typeCounts: Record<SupplyType, number>;
-  manufacturerCounts: Record<string, number>;
+  validSupplies: number;
+  reorderPointItems: number;
+  typeCounts: Record<string, number>;
+  recentActivities: RecentActivity[];
 }
 
 export type AdminSettings = {

@@ -22,3 +22,34 @@ export const generateExpiryDate = (monthsAhead: number): string => {
   date.setMonth(date.getMonth() + monthsAhead);
   return date.toISOString().split('T')[0];
 };
+
+/**
+ * Calculates the time elapsed since a given date and returns a formatted string.
+ */
+export const timeSince = (date: Date, lang: 'en' | 'ar' = 'en'): string => {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  let interval = seconds / 31536000;
+
+  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
+
+  if (interval > 1) {
+    return rtf.format(-Math.floor(interval), 'year');
+  }
+  interval = seconds / 2592000;
+  if (interval > 1) {
+    return rtf.format(-Math.floor(interval), 'month');
+  }
+  interval = seconds / 86400;
+  if (interval > 1) {
+    return rtf.format(-Math.floor(interval), 'day');
+  }
+  interval = seconds / 3600;
+  if (interval > 1) {
+    return rtf.format(-Math.floor(interval), 'hour');
+  }
+  interval = seconds / 60;
+  if (interval > 1) {
+    return rtf.format(-Math.floor(interval), 'minute');
+  }
+  return rtf.format(-Math.floor(seconds), 'second');
+};

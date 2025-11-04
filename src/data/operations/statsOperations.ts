@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { getProductDefinitions } from './productDefinitionOperations';
+import { RecentActivity } from '@/types';
 
 export const calculateDashboardStats = async () => {
   const supabase = getSupabaseClient();
@@ -60,6 +61,38 @@ export const calculateDashboardStats = async () => {
     return acc;
   }, {} as Record<string, number>);
 
+  // Fetch recent activities
+  const { data: supplyVouchers, error: supplyVouchersError } = await supabase
+    .from('supply_vouchers')
+    .select('created_at, voucher_number')
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  const { data: consumptionRecords, error: consumptionRecordsError } = await supabase
+    .from('consumption_records')
+    .select('created_at, department')
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  if (supplyVouchersError) console.error("Error fetching supply vouchers:", supplyVouchersError);
+  if (consumptionRecordsError) console.error("Error fetching consumption records:", consumptionRecordsError);
+
+  const supplyActivities: RecentActivity[] = (supplyVouchers || []).map(v => ({
+    type: 'supply',
+    date: new Date(v.created_at),
+    description: `Voucher #${v.voucher_number}`,
+  }));
+
+  const consumptionActivities: RecentActivity[] = (consumptionRecords || []).map(r => ({
+    type: 'consumption',
+    date: new Date(r.created_at),
+    description: `Dept: ${r.department}`,
+  }));
+
+  const recentActivities: RecentActivity[] = [...supplyActivities, ...consumptionActivities]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 4);
+
 
   return {
     totalSupplies,
@@ -68,5 +101,6 @@ export const calculateDashboardStats = async () => {
     reorderPointItems,
     validSupplies,
     typeCounts,
+    recentActivities,
   };
 };

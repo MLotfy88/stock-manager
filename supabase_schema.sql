@@ -70,6 +70,7 @@ CREATE TABLE product_definitions (
   type_id UUID REFERENCES supply_types(id),
   variant_label TEXT,
   variants JSONB,
+  reorder_point INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -108,21 +109,59 @@ CREATE TABLE consumption_record_items (
   quantity INT NOT NULL CHECK (quantity > 0)
 );
 
--- 3. CREATE VIEW FOR DYNAMIC STATUS
+-- 3. CREATE VIEW FOR DYNAMIC STATUS (V2 - Comprehensive)
 CREATE OR REPLACE VIEW inventory_items_with_status AS
 SELECT
-  ii.*,
-  s.alert_period,
-  CASE
-    WHEN ii.expiry_date <= CURRENT_DATE THEN 'expired'
-    WHEN ii.expiry_date <= (CURRENT_DATE + INTERVAL '1 day' * s.alert_period) THEN 'expiring_soon'
-    WHEN ii.expiry_date <= (CURRENT_DATE + INTERVAL '1 day' * (s.alert_period + 30)) THEN 'needs_replacement_action'
-    ELSE 'valid'
-  END AS status
+    -- From inventory_items
+    ii.id,
+    ii.barcode,
+    ii.batch_number,
+    ii.expiry_date,
+    ii.quantity,
+    ii.purchase_price,
+    ii.variant,
+    ii.product_definition_id,
+    ii.store_id,
+    ii.manufacturer_id,
+    ii.supplier_id,
+    
+    -- From stores
+    st.name AS store_name,
+    
+    -- From product_definitions
+    pd.name AS product_name,
+    pd.reorder_point,
+    
+    -- From supply_types
+    sty.name AS supply_type_name,
+    
+    -- From manufacturers
+    m.name AS manufacturer_name,
+    
+    -- From suppliers
+    s.name AS supplier_name,
+    s.alert_period,
+    
+    -- Calculated Status
+    CASE
+        WHEN ii.quantity <= pd.reorder_point THEN 'low_stock'
+        WHEN ii.expiry_date <= CURRENT_DATE THEN 'expired'
+        WHEN ii.expiry_date <= (CURRENT_DATE + INTERVAL '1 day' * s.alert_period) THEN 'expiring_soon'
+        WHEN ii.expiry_date <= (CURRENT_DATE + INTERVAL '1 day' * (s.alert_period + 30)) THEN 'needs_replacement_action'
+        ELSE 'valid'
+    END AS status
 FROM
-  inventory_items ii
-JOIN
-  suppliers s ON ii.supplier_id = s.id;
+    inventory_items ii
+LEFT JOIN
+    stores st ON ii.store_id = st.id
+LEFT JOIN
+    product_definitions pd ON ii.product_definition_id = pd.id
+LEFT JOIN
+    supply_types sty ON pd.type_id = sty.id
+LEFT JOIN
+    manufacturers m ON ii.manufacturer_id = m.id
+LEFT JOIN
+    suppliers s ON ii.supplier_id = s.id;
 
 -- 4. ROW LEVEL SECURITY (RLS)
 -- Enable RLS for all tables

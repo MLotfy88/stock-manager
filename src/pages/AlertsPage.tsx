@@ -186,7 +186,7 @@ const AlertsPage = () => {
                             </Badge>
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            {t('batch')}: {supply.batch_number} | {t('supplier')}: {supply.suppliers?.name || 'N/A'}
+                            {t('batch')}: {supply.batch_number} | {t('supplier')}: {supply.supplier_name || 'N/A'}
                           </p>
                         </div>
                         <Button size="sm" variant="outline" className="text-xs" onClick={() => handleViewDetails(supply.id)}>

@@ -4,50 +4,88 @@ import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Store, ProductDefinition, InventoryItem, Manufacturer, SupplyTypeItem } from '@/types';
+import { Store, ProductDefinition, InventoryItem, Manufacturer, SupplyTypeItem, Supplier } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileDown, FileSpreadsheet, Package, DollarSign, Warehouse, Building2, Tag } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ArrowLeft, FileSpreadsheet, Package, DollarSign, Warehouse, Building2, Tag, ChevronDown } from 'lucide-react';
 import { getStores } from '@/data/operations/storesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getInventoryItems } from '@/data/operations/suppliesOperations';
 import { getManufacturers } from '@/data/operations/manufacturerOperations';
 import { getSupplyTypes } from '@/data/operations/supplyTypeOperations';
+import { getSuppliers } from '@/data/operations/supplierOperations';
 import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+
+const ALL_COLUMNS = {
+  store_name: { key: 'store_name', label: 'store' },
+  product_name: { key: 'product_name', label: 'product' },
+  supply_type_name: { key: 'supply_type_name', label: 'supply_type' },
+  variant: { key: 'variant', label: 'variant' },
+  manufacturer_name: { key: 'manufacturer_name', label: 'manufacturer' },
+  supplier_name: { key: 'supplier_name', label: 'supplier' },
+  barcode: { key: 'barcode', label: 'barcode' },
+  batch_number: { key: 'batch_number', label: 'batch_number' },
+  expiry_date: { key: 'expiry_date', label: 'expiry_date' },
+  quantity: { key: 'quantity', label: 'quantity' },
+  purchase_price: { key: 'purchase_price', label: 'cost' },
+  reorder_point: { key: 'reorder_point', label: 'reorder_point' },
+};
 
 const InventoryReportPage = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Data states
   const [stores, setStores] = useState<Store[]>([]);
-  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplyTypes, setSupplyTypes] = useState<SupplyTypeItem[]>([]);
-  const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [selectedStore, setSelectedStore] = useState<string>('all');
-  const [selectedManufacturer, setSelectedManufacturer] = useState<string>('all');
-  const [selectedType, setSelectedType] = useState<string>('all');
+  // Filter states
+  const [filters, setFilters] = useState({
+    store: 'all',
+    supplier: 'all',
+    product: '',
+    type: 'all',
+    variant: '',
+  });
+
+  // Column visibility state
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    store_name: true,
+    product_name: true,
+    supply_type_name: true,
+    variant: true,
+    manufacturer_name: false,
+    supplier_name: true,
+    barcode: false,
+    batch_number: true,
+    expiry_date: true,
+    quantity: true,
+    purchase_price: true,
+    reorder_point: false,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [storesData, manufacturersData, typesData, defsData, inventoryData] = await Promise.all([
+        const [storesData, suppliersData, typesData, inventoryData] = await Promise.all([
           getStores(),
-          getManufacturers(),
+          getSuppliers(),
           getSupplyTypes(),
-          getProductDefinitions(),
-          getInventoryItems(),
+          getInventoryItems(), // This now fetches the comprehensive view
         ]);
         setStores(storesData);
-        setManufacturers(manufacturersData);
+        setSuppliers(suppliersData);
         setSupplyTypes(typesData);
-        setProductDefs(defsData);
         setInventory(inventoryData);
       } catch (error) {
         console.error("Failed to fetch report data:", error);
@@ -58,20 +96,19 @@ const InventoryReportPage = () => {
     fetchData();
   }, []);
 
-  const enrichedInventory = useMemo(() => {
-    return inventory.map(item => {
-      const def = productDefs.find(d => d.id === item.product_definition_id);
-      return { ...item, type_id: def?.type_id };
-    });
-  }, [inventory, productDefs]);
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
 
   const filteredInventory = useMemo(() => {
-    return enrichedInventory.filter(item => 
-      (selectedStore === 'all' || item.store_id === selectedStore) &&
-      (selectedManufacturer === 'all' || item.manufacturer_id === selectedManufacturer) &&
-      (selectedType === 'all' || item.type_id === selectedType)
+    return inventory.filter(item => 
+      (filters.store === 'all' || item.store_id === filters.store) &&
+      (filters.supplier === 'all' || item.supplier_id === filters.supplier) &&
+      (filters.type === 'all' || item.supply_type_name === supplyTypes.find(st => st.id === filters.type)?.name) &&
+      (item.product_name.toLowerCase().includes(filters.product.toLowerCase())) &&
+      (item.variant.toLowerCase().includes(filters.variant.toLowerCase()))
     );
-  }, [enrichedInventory, selectedStore, selectedManufacturer, selectedType]);
+  }, [inventory, filters, supplyTypes]);
 
   const reportStats = useMemo(() => {
     const totalItems = new Set(filteredInventory.map(i => i.product_definition_id + i.variant)).size;
@@ -80,28 +117,17 @@ const InventoryReportPage = () => {
     return { totalItems, totalQuantity, totalValue };
   }, [filteredInventory]);
 
-  const groupedByProduct = useMemo(() => {
-    const grouped: { [key: string]: { name: string; variant: string; quantity: number; value: number } } = {};
-    filteredInventory.forEach(item => {
-      const def = productDefs.find(d => d.id === item.product_definition_id);
-      const key = item.product_definition_id + item.variant;
-      if (!grouped[key]) {
-        grouped[key] = { name: def?.name || 'N/A', variant: item.variant, quantity: 0, value: 0 };
-      }
-      grouped[key].quantity += item.quantity;
-      grouped[key].value += item.quantity * (item.purchase_price || 0);
-    });
-    return Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name));
-  }, [filteredInventory, productDefs]);
-
   const handleExportCSV = () => {
-    const headers = [t('product'), t('variant'), t('quantity'), t('total_value')];
-    const rows = groupedByProduct.map(item => [
-      `"${item.name.replace(/"/g, '""')}"`, // Handle quotes in names
-      `"${item.variant.replace(/"/g, '""')}"`,
-      item.quantity,
-      item.value.toFixed(2)
-    ].join(','));
+    const headers = Object.values(ALL_COLUMNS).map(col => t(col.label));
+    const rows = filteredInventory.map(item => 
+      Object.values(ALL_COLUMNS).map(col => {
+        let value = item[col.key as keyof InventoryItem] ?? '';
+        if (typeof value === 'string') {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      }).join(',')
+    );
 
     const csvContent = "data:text/csv;charset=utf-8," 
       + headers.join(',') + "\n" 
@@ -142,15 +168,40 @@ const InventoryReportPage = () => {
 
           <Card>
             <CardHeader>
-              <div className="flex flex-col md:flex-row justify-between gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-grow">
-                  <Select value={selectedStore} onValueChange={setSelectedStore}><SelectTrigger><div className="flex items-center gap-2"><Warehouse className="h-4 w-4" /><SelectValue placeholder={t('filter_by_store')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_stores')}</SelectItem>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
-                  <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}><SelectTrigger><div className="flex items-center gap-2"><Building2 className="h-4 w-4" /><SelectValue placeholder={t('filter_by_manufacturer')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_manufacturers')}</SelectItem>{manufacturers.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent></Select>
-                  <Select value={selectedType} onValueChange={setSelectedType}><SelectTrigger><div className="flex items-center gap-2"><Tag className="h-4 w-4" /><SelectValue placeholder={t('filter_by_type')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_types')}</SelectItem>{supplyTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select>
+              <div className="space-y-4">
+                {/* Filters Row 1 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <Select value={filters.store} onValueChange={(v) => handleFilterChange('store', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_stores')}</SelectItem>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
+                  <Select value={filters.supplier} onValueChange={(v) => handleFilterChange('supplier', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_suppliers')}</SelectItem>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
+                  <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_types')}</SelectItem>{supplyTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2" disabled>{t('export_pdf')}</Button>
-                  <Button variant="outline" size="sm" className="gap-2" onClick={handleExportCSV} disabled={isLoading || groupedByProduct.length === 0}>
+                {/* Filters Row 2 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <Input placeholder={t('filter_by_product_name')} value={filters.product} onChange={(e) => handleFilterChange('product', e.target.value)} />
+                  <Input placeholder={t('filter_by_variant')} value={filters.variant} onChange={(e) => handleFilterChange('variant', e.target.value)} />
+                </div>
+                {/* Actions */}
+                <div className="flex justify-between items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="ml-auto gap-2">
+                        {t('columns')} <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {Object.values(ALL_COLUMNS).map(col => (
+                        <DropdownMenuCheckboxItem
+                          key={col.key}
+                          className="capitalize"
+                          checked={visibleColumns[col.key]}
+                          onCheckedChange={(value) => setVisibleColumns(prev => ({ ...prev, [col.key]: !!value }))}
+                        >
+                          {t(col.label)}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={handleExportCSV} disabled={isLoading || filteredInventory.length === 0}>
                     <FileSpreadsheet className="h-4 w-4" />
                     {t('export_csv')}
                   </Button>
@@ -162,26 +213,35 @@ const InventoryReportPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('product')}</TableHead>
-                      <TableHead>{t('variant')}</TableHead>
-                      <TableHead className="text-right">{t('quantity')}</TableHead>
-                      <TableHead className="text-right">{t('total_value')}</TableHead>
+                      {Object.values(ALL_COLUMNS).map(col => visibleColumns[col.key] && <TableHead key={col.key}>{t(col.label)}</TableHead>)}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
-                      [...Array(5)].map((_, i) => <TableRow key={i}><TableCell colSpan={4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>)
-                    ) : groupedByProduct.length > 0 ? (
-                      groupedByProduct.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.variant}</TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">{item.value.toFixed(2)}</TableCell>
+                      [...Array(10)].map((_, i) => (
+                        <TableRow key={i}>
+                          {Object.keys(visibleColumns).filter(k => visibleColumns[k]).map(key => <TableCell key={key}><Skeleton className="h-5 w-full" /></TableCell>)}
+                        </TableRow>
+                      ))
+                    ) : filteredInventory.length > 0 ? (
+                      filteredInventory.map((item) => (
+                        <TableRow key={item.id}>
+                          {visibleColumns.store_name && <TableCell>{item.store_name}</TableCell>}
+                          {visibleColumns.product_name && <TableCell>{item.product_name}</TableCell>}
+                          {visibleColumns.supply_type_name && <TableCell>{item.supply_type_name}</TableCell>}
+                          {visibleColumns.variant && <TableCell>{item.variant}</TableCell>}
+                          {visibleColumns.manufacturer_name && <TableCell>{item.manufacturer_name}</TableCell>}
+                          {visibleColumns.supplier_name && <TableCell>{item.supplier_name}</TableCell>}
+                          {visibleColumns.barcode && <TableCell>{item.barcode}</TableCell>}
+                          {visibleColumns.batch_number && <TableCell>{item.batch_number}</TableCell>}
+                          {visibleColumns.expiry_date && <TableCell>{format(new Date(item.expiry_date), 'P')}</TableCell>}
+                          {visibleColumns.quantity && <TableCell>{item.quantity}</TableCell>}
+                          {visibleColumns.purchase_price && <TableCell>{item.purchase_price?.toFixed(2)}</TableCell>}
+                          {visibleColumns.reorder_point && <TableCell>{item.reorder_point}</TableCell>}
                         </TableRow>
                       ))
                     ) : (
-                      <TableRow><TableCell colSpan={4} className="text-center h-24">{t('no_data_for_filters')}</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={Object.values(visibleColumns).filter(v => v).length} className="text-center h-24">{t('no_data_for_filters')}</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
