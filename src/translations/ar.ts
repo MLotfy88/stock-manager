@@ -63,6 +63,7 @@ export default {
   data_settings_nav: 'إعدادات البيانات',
   management_settings_nav: 'إدارة النظام',
   supplies_nav: 'المستلزمات',
+  bulk_add_inventory_nav: 'إضافة مخزون مجمّع',
   add_supply_nav: 'إضافة مستلزم',
   calendar_nav: 'التقويم',
   alerts_nav: 'التنبيهات',

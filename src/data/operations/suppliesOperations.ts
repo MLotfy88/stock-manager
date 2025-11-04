@@ -75,6 +75,32 @@ export const getInventoryItemById = async (itemId: string): Promise<InventoryIte
 };
 
 /**
+ * Get a single inventory item by barcode
+ */
+export const getInventoryItemByBarcode = async (barcode: string): Promise<InventoryItem | null> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
+  const { data, error } = await supabase
+    .from('inventory_items_with_status')
+    .select(`
+      *,
+      manufacturers (
+        name
+      )
+    `)
+    .eq('barcode', barcode)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116 = 'No rows found'
+    console.error(`Error fetching item with barcode ${barcode}:`, error);
+    throw error;
+  }
+  
+  return data;
+};
+
+/**
  * Add a new inventory item or a batch of items
  */
 export const addInventoryItems = async (items: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at' | 'status'>[]): Promise<InventoryItem[]> => {

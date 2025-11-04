@@ -1,35 +1,36 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+// 1. Get Supabase URL and Key from environment variables
+// Vite exposes env variables on `import.meta.env`
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+
+// 2. Check if the environment variables are set
+if (!supabaseUrl || !supabaseKey) {
+  // Log an error to the console if variables are missing.
+  // The app will not function correctly without them.
+  console.error("Supabase URL and/or Key are not set in environment variables.");
+  console.error("Please create a .env file with VITE_SUPABASE_URL and VITE_SUPABASE_KEY for local development.");
+}
+
+// 3. Create a single Supabase client instance
 let supabaseInstance: SupabaseClient | null = null;
 
+if (supabaseUrl && supabaseKey) {
+  try {
+    supabaseInstance = createClient(supabaseUrl, supabaseKey);
+  } catch (error) {
+    console.error("Error creating Supabase client:", error);
+  }
+}
+
+// 4. Export a function to get the singleton instance
 export const getSupabaseClient = (): SupabaseClient | null => {
-  if (supabaseInstance) {
-    return supabaseInstance;
-  }
-
-  let supabaseUrl = localStorage.getItem('supabaseUrl');
-  let supabaseKey = localStorage.getItem('supabaseKey');
-
-  // Fallback to hardcoded values if not found in localStorage
-  if (!supabaseUrl || !supabaseKey) {
-    supabaseUrl = 'https://hmpsdmovolevivkqkhba.supabase.co';
-    supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtcHNkbW92b2xldml2a3FraGJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwNjE2NDEsImV4cCI6MjA2OTYzNzY0MX0.c3lvcvGO55ursK-Kiq1T2iIZSuXAYlgKXNdLZmagHnE';
-  }
-
-
-  if (supabaseUrl && supabaseKey) {
-    try {
-      supabaseInstance = createClient(supabaseUrl, supabaseKey);
-      return supabaseInstance;
-    } catch (error) {
-      console.error("Error creating Supabase client:", error);
-      return null;
-    }
-  }
-  
-  return null;
+  return supabaseInstance;
 };
 
+// The test function remains the same as it's for dynamically testing credentials
+// from the settings page, not for the main app client.
 interface ConnectionResult {
   success: boolean;
   tables?: string[];

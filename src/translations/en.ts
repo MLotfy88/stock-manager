@@ -63,6 +63,7 @@ export default {
   data_settings_nav: 'Data Settings',
   management_settings_nav: 'System Management',
   supplies_nav: 'Supplies',
+  bulk_add_inventory_nav: 'Bulk Add Inventory',
   add_supply_nav: 'Add Supply',
   calendar_nav: 'Calendar',
   alerts_nav: 'Alerts',

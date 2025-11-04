@@ -39,6 +39,12 @@ export const useNavigationItems = () => {
     },
     {
       type: 'link',
+      label: t('bulk_add_inventory_nav'),
+      icon: <Truck className="h-5 w-5" />,
+      href: '/bulk-add-inventory',
+    },
+    {
+      type: 'link',
       label: t('transfer_inventory_nav'),
       icon: <ArrowRightLeft className="h-5 w-5" />,
       href: '/transfer-inventory',
