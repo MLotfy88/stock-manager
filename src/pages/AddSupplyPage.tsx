@@ -4,7 +4,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/components/ui/use-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -366,11 +366,13 @@ const AddInventoryPage = () => {
                   })}
                 </div>
 
-                <Button type="button" variant="outline" onClick={addNewItem} className="mt-4 gap-2 hidden md:inline-flex">
+              </CardContent>
+              <CardFooter className="justify-start border-t pt-6">
+                <Button type="button" variant="outline" onClick={addNewItem} className="gap-2">
                   <PlusCircle className="h-4 w-4" />
                   {t('add_another_item')}
                 </Button>
-              </CardContent>
+              </CardFooter>
             </Card>
 
             {/* Floating Action Button for Mobile */}
