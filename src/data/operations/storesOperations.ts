@@ -68,6 +68,22 @@ export const deleteStore = async (storeId: string): Promise<{ success: boolean; 
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
 
+  // Check if the store is being used in inventory_items
+  const { data: items, error: checkError } = await supabase
+    .from('inventory_items')
+    .select('id')
+    .eq('store_id', storeId)
+    .limit(1);
+
+  if (checkError) {
+    console.error('Error checking for store usage:', checkError);
+    return { success: false, error: 'check_failed' };
+  }
+
+  if (items && items.length > 0) {
+    return { success: false, error: 'store_in_use' };
+  }
+
   const { error } = await supabase
     .from('stores')
     .delete()

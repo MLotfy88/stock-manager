@@ -14,7 +14,8 @@ import {
   Warehouse,
   Truck,
   Factory,
-  Tag
+  Tag,
+  Replace
 } from 'lucide-react';
 
 export const useNavigationItems = () => {
@@ -52,6 +53,12 @@ export const useNavigationItems = () => {
       label: t('consumption_nav'),
       icon: <Recycle className="h-5 w-5" />,
       href: '/consumption',
+    },
+    {
+      type: 'link',
+      label: t('replacement_voucher_nav'),
+      icon: <Replace className="h-5 w-5" />,
+      href: '/replacement-voucher',
     },
     {
       type: 'link',

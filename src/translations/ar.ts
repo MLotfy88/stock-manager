@@ -1,5 +1,12 @@
 export default {
   // General
+  replacement_voucher: 'محضر استبدال',
+  select_return_items: 'تحديد الأصناف المرتجعة',
+  enter_new_items: 'إدخال الأصناف الجديدة',
+  review_and_confirm: 'مراجعة وتأكيد',
+  back: 'رجوع',
+  next: 'التالي',
+  finish: 'إنهاء',
   welcome: 'مرحباً',
   dashboard: 'لوحة التحكم',
   urgent_actions: 'إجراءات عاجلة',
@@ -59,6 +66,7 @@ export default {
   settings: 'الإعدادات',
   
   // Navigation
+  replacement_voucher_nav: 'محضر استبدال',
   dashboard_nav: 'لوحة التحكم',
   data_settings_nav: 'إعدادات البيانات',
   management_settings_nav: 'إدارة النظام',
@@ -141,6 +149,7 @@ export default {
   expired_status: 'منتهية',
   expiring_soon_status: 'تنتهي قريبًا',
   valid: 'صالحة',
+  needs_replacement_action_status: 'تحتاج إجراء استبدال',
   
   // Calendar
   expiry_calendar: 'تقويم انتهاء الصلاحية',
@@ -154,6 +163,7 @@ export default {
   warning: 'تحذير',
   
   // Alerts
+  replacement_action_alerts: 'تنبيهات الاستبدال',
   critical_alerts: 'تنبيهات حرجة',
   warning_alerts: 'تنبيهات تحذيرية',
   expired_items: 'عناصر منتهية الصلاحية',
@@ -286,6 +296,7 @@ export default {
   supplier_contact: 'جهة الاتصال',
   supplier_phone: 'الهاتف',
   supplier_email: 'البريد الإلكتروني',
+  supplier_alert_period: 'فترة تنبيه الاستبدال (أيام)',
   
   // Admin
   admin_settings: 'إعدادات المدير',

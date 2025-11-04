@@ -52,7 +52,6 @@ CREATE TABLE supply_types (
 CREATE TABLE manufacturers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
-  alert_period INT DEFAULT 30,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -61,7 +60,8 @@ CREATE TABLE suppliers (
   name TEXT NOT NULL UNIQUE,
   contact TEXT,
   phone TEXT,
-  email TEXT
+  email TEXT,
+  alert_period INT DEFAULT 30
 );
 
 CREATE TABLE product_definitions (
@@ -112,16 +112,17 @@ CREATE TABLE consumption_record_items (
 CREATE OR REPLACE VIEW inventory_items_with_status AS
 SELECT
   ii.*,
-  m.alert_period,
+  s.alert_period,
   CASE
     WHEN ii.expiry_date <= CURRENT_DATE THEN 'expired'
-    WHEN ii.expiry_date <= (CURRENT_DATE + INTERVAL '1 day' * m.alert_period) THEN 'expiring_soon'
+    WHEN ii.expiry_date <= (CURRENT_DATE + INTERVAL '1 day' * s.alert_period) THEN 'expiring_soon'
+    WHEN ii.expiry_date <= (CURRENT_DATE + INTERVAL '1 day' * (s.alert_period + 30)) THEN 'needs_replacement_action'
     ELSE 'valid'
   END AS status
 FROM
   inventory_items ii
 JOIN
-  manufacturers m ON ii.manufacturer_id = m.id;
+  suppliers s ON ii.supplier_id = s.id;
 
 -- 4. ROW LEVEL SECURITY (RLS)
 -- Enable RLS for all tables

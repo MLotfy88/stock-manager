@@ -68,6 +68,22 @@ export const deleteProductDefinition = async (definitionId: string): Promise<{ s
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
 
+  // Check if the product definition is being used in inventory_items
+  const { data: items, error: checkError } = await supabase
+    .from('inventory_items')
+    .select('id')
+    .eq('product_definition_id', definitionId)
+    .limit(1);
+
+  if (checkError) {
+    console.error('Error checking for product definition usage:', checkError);
+    return { success: false, error: 'check_failed' };
+  }
+
+  if (items && items.length > 0) {
+    return { success: false, error: 'definition_in_use' };
+  }
+
   const { error } = await supabase
     .from('product_definitions')
     .delete()

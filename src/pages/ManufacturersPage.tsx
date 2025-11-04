@@ -28,7 +28,6 @@ export const ManufacturersPageContent = () => {
   const [currentManufacturer, setCurrentManufacturer] = useState<Manufacturer | null>(null);
   
   const [name, setName] = useState('');
-  const [alertPeriod, setAlertPeriod] = useState('30');
 
   const loadManufacturers = async () => {
     setIsLoading(true);
@@ -48,7 +47,6 @@ export const ManufacturersPageContent = () => {
 
   const resetForm = () => {
     setName('');
-    setAlertPeriod('30');
     setCurrentManufacturer(null);
   };
 
@@ -56,7 +54,6 @@ export const ManufacturersPageContent = () => {
     if (manufacturer) {
       setCurrentManufacturer(manufacturer);
       setName(manufacturer.name);
-      setAlertPeriod(String(manufacturer.alert_period));
     } else {
       resetForm();
     }
@@ -69,7 +66,6 @@ export const ManufacturersPageContent = () => {
     try {
       const manufacturerData = {
         name,
-        alert_period: parseInt(alertPeriod) || 30,
       };
 
       if (currentManufacturer) {
@@ -130,10 +126,6 @@ export const ManufacturersPageContent = () => {
                 <Label htmlFor="name">{t('manufacturer_name')}</Label>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="alertPeriod">{t('manufacturer_alert_period')}</Label>
-                <Input id="alertPeriod" type="number" min="1" max="365" value={alertPeriod} onChange={(e) => setAlertPeriod(e.target.value)} />
-              </div>
             </div>
             <DialogFooter>
               <DialogClose asChild><Button variant="outline">{t('cancel')}</Button></DialogClose>
@@ -150,20 +142,18 @@ export const ManufacturersPageContent = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('manufacturer_name')}</TableHead>
-                  <TableHead>{t('manufacturer_alert_period')}</TableHead>
                   <TableHead className="text-right">{t('actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={3} className="text-center h-24">{t('loading')}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={2} className="text-center h-24">{t('loading')}</TableCell></TableRow>
                 ) : manufacturersList.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center h-24">{t('no_data')}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={2} className="text-center h-24">{t('no_data')}</TableCell></TableRow>
                 ) : (
                   manufacturersList.map((manufacturer) => (
                     <TableRow key={manufacturer.id}>
                       <TableCell className="font-medium">{manufacturer.name}</TableCell>
-                      <TableCell>{manufacturer.alert_period} {t('days')}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => openDialog(manufacturer)}>
                           <Edit className="h-4 w-4" />

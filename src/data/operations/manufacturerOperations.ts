@@ -88,10 +88,9 @@ export const deleteManufacturer = async (manufacturerId: string): Promise<{ succ
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
 
-  // First, check if the manufacturer is being used in the 'supplies' table.
-  // This is a simplified check. In a real app, you might want more robust cascading or checks.
-  const { data: supplies, error: checkError } = await supabase
-    .from('supplies')
+  // First, check if the manufacturer is being used in the 'inventory_items' table.
+  const { data: items, error: checkError } = await supabase
+    .from('inventory_items')
     .select('id')
     .eq('manufacturer_id', manufacturerId)
     .limit(1);
@@ -101,7 +100,7 @@ export const deleteManufacturer = async (manufacturerId: string): Promise<{ succ
     return { success: false, error: 'check_failed' };
   }
 
-  if (supplies && supplies.length > 0) {
+  if (items && items.length > 0) {
     return { success: false, error: 'manufacturer_in_use' };
   }
 

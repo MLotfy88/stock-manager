@@ -88,8 +88,8 @@ export const deleteSupplier = async (supplierId: string): Promise<{ success: boo
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
 
-  const { data: supplies, error: checkError } = await supabase
-    .from('supplies')
+  const { data: items, error: checkError } = await supabase
+    .from('inventory_items')
     .select('id')
     .eq('supplier_id', supplierId)
     .limit(1);
@@ -99,7 +99,7 @@ export const deleteSupplier = async (supplierId: string): Promise<{ success: boo
     return { success: false, error: 'check_failed' };
   }
 
-  if (supplies && supplies.length > 0) {
+  if (items && items.length > 0) {
     return { success: false, error: 'supplier_in_use' };
   }
 

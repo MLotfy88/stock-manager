@@ -88,8 +88,21 @@ export const deleteSupplyType = async (supplyTypeId: string): Promise<{ success:
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
 
-  // Note: In a real-world scenario, you'd check if this type is used in product_definitions.
-  // For simplicity, we'll omit that check here but it's crucial for data integrity.
+  // Check if the supply type is being used in product_definitions
+  const { data: definitions, error: checkError } = await supabase
+    .from('product_definitions')
+    .select('id')
+    .eq('type_id', supplyTypeId)
+    .limit(1);
+
+  if (checkError) {
+    console.error('Error checking for supply type usage:', checkError);
+    return { success: false, error: 'check_failed' };
+  }
+
+  if (definitions && definitions.length > 0) {
+    return { success: false, error: 'supply_type_in_use' };
+  }
   
   const { error } = await supabase
     .from('supply_types')

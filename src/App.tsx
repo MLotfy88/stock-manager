@@ -23,6 +23,7 @@ const ImportExportPage = lazy(() => import('./pages/ImportExportPage'));
 const ConsumptionPage = lazy(() => import('./pages/ConsumptionPage'));
 const ManagementPage = lazy(() => import('./pages/ManagementPage'));
 const AllSuppliesPage = lazy(() => import('./pages/AllSuppliesPage'));
+const ReplacementVoucherPage = lazy(() => import('./pages/ReplacementVoucherPage'));
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
               <Route path="/all-supplies" element={<AllSuppliesPage />} />
               <Route path="/add-supply" element={<AddInventoryPage />} />
               <Route path="/consumption" element={<ConsumptionPage />} />
+              <Route path="/replacement-voucher" element={<ReplacementVoucherPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/alerts" element={<AlertsPage />} />
               <Route path="/reports" element={<ReportsPage />} />

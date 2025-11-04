@@ -1,5 +1,12 @@
 export default {
   // General
+  replacement_voucher: 'Replacement Voucher',
+  select_return_items: 'Select Return Items',
+  enter_new_items: 'Enter New Items',
+  review_and_confirm: 'Review and Confirm',
+  back: 'Back',
+  next: 'Next',
+  finish: 'Finish',
   welcome: 'Welcome',
   dashboard: 'Dashboard',
   urgent_actions: 'Urgent Actions',
@@ -59,6 +66,7 @@ export default {
   settings: 'Settings',
   
   // Navigation
+  replacement_voucher_nav: 'Replacement Voucher',
   dashboard_nav: 'Dashboard',
   data_settings_nav: 'Data Settings',
   management_settings_nav: 'System Management',
@@ -141,6 +149,7 @@ export default {
   expired_status: 'Expired',
   expiring_soon_status: 'Expiring Soon',
   valid: 'Valid',
+  needs_replacement_action_status: 'Replacement Action Needed',
   
   // Calendar
   expiry_calendar: 'Expiry Calendar',
@@ -154,6 +163,7 @@ export default {
   warning: 'Warning',
   
   // Alerts
+  replacement_action_alerts: 'Replacement Alerts',
   critical_alerts: 'Critical Alerts',
   warning_alerts: 'Warning Alerts',
   expired_items: 'Expired Items',
@@ -286,6 +296,7 @@ export default {
   supplier_contact: 'Contact',
   supplier_phone: 'Phone',
   supplier_email: 'Email',
+  supplier_alert_period: 'Replacement Alert Period (Days)',
   
   // Admin
   admin_settings: 'Admin Settings',

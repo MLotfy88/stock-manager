@@ -10,13 +10,13 @@ export type SupplyType =
 export type SupplyStatus = 
   | 'valid' 
   | 'expiring_soon' 
-  | 'expired';
+  | 'expired'
+  | 'needs_replacement_action';
 
 export interface Manufacturer {
   id: string;
   name: string;
   logo?: string;
-  alert_period: number; // Period in days to alert before expiration
   created_at?: string;
 }
 
@@ -26,6 +26,7 @@ export interface Supplier {
   contact?: string;
   phone?: string;
   email?: string;
+  alert_period: number; // Period in days to alert before expiration
 }
 
 export interface SupplyTypeItem {

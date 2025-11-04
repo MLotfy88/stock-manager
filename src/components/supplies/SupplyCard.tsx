@@ -40,16 +40,30 @@ const SupplyCard: React.FC<SupplyCardProps> = ({ supply, onDelete }) => {
   
   const handleDelete = async () => {
     try {
-      await deleteInventoryItem(supply.id);
-      toast({
-        title: t('success'),
-        description: t('item_deleted'),
-      });
+      const result = await deleteInventoryItem(supply.id);
       
-      if (onDelete) {
-        onDelete();
+      if (result.success) {
+        toast({
+          title: t('success'),
+          description: t('item_deleted'),
+        });
+        if (onDelete) {
+          onDelete();
+        }
+      } else {
+        // Handle specific errors returned from the operation
+        const errorMessage = result.error === 'item_in_use'
+          ? t('error_item_in_use')
+          : t('error_deleting_item');
+        
+        toast({
+          title: t('error'),
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
     } catch (error) {
+      // Handle unexpected errors (e.g., network issues)
       toast({
         title: t('error'),
         description: t('error_deleting_item'),
