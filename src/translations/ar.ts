@@ -67,6 +67,7 @@ export default {
   
   // Navigation
   replacement_voucher_nav: 'محضر استبدال',
+  on_shelf_invoicing_nav: 'فوترة الأمانات',
   dashboard_nav: 'لوحة التحكم',
   data_settings_nav: 'إعدادات البيانات',
   management_settings_nav: 'إدارة النظام',
@@ -122,6 +123,7 @@ export default {
 
   // Consumption Report
   consumption_report_nav: 'تقرير الاستهلاك',
+  on_shelf_report_nav: 'تقرير الأمانات',
   consumption_rate_report: 'تقرير معدلات الاستهلاك',
   consumption_analysis: 'تحليل الاستهلاك',
   group_by_department: 'القسم',
@@ -379,4 +381,22 @@ export default {
   filter_by_product_name: "فلترة باسم المنتج...",
   filter_by_variant: "فلترة بالمتغير...",
   columns: "الأعمدة",
+
+  // Stock Types
+  stock_type: "نوع المخزون",
+  select_stock_type: "اختر نوع المخزون",
+  purchased: "شراء",
+  on_shelf: "على سبيل الأمانة",
+  voucher_number: "رقم الفاتورة",
+  on_shelf_invoicing: 'فوترة الأمانات',
+  please_select_items_to_invoice: 'يرجى تحديد أصناف لفوترتها',
+  invoice_created_successfully: 'تم إنشاء الفاتورة بنجاح',
+  failed_to_create_invoice: 'فشل إنشاء الفاتورة',
+  creating_invoice: 'جاري إنشاء الفاتورة...',
+  create_invoice: 'إنشاء فاتورة',
+  consumption_date: 'تاريخ الاستهلاك',
+  consumed_quantity: 'الكمية المستهلكة',
+  unit_price: 'سعر الوحدة',
+  total_cost: 'التكلفة الإجمالية',
+  total: 'الإجمالي',
 };

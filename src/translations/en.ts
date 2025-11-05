@@ -67,6 +67,7 @@ export default {
   
   // Navigation
   replacement_voucher_nav: 'Replacement Voucher',
+  on_shelf_invoicing_nav: 'On-Shelf Invoicing',
   dashboard_nav: 'Dashboard',
   data_settings_nav: 'Data Settings',
   management_settings_nav: 'System Management',
@@ -122,6 +123,7 @@ export default {
 
   // Consumption Report
   consumption_report_nav: 'Consumption Report',
+  on_shelf_report_nav: 'On-Shelf Report',
   consumption_rate_report: 'Consumption Rate Report',
   consumption_analysis: 'Consumption Analysis',
   group_by_department: 'Department',
@@ -379,4 +381,22 @@ export default {
   filter_by_product_name: "Filter by product name...",
   filter_by_variant: "Filter by variant...",
   columns: "Columns",
+
+  // Stock Types
+  stock_type: "Stock Type",
+  select_stock_type: "Select stock type",
+  purchased: "Purchased",
+  on_shelf: "On Shelf",
+  voucher_number: "Voucher Number",
+  on_shelf_invoicing: 'On-Shelf Invoicing',
+  please_select_items_to_invoice: 'Please select items to invoice',
+  invoice_created_successfully: 'Invoice created successfully',
+  failed_to_create_invoice: 'Failed to create invoice',
+  creating_invoice: 'Creating Invoice...',
+  create_invoice: 'Create Invoice',
+  consumption_date: 'Consumption Date',
+  consumed_quantity: 'Consumed Quantity',
+  unit_price: 'Unit Price',
+  total_cost: 'Total Cost',
+  total: 'Total',
 };

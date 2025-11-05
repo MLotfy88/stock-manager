@@ -6,16 +6,17 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSuppliers } from '@/data/operations/supplierOperations';
-import { Supplier, Manufacturer, Store } from '@/types';
+import { Supplier, Manufacturer, Store, StockType } from '@/types';
 import { Save, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { getManufacturers } from '@/data/operations/manufacturerOperations';
 import { getStores } from '@/data/operations/storesOperations';
-import { addInventoryItems } from '@/data/operations/suppliesOperations';
+import { createSupplyVoucherWithItems } from '@/data/operations/voucherOperations';
 import InventoryItemForm, { PurchaseOrderItem } from '@/components/supplies/InventoryItemForm';
 
 const AddInventoryPage = () => {
@@ -41,6 +42,8 @@ const AddInventoryPage = () => {
   const [supplierId, setSupplierId] = useState('');
   const [manufacturerId, setManufacturerId] = useState('');
   const [storeId, setStoreId] = useState('');
+  const [stockType, setStockType] = useState<StockType>('purchased');
+  const [voucherNumber, setVoucherNumber] = useState('');
   const [items, setItems] = useState<PurchaseOrderItem[]>([
     { id: `item_${Date.now()}`, barcode: '', productDefinitionId: '', variant: '', batchNumber: '', expiryDate: undefined, quantity: '1', purchasePrice: '0' }
   ]);
@@ -65,33 +68,44 @@ const AddInventoryPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supplierId || !manufacturerId || !storeId) {
+    if (!supplierId || !manufacturerId || !storeId || !stockType) {
       toast({ title: t('error'), description: t('please_fill_header_fields'), variant: 'destructive' });
       return;
     }
 
     for (const item of items) {
-      if (!item.productDefinitionId || !item.variant || !item.batchNumber || !item.expiryDate || !item.quantity || !item.purchasePrice) {
+      if (!item.productDefinitionId || !item.variant || !item.batchNumber || !item.expiryDate || !item.quantity) {
         toast({ title: t('error'), description: `${t('please_complete_all_fields_for_item')} #${item.id.slice(-4)}`, variant: 'destructive' });
         return;
       }
     }
 
-    const newInventoryItems = items.map(item => ({
-      product_definition_id: item.productDefinitionId,
-      variant: item.variant,
-      barcode: item.barcode,
-      quantity: parseInt(item.quantity),
-      store_id: storeId,
-      manufacturer_id: manufacturerId,
+    const voucherData = {
+      supplier_id: supplierId,
+      date: format(new Date(), 'yyyy-MM-dd'),
+      stock_type: stockType,
+      voucher_number: voucherNumber,
+    };
+
+    const newInventoryItems = items.map(item => {
+      const quantity = parseInt(item.quantity);
+      return {
+        product_definition_id: item.productDefinitionId,
+        variant: item.variant,
+        barcode: item.barcode || null,
+        quantity: quantity,
+        initial_quantity: quantity,
+        store_id: storeId,
+        manufacturer_id: manufacturerId,
       supplier_id: supplierId,
       batch_number: item.batchNumber,
-      expiry_date: item.expiryDate ? format(item.expiryDate, 'yyyy-MM-dd') : '',
-      purchase_price: parseFloat(item.purchasePrice),
-    }));
+      expiry_date: format(item.expiryDate!, 'yyyy-MM-dd'),
+      purchase_price: parseFloat(item.purchasePrice || '0'),
+      };
+    });
 
     try {
-      await addInventoryItems(newInventoryItems as any);
+      await createSupplyVoucherWithItems(voucherData, newInventoryItems as any);
       toast({ title: t('success'), description: t('invoice_processed_successfully') });
       navigate('/supplies');
     } catch (error) {
@@ -118,7 +132,21 @@ const AddInventoryPage = () => {
                 <CardTitle>{t('invoice_details')}</CardTitle>
                 <CardDescription>{t('invoice_details_description')}</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-6">
+                <div className="space-y-2">
+                  <Label htmlFor="stockType">{t('stock_type')}</Label>
+                  <Select value={stockType} onValueChange={(value) => setStockType(value as StockType)}>
+                    <SelectTrigger><SelectValue placeholder={t('select_stock_type')} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="purchased">{t('purchased')}</SelectItem>
+                      <SelectItem value="on_shelf">{t('on_shelf')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="voucherNumber">{t('voucher_number')}</Label>
+                  <Input id="voucherNumber" value={voucherNumber} onChange={(e) => setVoucherNumber(e.target.value)} />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="manufacturer">{t('manufacturer')}</Label>
                   <Select value={manufacturerId} onValueChange={setManufacturerId}>

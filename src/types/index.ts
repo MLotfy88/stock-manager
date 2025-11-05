@@ -58,18 +58,33 @@ export interface ProductDefinition {
   updated_at: string;
 }
 
+export type StockType = 'purchased' | 'on_shelf';
+
+export interface SupplyVoucher {
+  id: string;
+  voucher_number?: string;
+  supplier_id?: string;
+  date: string;
+  stock_type: StockType;
+  notes?: string;
+  created_at: string;
+}
+
 export interface InventoryItem {
   id: string;
   barcode: string | null;
   batch_number: string | null;
   expiry_date: string;
   quantity: number;
+  initial_quantity: number;
   purchase_price: number | null;
   variant: string;
   product_definition_id: string;
   store_id: string;
   manufacturer_id: string | null;
   supplier_id: string | null;
+  supply_voucher_id?: string | null;
+  stock_type: StockType;
   
   // Joined fields from the new view
   store_name: string;
@@ -79,6 +94,35 @@ export interface InventoryItem {
   manufacturer_name: string;
   supplier_name: string;
   status: string;
+}
+
+export type InvoicingStatus = 'not_consumed' | 'consumed_not_invoiced' | 'partially_invoiced' | 'fully_invoiced';
+
+export interface OnShelfItemStatus {
+  inventory_item_id: string;
+  product_name: string;
+  variant: string;
+  batch_number: string;
+  supplier_name: string;
+  initial_quantity: number;
+  consumed_quantity: number;
+  remaining_quantity: number;
+  invoicing_status: InvoicingStatus;
+}
+
+export interface OnShelfInvoiceItem {
+  consumption_item_id: string;
+  consumption_date: string;
+  department: string;
+  product_name: string;
+  variant: string;
+  batch_number: string;
+  supplier_name: string;
+  consumed_quantity: number;
+  purchase_price: number;
+  total_cost: number;
+  inventory_item_id: string;
+  supplier_id: string;
 }
 
 export interface RecentActivity {
@@ -115,6 +159,7 @@ export interface ConsumptionItem {
   item_name: string; // e.g., "Diagnostic Catheter - L3.5"
   quantity: number;
   notes?: string;
+  is_invoiced?: boolean;
 }
 
 export interface ConsumptionRecord {

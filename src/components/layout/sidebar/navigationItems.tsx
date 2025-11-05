@@ -50,6 +50,12 @@ export const useNavigationItems = () => {
     },
     {
       type: 'link',
+      label: t('on_shelf_invoicing_nav'),
+      icon: <Package className="h-5 w-5" />,
+      href: '/on-shelf-invoicing',
+    },
+    {
+      type: 'link',
       label: t('consumption_nav'),
       icon: <Recycle className="h-5 w-5" />,
       href: '/consumption',
@@ -85,6 +91,7 @@ export const useNavigationItems = () => {
         { type: 'link', label: t('inventory_report_nav'), href: '/inventory-report' },
         { type: 'link', label: t('reorder_point_report_nav'), href: '/reorder-point-report' },
         { type: 'link', label: t('consumption_report_nav'), href: '/consumption-report' },
+        { type: 'link', label: t('on_shelf_report_nav'), href: '/on-shelf-report' },
       ]
     },
     {
