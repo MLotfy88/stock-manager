@@ -1,5 +1,53 @@
 import { getSupabaseClient } from '@/lib/supabaseClient';
-import { ConsumptionItem, InventoryItem } from '@/types';
+import { ConsumptionItem, InventoryItem, ConsumptionRecord } from '@/types';
+
+type ConsumptionItemPayload = {
+  inventory_item_id: string;
+  quantity: number;
+};
+
+export const addConsumptionRecord = async (
+  record: Omit<ConsumptionRecord, 'id' | 'created_at' | 'items' | 'status'>,
+  items: ConsumptionItemPayload[]
+): Promise<ConsumptionRecord> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
+  const { data, error } = await supabase.rpc('create_consumption_record', {
+    p_date: record.date,
+    p_department: record.department,
+    p_purpose: record.purpose,
+    p_requested_by: record.requested_by,
+    p_notes: record.notes,
+    p_items: items,
+  });
+
+  if (error) {
+    console.error('Error creating consumption record:', error);
+    throw error;
+  }
+
+  return data;
+};
+
+export const getConsumptionRecords = async (): Promise<ConsumptionRecord[]> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('consumption_records')
+    .select(`
+      *,
+      items:consumption_record_items (*)
+    `);
+
+  if (error) {
+    console.error('Error fetching consumption records:', error);
+    throw error;
+  }
+
+  return data || [];
+};
 
 export interface ConsumedOnShelfItem extends ConsumptionItem {
   inventory_item: InventoryItem;
@@ -41,4 +89,18 @@ export const getConsumedOnShelfItems = async (): Promise<ConsumedOnShelfItem[]> 
   }));
 
   return transformedData as any;
+};
+
+export const deleteConsumptionRecord = async (recordId: string): Promise<void> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
+  const { error } = await supabase.rpc('delete_consumption_record', {
+    p_record_id: recordId,
+  });
+
+  if (error) {
+    console.error('Error deleting consumption record:', error);
+    throw error;
+  }
 };
