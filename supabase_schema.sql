@@ -131,7 +131,7 @@ CREATE TABLE consumption_record_items (
 CREATE OR REPLACE VIEW inventory_items_with_status AS
 SELECT
     ii.id, ii.barcode, ii.batch_number, ii.expiry_date, ii.quantity, ii.purchase_price, ii.variant,
-    ii.product_definition_id, ii.store_id, ii.manufacturer_id, ii.supplier_id, ii.stock_type, ii.initial_quantity,
+    ii.product_definition_id, ii.store_id, ii.manufacturer_id, ii.supplier_id, ii.stock_type, ii.initial_quantity, ii.created_at,
     st.name AS store_name,
     pd.name AS product_name, pd.reorder_point,
     sty.name AS supply_type_name,
@@ -305,7 +305,7 @@ BEGIN
                 product_definition_id, variant, barcode, quantity, store_id, manufacturer_id, supplier_id,
                 batch_number, expiry_date, purchase_price, notes, stock_type, initial_quantity
             ) VALUES (
-                source_item.product_definition_id, source_item.variant, NULL, item."quantity", item."toStoreId",
+                source_item.product_definition_id, source_item.variant, source_item.barcode, item."quantity", item."toStoreId",
                 source_item.manufacturer_id, source_item.supplier_id, source_item.batch_number, source_item.expiry_date,
                 source_item.purchase_price, 'Transferred from store ' || item."fromStoreId"::text || '. Original item ID: ' || source_item.id::text,
                 source_item.stock_type, item."quantity" -- Set initial quantity for the new batch

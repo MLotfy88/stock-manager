@@ -1,4 +1,3 @@
-
 export type SupplyType = 
   | 'catheter' 
   | 'surgical_tool' 
@@ -93,6 +92,7 @@ export interface InventoryItem {
   supply_type_name: string;
   manufacturer_name: string;
   supplier_name: string;
+  alert_period?: number; // Added for alerts page logic
   status: string;
 
   // Optional joined data

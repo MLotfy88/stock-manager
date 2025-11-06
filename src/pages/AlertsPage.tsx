@@ -16,13 +16,17 @@ import { getManufacturers } from '@/data/operations/manufacturerOperations';
 import { useEffect } from 'react';
 
 // Helper function to classify alerts by severity
-const getAlertSeverity = (status: string) => {
-  switch (status) {
-    case 'expired': return 'expired';
-    case 'expiring_soon': return 'critical';
-    case 'needs_replacement_action': return 'replacement';
-    default: return 'ok';
+const getAlertSeverity = (daysRemaining: number, alertPeriod: number) => {
+  if (daysRemaining <= 0) {
+    return 'expired';
   }
+  if (daysRemaining <= alertPeriod) {
+    return 'critical';
+  }
+  if (daysRemaining <= alertPeriod + 15) {
+    return 'replacement';
+  }
+  return 'ok';
 };
 
 const AlertsPage = () => {
@@ -82,13 +86,14 @@ const AlertsPage = () => {
     const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
     const def = productDefs.find(d => d.id === item.product_definition_id);
     const manufacturer = manufacturers.find(m => m.id === item.manufacturer_id);
-    
+    const alertPeriod = item.alert_period || 30; // Default to 30 if not set
+
     return {
       ...item,
       name: def?.name || 'N/A',
       manufacturerName: manufacturer?.name || 'N/A',
       daysRemaining,
-      severity: getAlertSeverity(item.status)
+      severity: getAlertSeverity(daysRemaining, alertPeriod)
     };
   });
   
