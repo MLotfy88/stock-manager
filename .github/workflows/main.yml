@@ -35,7 +35,9 @@ jobs:
       run: npx cap sync android
 
     - name: Decode Keystore
-      run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" > keystore.jks.base64
+        base64 --decode keystore.jks.base64 > android/app/keystore.jks
 
     - name: Grant execute permission to gradlew
       run: chmod +x android/gradlew
