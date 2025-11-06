@@ -11,9 +11,6 @@ import { DateRange } from 'react-day-picker';
 import { DatePickerWithRange } from '@/components/ui/DatePickerWithRange';
 import { getConsumptionRecords } from '@/data/operations/consumptionOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
-import { getInventoryItems } from '@/data/operations/suppliesOperations';
-
-type GroupBy = 'product' | 'department';
 
 const ConsumptionReportPage = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -22,24 +19,21 @@ const ConsumptionReportPage = () => {
 
   const [records, setRecords] = useState<ConsumptionRecord[]>([]);
   const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [groupBy, setGroupBy] = useState<GroupBy>('product');
+  const [selectedProductDefId, setSelectedProductDefId] = useState<string>('all');
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [recordsData, defsData, inventoryData] = await Promise.all([
+        const [recordsData, defsData] = await Promise.all([
           getConsumptionRecords(),
           getProductDefinitions(),
-          getInventoryItems(),
         ]);
         setRecords(recordsData);
         setProductDefs(defsData);
-        setInventory(inventoryData);
       } catch (error) {
         console.error("Failed to fetch report data:", error);
       } finally {
@@ -49,44 +43,39 @@ const ConsumptionReportPage = () => {
     fetchData();
   }, []);
 
-  const filteredData = useMemo(() => {
+  const groupedData = useMemo(() => {
+    const groups: { [key: string]: { name: string; totalQuantity: number } } = {};
+
     let filteredRecords = records;
+
+    // Filter by date range
     if (dateRange?.from) {
       filteredRecords = filteredRecords.filter(r => new Date(r.date) >= dateRange.from!);
     }
     if (dateRange?.to) {
       filteredRecords = filteredRecords.filter(r => new Date(r.date) <= dateRange.to!);
     }
-    return filteredRecords;
-  }, [dateRange, records]);
 
-  const groupedData = useMemo(() => {
-    const groups: { [key: string]: { name: string; totalQuantity: number } } = {};
+    // Process items
+    filteredRecords.forEach(record => {
+      (record.items || []).forEach(item => {
+        // Filter by product definition if one is selected
+        if (selectedProductDefId !== 'all' && item.inventory_item?.product_definition_id !== selectedProductDefId) {
+          return;
+        }
 
-    filteredData.forEach(record => {
-        (record.items || []).forEach(item => {
-            let key = '';
-            let groupName = '';
+        const key = item.inventory_item ? `${item.inventory_item.product_definition?.name} - ${item.inventory_item.variant}` : 'Unknown Product';
+        const groupName = key;
 
-            if (groupBy === 'product') {
-                const inventoryItem = inventory.find(inv => inv.id === item.inventory_item_id);
-                const productDef = productDefs.find(def => def.id === inventoryItem?.product_definition_id);
-                key = productDef ? `${productDef.name} - ${inventoryItem?.variant}` : 'Unknown Product';
-                groupName = key;
-            } else if (groupBy === 'department') {
-                key = record.department;
-                groupName = record.department || 'Unknown Department';
-            }
-
-            if (!groups[key]) {
-                groups[key] = { name: groupName, totalQuantity: 0 };
-            }
-            groups[key].totalQuantity += item.quantity;
-        });
+        if (!groups[key]) {
+          groups[key] = { name: groupName, totalQuantity: 0 };
+        }
+        groups[key].totalQuantity += item.quantity;
+      });
     });
 
     return Object.values(groups).sort((a, b) => b.totalQuantity - a.totalQuantity);
-  }, [filteredData, groupBy, inventory, productDefs]);
+  }, [dateRange, records, selectedProductDefId]);
 
   return (
     <div className="page-container bg-background" dir={direction}>
@@ -105,11 +94,15 @@ const ConsumptionReportPage = () => {
                 <CardTitle>{t('consumption_analysis')}</CardTitle>
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                   <DatePickerWithRange date={dateRange} setDate={setDateRange} />
-                  <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupBy)}>
-                    <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder={t('group_by')} /></SelectTrigger>
+                  <Select value={selectedProductDefId} onValueChange={setSelectedProductDefId}>
+                    <SelectTrigger className="w-full sm:w-[220px]">
+                      <SelectValue placeholder={t('filter_by_product_type')} />
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="product">{t('group_by_product')}</SelectItem>
-                      <SelectItem value="department">{t('group_by_department')}</SelectItem>
+                      <SelectItem value="all">{t('all_product_types')}</SelectItem>
+                      {productDefs.map(def => (
+                        <SelectItem key={def.id} value={def.id}>{def.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -123,7 +116,7 @@ const ConsumptionReportPage = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{groupBy === 'product' ? t('product') : t('department')}</TableHead>
+                        <TableHead>{t('product_variant')}</TableHead>
                         <TableHead className="text-right">{t('total_consumed_quantity')}</TableHead>
                       </TableRow>
                     </TableHeader>

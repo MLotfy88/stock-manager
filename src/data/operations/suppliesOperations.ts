@@ -5,19 +5,30 @@ import { format } from 'date-fns';
 /**
  * Get all inventory items with their dynamic status
  */
-export const getInventoryItems = async (): Promise<InventoryItem[]> => {
+export const getInventoryItems = async (
+  storeId?: string,
+  ignoreQuantityCheck = false
+): Promise<InventoryItem[]> => {
   const supabase = getSupabaseClient();
   if (!supabase) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('inventory_items_with_status') // Use the new VIEW
     .select(`
       *,
       manufacturers ( name ),
       suppliers ( name )
-    `)
-    .gt('quantity', 0)
-    .order('created_at', { ascending: false });
+    `);
+
+  if (storeId) {
+    query = query.eq('store_id', storeId);
+  }
+
+  if (!ignoreQuantityCheck) {
+    query = query.gt('quantity', 0);
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching inventory items:', error);

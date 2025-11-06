@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { getConsumptionRecords, deleteConsumptionRecord } from '@/data/operations/consumptionOperations';
 import { ConsumptionRecord } from '@/types';
-import { Search, Trash2, FileSpreadsheet, Calendar, Package, User, Building2 } from 'lucide-react';
+import { Search, Trash2, FileSpreadsheet, Calendar, Package, User, Warehouse } from 'lucide-react';
 import { useEffect } from 'react';
 import { format } from 'date-fns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -27,7 +27,7 @@ const ConsumptionRecordList = () => {
   const [records, setRecords] = useState<ConsumptionRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [stockTypeFilter, setStockTypeFilter] = useState('all');
   const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
 
   const loadRecords = async () => {
@@ -45,26 +45,19 @@ const ConsumptionRecordList = () => {
   useEffect(() => {
     loadRecords();
   }, []);
-  
-  // الأقسام المتاحة
-  const departments = [
-    { id: 'cardiology', name: t('cardiology_dept') },
-    { id: 'surgery', name: t('surgery_dept') },
-    { id: 'emergency', name: t('emergency_dept') },
-    { id: 'radiology', name: t('radiology_dept') },
-    { id: 'icu', name: t('icu_dept') },
-    { id: 'pharmacy', name: t('pharmacy_dept') },
-  ];
-  
+
   // تصفية السجلات
   const filteredRecords = records.filter(record => {
     const matchesSearch = searchQuery === '' || 
       record.requested_by.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (record.approved_by && record.approved_by.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesDepartment = departmentFilter === 'all' || record.department === departmentFilter;
+    // بما أن كل سجل يمكن أن يحتوي على أصناف من أنواع مخزون مختلفة،
+    // سنقوم بالتحقق مما إذا كان أي صنف في السجل يطابق الفلتر
+    const matchesStockType = stockTypeFilter === 'all' || 
+      record.items.some(item => item.inventory_item?.stock_type === stockTypeFilter);
     
-    return matchesSearch && matchesDepartment;
+    return matchesSearch && matchesStockType;
   });
   
   // ترتيب السجلات (الأحدث أولاً)
@@ -118,20 +111,17 @@ const ConsumptionRecordList = () => {
               />
             </div>
             
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <Select value={stockTypeFilter} onValueChange={setStockTypeFilter}>
               <SelectTrigger>
                 <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  <SelectValue placeholder={t('filter_by_department')} />
+                  <Warehouse className="h-4 w-4" />
+                  <SelectValue placeholder={t('filter_by_stock_type')} />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('all_departments')}</SelectItem>
-                {departments.map(dept => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">{t('all_stock_types')}</SelectItem>
+                <SelectItem value="purchased">{t('purchased')}</SelectItem>
+                <SelectItem value="on_shelf">{t('on_shelf')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -149,17 +139,14 @@ const ConsumptionRecordList = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('date')}</TableHead>
-                    <TableHead>{t('department')}</TableHead>
                     <TableHead>{t('requested_by')}</TableHead>
                     <TableHead>{t('items_count')}</TableHead>
+                    <TableHead>{t('notes')}</TableHead>
                     <TableHead>{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedRecords.map(record => {
-                    const departmentName = departments.find(d => d.id === record.department)?.name || record.department;
-                    
-                    return (
+                  {sortedRecords.map(record => (
                       <React.Fragment key={record.id}>
                         <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => toggleRecord(record.id)}>
                           <TableCell>
@@ -167,11 +154,6 @@ const ConsumptionRecordList = () => {
                               <Calendar className="h-4 w-4 text-muted-foreground" />
                               <span>{format(new Date(record.date), 'yyyy-MM-dd')}</span>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {departmentName}
-                            </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -183,6 +165,11 @@ const ConsumptionRecordList = () => {
                             <Badge>
                               {record.items.length} {t('items')}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground truncate">
+                              {record.notes || '-'}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -235,6 +222,7 @@ const ConsumptionRecordList = () => {
                                     <TableRow>
                                       <TableHead>{t('supply')}</TableHead>
                                       <TableHead>{t('quantity')}</TableHead>
+                                      <TableHead>{t('stock_type')}</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
@@ -243,12 +231,17 @@ const ConsumptionRecordList = () => {
                                         <TableCell>
                                           <div className="flex items-center gap-2">
                                             <Package className="h-4 w-4 text-muted-foreground" />
-                                            <span>{item.inventory_item_id}</span>
+                                            <span>{item.inventory_item?.product_definition?.name || item.inventory_item_id}</span>
                                           </div>
                                         </TableCell>
                                         <TableCell>
                                           <Badge variant="secondary">
                                             {item.quantity} {t('units')}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge variant={item.inventory_item?.stock_type === 'on_shelf' ? 'default' : 'outline'}>
+                                            {t(item.inventory_item?.stock_type || 'unknown')}
                                           </Badge>
                                         </TableCell>
                                       </TableRow>
@@ -260,8 +253,7 @@ const ConsumptionRecordList = () => {
                           </TableRow>
                         )}
                       </React.Fragment>
-                    );
-                  })}
+                    ))}
                 </TableBody>
               </Table>
             </div>

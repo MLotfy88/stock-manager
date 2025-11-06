@@ -8,7 +8,11 @@ import { ProductDefinition, InventoryItem } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getInventoryItems } from '@/data/operations/suppliesOperations';
+import { getStores } from '@/data/operations/storesOperations';
+import { getSuppliers } from '@/data/operations/supplierOperations';
+import { Store, Supplier } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ReorderItem {
     productName: string;
@@ -24,18 +28,30 @@ const ReorderPointReportPage = () => {
 
   const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [filters, setFilters] = useState({
+    store: 'all',
+    supplier: 'all',
+    stock_type: 'all',
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [defsData, inventoryData] = await Promise.all([
+        const [defsData, inventoryData, storesData, suppliersData] = await Promise.all([
           getProductDefinitions(),
-          getInventoryItems(),
+          getInventoryItems(undefined, true), // Fetch all items, including those with 0 quantity
+          getStores(),
+          getSuppliers(),
         ]);
         setProductDefs(defsData);
         setInventory(inventoryData);
+        setStores(storesData);
+        setSuppliers(suppliersData);
       } catch (error) {
         console.error("Failed to fetch report data:", error);
       } finally {
@@ -45,11 +61,21 @@ const ReorderPointReportPage = () => {
     fetchData();
   }, []);
 
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
+
   const reorderItems = useMemo(() => {
     if (isLoading) return [];
 
+    const filteredInventory = inventory.filter(item =>
+      (filters.store === 'all' || item.store_id === filters.store) &&
+      (filters.supplier === 'all' || item.supplier_id === filters.supplier) &&
+      (filters.stock_type === 'all' || item.stock_type === filters.stock_type)
+    );
+
     const stockMap: { [key: string]: number } = {};
-    inventory.forEach(item => {
+    filteredInventory.forEach(item => {
         const key = `${item.product_definition_id}-${item.variant}`;
         stockMap[key] = (stockMap[key] || 0) + item.quantity;
     });
@@ -73,7 +99,7 @@ const ReorderPointReportPage = () => {
     });
 
     return itemsToReorder.sort((a, b) => a.productName.localeCompare(b.productName));
-  }, [inventory, productDefs, isLoading]);
+  }, [inventory, productDefs, isLoading, filters]);
 
   return (
     <div className="page-container bg-background" dir={direction}>
@@ -88,7 +114,33 @@ const ReorderPointReportPage = () => {
           <h1 className="text-2xl font-bold mb-6">{t('reorder_point_report_nav')}</h1>
           <Card>
             <CardHeader>
-              <CardTitle>{t('items_below_reorder_point')}</CardTitle>
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                <CardTitle>{t('items_below_reorder_point')}</CardTitle>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full md:w-auto">
+                  <Select value={filters.store} onValueChange={(v) => handleFilterChange('store', v)}>
+                    <SelectTrigger><SelectValue placeholder={t('filter_by_store')} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('all_stores')}</SelectItem>
+                      {stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filters.supplier} onValueChange={(v) => handleFilterChange('supplier', v)}>
+                    <SelectTrigger><SelectValue placeholder={t('filter_by_supplier')} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('all_suppliers')}</SelectItem>
+                      {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filters.stock_type} onValueChange={(v) => handleFilterChange('stock_type', v)}>
+                    <SelectTrigger><SelectValue placeholder={t('filter_by_stock_type')} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('all_stock_types')}</SelectItem>
+                      <SelectItem value="purchased">{t('purchased')}</SelectItem>
+                      <SelectItem value="on_shelf">{t('on_shelf')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (

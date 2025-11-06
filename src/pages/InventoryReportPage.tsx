@@ -34,6 +34,7 @@ const ALL_COLUMNS = {
   quantity: { key: 'quantity', label: 'quantity' },
   purchase_price: { key: 'purchase_price', label: 'cost' },
   reorder_point: { key: 'reorder_point', label: 'reorder_point' },
+  stock_type: { key: 'stock_type', label: 'stock_type' },
 };
 
 const InventoryReportPage = () => {
@@ -55,6 +56,7 @@ const InventoryReportPage = () => {
     product: '',
     type: 'all',
     variant: '',
+    stock_type: 'all',
   });
 
   // Column visibility state
@@ -71,6 +73,7 @@ const InventoryReportPage = () => {
     quantity: true,
     purchase_price: true,
     reorder_point: false,
+    stock_type: true,
   });
 
   useEffect(() => {
@@ -106,7 +109,8 @@ const InventoryReportPage = () => {
       (filters.supplier === 'all' || item.supplier_id === filters.supplier) &&
       (filters.type === 'all' || item.supply_type_name === supplyTypes.find(st => st.id === filters.type)?.name) &&
       (item.product_name.toLowerCase().includes(filters.product.toLowerCase())) &&
-      (item.variant.toLowerCase().includes(filters.variant.toLowerCase()))
+      (item.variant.toLowerCase().includes(filters.variant.toLowerCase())) &&
+      (filters.stock_type === 'all' || item.stock_type === filters.stock_type)
     );
   }, [inventory, filters, supplyTypes]);
 
@@ -119,9 +123,14 @@ const InventoryReportPage = () => {
 
   const handleExportCSV = () => {
     const headers = Object.values(ALL_COLUMNS).map(col => t(col.label));
-    const rows = filteredInventory.map(item => 
+    // Export ALL inventory data, not just filtered data
+    const rows = inventory.map(item => 
       Object.values(ALL_COLUMNS).map(col => {
         let value = item[col.key as keyof InventoryItem] ?? '';
+        // Handle special formatting for stock_type
+        if (col.key === 'stock_type') {
+          value = t(value as string);
+        }
         if (typeof value === 'string') {
           return `"${value.replace(/"/g, '""')}"`;
         }
@@ -171,9 +180,10 @@ const InventoryReportPage = () => {
               <div className="space-y-4">
                 {/* Filters Row 1 */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <Select value={filters.store} onValueChange={(v) => handleFilterChange('store', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_stores')}</SelectItem>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
-                  <Select value={filters.supplier} onValueChange={(v) => handleFilterChange('supplier', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_suppliers')}</SelectItem>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
-                  <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_types')}</SelectItem>{supplyTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select>
+                  <Select value={filters.store} onValueChange={(v) => handleFilterChange('store', v)}><SelectTrigger><SelectValue placeholder={t('filter_by_store')} /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_stores')}</SelectItem>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
+                  <Select value={filters.supplier} onValueChange={(v) => handleFilterChange('supplier', v)}><SelectTrigger><SelectValue placeholder={t('filter_by_supplier')} /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_suppliers')}</SelectItem>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
+                  <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v)}><SelectTrigger><SelectValue placeholder={t('filter_by_type')} /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_types')}</SelectItem>{supplyTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select>
+                  <Select value={filters.stock_type} onValueChange={(v) => handleFilterChange('stock_type', v)}><SelectTrigger><SelectValue placeholder={t('filter_by_stock_type')} /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_stock_types')}</SelectItem><SelectItem value="purchased">{t('purchased')}</SelectItem><SelectItem value="on_shelf">{t('on_shelf')}</SelectItem></SelectContent></Select>
                 </div>
                 {/* Filters Row 2 */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -238,6 +248,7 @@ const InventoryReportPage = () => {
                           {visibleColumns.quantity && <TableCell>{item.quantity}</TableCell>}
                           {visibleColumns.purchase_price && <TableCell>{item.purchase_price?.toFixed(2)}</TableCell>}
                           {visibleColumns.reorder_point && <TableCell>{item.reorder_point}</TableCell>}
+                          {visibleColumns.stock_type && <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ${item.stock_type === 'on_shelf' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{t(item.stock_type)}</span></TableCell>}
                         </TableRow>
                       ))
                     ) : (

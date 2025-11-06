@@ -38,7 +38,13 @@ export const getConsumptionRecords = async (): Promise<ConsumptionRecord[]> => {
     .from('consumption_records')
     .select(`
       *,
-      items:consumption_record_items (*)
+      items:consumption_record_items (
+        *,
+        inventory_item:inventory_item_id (
+          *,
+          product_definition:product_definition_id (*)
+        )
+      )
     `);
 
   if (error) {

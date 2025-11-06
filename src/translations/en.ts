@@ -399,4 +399,15 @@ export default {
   unit_price: 'Unit Price',
   total_cost: 'Total Cost',
   total: 'Total',
+
+  // On-Shelf Report
+  on_shelf_items_status: 'On-Shelf Items Status',
+  filter_by_supplier: 'Filter by Supplier',
+  initial_quantity: 'Initial Quantity',
+  remaining_quantity: 'Remaining Quantity',
+  invoicing_status: 'Invoicing Status',
+  not_consumed: 'Not Consumed',
+  consumed_not_invoiced: 'Consumed, Not Invoiced',
+  partially_invoiced: 'Partially Invoiced',
+  fully_invoiced: 'Fully Invoiced',
 };

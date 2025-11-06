@@ -41,28 +41,43 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        const [inventoryData, defsData, storesData] = await Promise.all([
-          getInventoryItems(),
+        const [defsData, storesData] = await Promise.all([
           getProductDefinitions(),
           getStores(),
         ]);
-        setInventory(inventoryData);
         setProductDefs(defsData);
         setStores(storesData);
       } catch (error) {
-        console.error("Failed to fetch form data", error);
+        console.error("Failed to fetch initial form data", error);
         toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
       } finally {
         setIsLoading(false);
       }
     };
-    fetchData();
+    fetchInitialData();
   }, [toast, t]);
 
-  const availableSupplies = inventory.filter(s => s.store_id === selectedStoreId && s.quantity > 0);
+  useEffect(() => {
+    if (selectedStoreId) {
+      const fetchInventoryForStore = async () => {
+        try {
+          const inventoryData = await getInventoryItems(selectedStoreId);
+          setInventory(inventoryData);
+        } catch (error) {
+          console.error(`Failed to fetch inventory for store ${selectedStoreId}`, error);
+          toast({ title: t('error'), description: t('error_fetching_inventory'), variant: 'destructive' });
+        }
+      };
+      fetchInventoryForStore();
+    } else {
+      setInventory([]); // Clear inventory if no store is selected
+    }
+  }, [selectedStoreId, toast, t]);
+
+  const availableSupplies = inventory; // Already filtered by store
 
   const handleItemChange = useCallback((itemId: string, field: keyof ConsumptionItem, value: any) => {
     setItems(prevItems => prevItems.map(item => {
@@ -150,17 +165,21 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
       return;
     }
     
-    const newRecord = {
+    const recordPayload: Omit<ConsumptionRecord, 'id' | 'created_at' | 'items' | 'status'> = {
       date: date!.toISOString().split('T')[0],
       department: stores.find(s => s.id === selectedStoreId)?.name || 'N/A',
-      requested_by: 'System',
+      requested_by: 'System', // This should be replaced with actual user later
       notes,
       purpose: 'use',
-      items: items.map(({ id, availableQuantity, ...rest }) => ({ ...rest, quantity: Number(rest.quantity) }))
     };
 
+    const itemsPayload = items.map(item => ({
+      inventory_item_id: item.inventory_item_id!,
+      quantity: Number(item.quantity),
+    }));
+
     try {
-      await addConsumptionRecord(newRecord as any);
+      await addConsumptionRecord(recordPayload, itemsPayload);
       toast({ title: t('success'), description: t('consumption_record_created') });
       if (onSuccess) onSuccess();
     } catch (error: any) {

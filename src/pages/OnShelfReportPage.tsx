@@ -1,29 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getOnShelfReportData } from '@/data/operations/reportOperations';
-import { OnShelfItemStatus, InvoicingStatus } from '@/types';
+import { getSuppliers } from '@/data/operations/supplierOperations';
+import { OnShelfItemStatus, InvoicingStatus, Supplier } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const OnShelfReportPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
   const [reportData, setReportData] = useState<OnShelfItemStatus[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedSupplier, setSelectedSupplier] = useState('all');
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const data = await getOnShelfReportData();
+        const [data, suppliersData] = await Promise.all([
+          getOnShelfReportData(),
+          getSuppliers(),
+        ]);
         setReportData(data);
+        setSuppliers(suppliersData);
       } catch (error) {
         console.error("Failed to fetch on-shelf report data", error);
       } finally {
@@ -33,9 +41,46 @@ const OnShelfReportPage = () => {
     fetchData();
   }, []);
 
+  const filteredData = useMemo(() => {
+    if (selectedSupplier === 'all') {
+      return reportData;
+    }
+    return reportData.filter(item => item.supplier_name === suppliers.find(s => s.id === selectedSupplier)?.name);
+  }, [reportData, selectedSupplier, suppliers]);
+
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => {
     if (isMobile) setIsSidebarOpen(false);
+  };
+
+  const handleExportCSV = () => {
+    const headers = [
+      t('product_name'), t('variant'), t('batch_number'), t('supplier'),
+      t('initial_quantity'), t('consumed_quantity'), t('remaining_quantity'), t('invoicing_status')
+    ];
+    
+    const rows = filteredData.map(item => [
+      `"${item.product_name.replace(/"/g, '""')}"`,
+      `"${item.variant.replace(/"/g, '""')}"`,
+      `"${item.batch_number.replace(/"/g, '""')}"`,
+      `"${item.supplier_name.replace(/"/g, '""')}"`,
+      item.initial_quantity,
+      item.consumed_quantity,
+      item.remaining_quantity,
+      `"${t(item.invoicing_status).replace(/"/g, '""')}"`
+    ].join(','));
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(',') + "\n" 
+      + rows.join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "on_shelf_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getStatusBadge = (status: InvoicingStatus) => {
@@ -60,17 +105,26 @@ const OnShelfReportPage = () => {
       
       <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
         <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">{t('on_shelf_report_nav')}</h1>
-            <Button variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              {t('export_as_csv')}
-            </Button>
-          </div>
-          
           <Card>
             <CardHeader>
-              <CardTitle>{t('on_shelf_items_status')}</CardTitle>
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                <CardTitle>{t('on_shelf_items_status')}</CardTitle>
+                <div className="flex items-center gap-4">
+                  <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder={t('filter_by_supplier')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('all_suppliers')}</SelectItem>
+                      {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" className="gap-2" onClick={handleExportCSV} disabled={filteredData.length === 0}>
+                    <Download className="h-4 w-4" />
+                    {t('export_as_csv')}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -89,8 +143,8 @@ const OnShelfReportPage = () => {
                 <TableBody>
                   {isLoading ? (
                     <TableRow><TableCell colSpan={8} className="text-center">{t('loading')}...</TableCell></TableRow>
-                  ) : reportData.length > 0 ? (
-                    reportData.map((item) => (
+                  ) : filteredData.length > 0 ? (
+                    filteredData.map((item) => (
                       <TableRow key={item.inventory_item_id}>
                         <TableCell>{item.product_name}</TableCell>
                         <TableCell>{item.variant}</TableCell>

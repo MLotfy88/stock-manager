@@ -94,6 +94,9 @@ export interface InventoryItem {
   manufacturer_name: string;
   supplier_name: string;
   status: string;
+
+  // Optional joined data
+  product_definition?: ProductDefinition;
 }
 
 export type InvoicingStatus = 'not_consumed' | 'consumed_not_invoiced' | 'partially_invoiced' | 'fully_invoiced';
@@ -160,6 +163,7 @@ export interface ConsumptionItem {
   quantity: number;
   notes?: string;
   is_invoiced?: boolean;
+  inventory_item?: InventoryItem; // Added for joining data
 }
 
 export interface ConsumptionRecord {

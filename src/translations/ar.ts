@@ -399,4 +399,15 @@ export default {
   unit_price: 'سعر الوحدة',
   total_cost: 'التكلفة الإجمالية',
   total: 'الإجمالي',
+
+  // On-Shelf Report
+  on_shelf_items_status: 'حالة أصناف الأمانات',
+  filter_by_supplier: 'تصفية حسب المورد',
+  initial_quantity: 'الكمية المبدئية',
+  remaining_quantity: 'الكمية المتبقية',
+  invoicing_status: 'حالة الفوترة',
+  not_consumed: 'لم تستهلك',
+  consumed_not_invoiced: 'مستهلكة, لم تصدر فاتورة',
+  partially_invoiced: 'تمت فوترة جزء',
+  fully_invoiced: 'تمت الفوترة بالكامل',
 };
