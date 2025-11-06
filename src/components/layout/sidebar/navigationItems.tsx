@@ -30,7 +30,7 @@ export const useNavigationItems = () => {
     },
     {
       type: 'header',
-      label: t('inventory_management'),
+      label: t('operations'),
     },
     {
       type: 'link',
@@ -40,13 +40,15 @@ export const useNavigationItems = () => {
     },
     {
       type: 'link',
+      label: t('consumption_nav'),
+      icon: <Recycle className="h-5 w-5" />,
+      href: '/consumption',
+    },
+    {
+      type: 'link',
       label: t('transfer_inventory_nav'),
       icon: <ArrowRightLeft className="h-5 w-5" />,
       href: '/transfer-inventory',
-    },
-    {
-      type: 'header',
-      label: t('operations'),
     },
     {
       type: 'link',
@@ -56,15 +58,13 @@ export const useNavigationItems = () => {
     },
     {
       type: 'link',
-      label: t('consumption_nav'),
-      icon: <Recycle className="h-5 w-5" />,
-      href: '/consumption',
-    },
-    {
-      type: 'link',
       label: t('replacement_voucher_nav'),
       icon: <Replace className="h-5 w-5" />,
       href: '/replacement-voucher',
+    },
+    {
+      type: 'header',
+      label: t('monitoring_and_planning'),
     },
     {
       type: 'link',
@@ -77,10 +77,6 @@ export const useNavigationItems = () => {
       label: t('alerts_nav'),
       icon: <AlertTriangle className="h-5 w-5" />,
       href: '/alerts',
-    },
-    {
-      type: 'header',
-      label: t('analysis'),
     },
     {
       type: 'collapsible',
@@ -99,16 +95,13 @@ export const useNavigationItems = () => {
       label: t('settings'),
     },
     {
-      type: 'link',
-      label: t('data_settings_nav'),
-      icon: <Database className="h-5 w-5" />,
-      href: '/admin',
-    },
-    {
-      type: 'link',
-      label: t('management_settings_nav'),
+      type: 'collapsible',
+      label: t('management'),
       icon: <Settings className="h-5 w-5" />,
-      href: '/management',
+      subItems: [
+        { type: 'link', label: t('data_settings_nav'), href: '/admin' },
+        { type: 'link', label: t('management_settings_nav'), href: '/management' },
+      ]
     },
   ];
 };

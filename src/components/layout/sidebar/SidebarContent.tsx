@@ -40,10 +40,6 @@ const SidebarContent = ({ activePath, handleNavClick }: SidebarContentProps) => 
           return null;
         })}
       </nav>
-      
-      <div className="mt-auto">
-        <SidebarFooter />
-      </div>
     </div>
   );
 };

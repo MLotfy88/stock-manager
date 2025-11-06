@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { getProductDefinitions } from './productDefinitionOperations';
+import { getSupplyTypes } from './supplyTypeOperations';
 import { RecentActivity } from '@/types';
 
 export const calculateDashboardStats = async () => {
@@ -20,6 +21,7 @@ export const calculateDashboardStats = async () => {
   }
 
   const productDefs = await getProductDefinitions();
+  const supplyTypes = await getSupplyTypes();
   
   // Filter items with quantity > 0, as the view might still return them before a refresh
   const itemsInStock = allItems?.filter(item => item.quantity > 0) || [];
@@ -52,11 +54,9 @@ export const calculateDashboardStats = async () => {
   const typeCounts = itemsInStock.reduce((acc, item) => {
     const def = productDefs.find(p => p.id === item.product_definition_id);
     if (def) {
-      // This assumes a mapping from type_id to a type name/key.
-      // As we don't have the supply_types table joined here, this is a simplification.
-      // A proper implementation would join supply_types or use an RPC function.
-      const typeKey = def.type_id; // Using type_id as a placeholder key
-      acc[typeKey] = (acc[typeKey] || 0) + item.quantity;
+      const supplyType = supplyTypes.find(st => st.id === def.type_id);
+      const typeName = supplyType ? supplyType.name : 'Unknown';
+      acc[typeName] = (acc[typeName] || 0) + item.quantity;
     }
     return acc;
   }, {} as Record<string, number>);

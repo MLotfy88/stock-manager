@@ -75,26 +75,26 @@ const SupplyList: React.FC<SupplyListProps> = ({
   }, [inventory, productDefs, manufacturers, status, limit]);
   
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">{title}</h2>
+    <div className="space-y-3">
+      <div className="flex justify-between items-center px-1">
+        <h2 className="text-base font-semibold">{title}</h2>
         {filteredSupplies.length > 0 && (
-          <button className="text-primary text-sm font-medium hover:underline">
+          <button className="text-primary text-xs font-medium hover:underline">
             {t('view_all')}
           </button>
         )}
       </div>
       
       {isLoading ? (
-        <div className="bg-muted/50 rounded-lg p-8 text-center">
-          <p className="text-muted-foreground">{t('loading')}</p>
+        <div className="text-center py-4">
+          <p className="text-sm text-muted-foreground">{t('loading')}</p>
         </div>
       ) : filteredSupplies.length === 0 ? (
-        <div className="bg-muted/50 rounded-lg p-8 text-center">
-          <p className="text-muted-foreground">{t('no_supplies')}</p>
+        <div className="text-center py-4">
+          <p className="text-sm text-muted-foreground">{t('no_supplies')}</p>
         </div>
       ) : (
-        <div className="card-grid">
+        <div className="space-y-2">
           {filteredSupplies.map((supply) => (
             <SupplyCard key={supply.id} supply={supply} />
           ))}

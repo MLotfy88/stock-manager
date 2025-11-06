@@ -81,7 +81,7 @@ const CalendarPage = () => {
   
   // Get the month name
   const monthName = new Date(currentYear, currentMonth).toLocaleDateString(
-    language === 'ar' ? 'ar-SA' : 'en-US', 
+    language === 'ar' ? 'ar-EG' : 'en-US', 
     { month: 'long' }
   );
   

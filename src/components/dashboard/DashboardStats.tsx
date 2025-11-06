@@ -58,47 +58,34 @@ const DashboardStats = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6">
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {statCards.map((card, index) => (
           <Card key={index} className="hover-lift overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-muted-foreground text-sm font-medium">{card.title}</p>
-                  <h3 className="text-3xl font-bold mt-1">{card.value}</h3>
-                </div>
-                <div className={`p-3 rounded-full ${card.color}`}>
-                  {card.icon}
-                </div>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className={`p-3 rounded-lg ${card.color}`}>
+                {card.icon}
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs font-medium">{card.title}</p>
+                <h3 className="text-2xl font-bold">{card.value}</h3>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Type Distribution and Recent Activities */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Card className="hover-lift">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 bg-primary rounded-full"></span>
-              {t('by_type')}
-            </h3>
+            <h3 className="text-base font-semibold mb-4">{t('by_type')}</h3>
             <div className="space-y-3">
               {Object.entries(stats.typeCounts || {}).map(([type, count]) => (
-                <div key={type} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium">{type}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-sm font-bold">{count as number}</span>
-                    <div className="w-12 h-2 bg-gray-100 rounded-full ml-2">
-                      <div 
-                        className="h-full bg-primary rounded-full" 
-                        style={{ width: `${((count as number) / stats.totalSupplies) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
+                <div key={type} className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-muted-foreground">{getLocalizedName(type)}</span>
+                  <span className="font-bold">{count as number}</span>
                 </div>
               ))}
             </div>
@@ -107,19 +94,16 @@ const DashboardStats = () => {
         
         <Card className="hover-lift">
           <CardContent className="p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 bg-secondary rounded-full"></span>
-              {t('recent_activities')}
-            </h3>
+            <h3 className="text-base font-semibold mb-4">{t('recent_activities')}</h3>
             <div className="space-y-4">
               {stats.recentActivities && stats.recentActivities.length > 0 ? (
                 stats.recentActivities.map((activity, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-full ${activity.type === 'supply' ? 'bg-green-100' : 'bg-amber-100'} flex items-center justify-center flex-shrink-0`}>
+                  <div key={i} className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full ${activity.type === 'supply' ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center flex-shrink-0`}>
                       {activity.type === 'supply' ? (
-                        <PlusCircle className="w-4 h-4 text-green-500" />
+                        <PlusCircle className="w-4 h-4 text-green-600" />
                       ) : (
-                        <MinusCircle className="w-4 h-4 text-amber-500" />
+                        <MinusCircle className="w-4 h-4 text-red-600" />
                       )}
                     </div>
                     <div>

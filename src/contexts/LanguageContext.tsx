@@ -9,7 +9,7 @@ interface LanguageContextType {
   direction: Direction;
   changeLanguage: (lang: Language) => void;
   t: (key: string) => string;
-  getLocalizedName: (arName: string, enName?: string) => string;
+  getLocalizedName: (item: { name: string; name_ar?: string } | string) => string;
 }
 
 const defaultLanguage: Language = 'ar';
@@ -52,10 +52,15 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     return translations[key] || key;
   };
   
-  // New function for getting localized names based on current language
-  const getLocalizedName = (arName: string, enName?: string): string => {
-    if (language === 'ar') return arName;
-    return enName || arName; // If no English name is provided, fall back to Arabic
+  // Updated function for getting localized names
+  const getLocalizedName = (item: { name: string; name_ar?: string } | string): string => {
+    if (typeof item === 'string') {
+      return item; // Or handle as a key if needed: t(item)
+    }
+    if (language === 'ar') {
+      return item.name_ar || item.name;
+    }
+    return item.name;
   };
   
   return (

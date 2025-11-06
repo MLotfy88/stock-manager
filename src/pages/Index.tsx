@@ -108,33 +108,34 @@ const Index = () => {
             reorderPointCount={stats.reorderPointItems || 0}
           />
           
-          <div className="mb-8 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <DashboardStats />
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            <div className="lg:col-span-8">
-              <div className="content-card">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Content Column */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                <DashboardStats />
+              </div>
+              <div className="animate-fade-in content-card" style={{ animationDelay: '0.3s' }}>
                 <SupplyList 
-                  title={t('supplies_expiring_soon')} 
-                  status="expiring_soon"
-                  limit={6}
+                  title={t('latest_supplies')} 
+                  status="all"
+                  limit={5}
                 />
               </div>
             </div>
-            <div className="lg:col-span-4">
-              <div className="content-card h-full p-4">
+
+            {/* Right Sidebar Column */}
+            <div className="lg:col-span-1 space-y-6">
+              <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
                 <ExpiryCalendar />
               </div>
+              <div className="animate-fade-in content-card" style={{ animationDelay: '0.4s' }}>
+                <SupplyList 
+                  title={t('supplies_expiring_soon')} 
+                  status="expiring_soon"
+                  limit={5}
+                />
+              </div>
             </div>
-          </div>
-          
-          <div className="mt-8 animate-fade-in content-card" style={{ animationDelay: '0.3s' }}>
-            <SupplyList 
-              title={t('latest_supplies')} 
-              status="all"
-              limit={4}
-            />
           </div>
         </div>
       </main>

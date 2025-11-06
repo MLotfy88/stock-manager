@@ -37,7 +37,7 @@ const ExpiryCalendar = () => {
   // Adjust the first day to match calendar (week starts on Saturday)
   const adjustedFirstDay = (firstDayOfMonth + 1) % 7;
   
-  const monthName = new Date(currentYear, currentMonth).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', { month: 'long' });
+  const monthName = new Date(currentYear, currentMonth).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long' });
   
   // Create days for display
   const days = [];
@@ -80,59 +80,46 @@ const ExpiryCalendar = () => {
     : [t('saturday'), t('sunday'), t('monday'), t('tuesday'), t('wednesday'), t('thursday'), t('friday')];
   
   return (
-    <Card className="hover-lift">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle>{t('expiry_calendar')}</CardTitle>
-          <div className="flex gap-1">
-            <Button variant="outline" size="icon" onClick={direction === 'rtl' ? goToNextMonth : goToPreviousMonth}>
-              {direction === 'rtl' ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </Button>
-            <Button variant="outline" size="icon" onClick={direction === 'rtl' ? goToPreviousMonth : goToNextMonth}>
-              {direction === 'rtl' ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </Button>
-          </div>
-        </div>
-        <div className="text-muted-foreground text-sm mt-1">
-          {language === 'ar' ? `${monthName} ${currentYear}` : `${monthName} ${currentYear}`}
+    <Card className="hover-lift h-full">
+      <CardHeader className="pb-2 flex-row items-center justify-between">
+        <CardTitle className="text-base font-semibold">{t('expiry_calendar')}</CardTitle>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={direction === 'rtl' ? goToNextMonth : goToPreviousMonth}>
+            {direction === 'rtl' ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={direction === 'rtl' ? goToPreviousMonth : goToNextMonth}>
+            {direction === 'rtl' ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-7 gap-1 mb-1">
-          {weekdays.map((day) => (
-            <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
-              {day}
-            </div>
-          ))}
+      <CardContent className="px-2">
+        <div className="text-center text-sm font-medium mb-2">
+          {`${monthName} ${currentYear}`}
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground mb-2">
+          {weekdays.map((day) => <div key={day}>{day.substring(0, 2)}</div>)}
         </div>
         <div className="grid grid-cols-7 gap-1">
-          {days}
+          {/* Empty cells for padding */}
+          {Array.from({ length: adjustedFirstDay }).map((_, i) => <div key={`empty-${i}`} />)}
+          
+          {/* Calendar days */}
           {Array.from({ length: daysInMonth }).map((_, index) => {
             const day = index + 1;
-            const isToday = day === currentDate.getDate() && 
-                          currentMonth === currentDate.getMonth() && 
-                          currentYear === currentDate.getFullYear();
+            const isToday = day === currentDate.getDate() && currentMonth === currentDate.getMonth() && currentYear === currentDate.getFullYear();
             const hasExpiry = !!expiryDates[day];
-            const itemCount = hasExpiry ? expiryDates[day].length : 0;
             
             return (
               <div 
-                key={`day-${day}`} 
-                className={`h-12 p-1 rounded-md relative text-center transition-all duration-200 ${
-                  isToday ? 'bg-primary/10 font-bold' : 
-                  hasExpiry ? 'bg-amber-50 hover:bg-amber-100' : 
-                  'hover:bg-gray-50'
-                }`}
+                key={day} 
+                className={`
+                  relative w-full aspect-square flex items-center justify-center rounded-full text-xs
+                  ${isToday ? 'bg-primary text-primary-foreground font-bold' : ''}
+                `}
               >
-                <div className="text-xs">{day}</div>
+                {day}
                 {hasExpiry && (
-                  <div className="absolute bottom-1 left-0 right-0 flex justify-center">
-                    <div className={`text-xs px-1 rounded-full font-medium ${
-                      itemCount > 2 ? 'bg-destructive text-white' : 'bg-amber-200 text-amber-800'
-                    }`}>
-                      {itemCount}
-                    </div>
-                  </div>
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-background" />
                 )}
               </div>
             );
