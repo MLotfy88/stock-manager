@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { usePageTracking } from './hooks/usePageTracking';
 import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -26,11 +27,18 @@ const AllSuppliesPage = lazy(() => import('./pages/AllSuppliesPage'));
 const ReplacementVoucherPage = lazy(() => import('./pages/ReplacementVoucherPage'));
 const OnShelfReportPage = lazy(() => import('./pages/OnShelfReportPage'));
 const OnShelfInvoicingPage = lazy(() => import('./pages/OnShelfInvoicingPage'));
+const UserDashboardPage = lazy(() => import('./pages/UserDashboardPage'));
+
+const PageTracker = () => {
+  usePageTracking();
+  return null;
+};
 
 function App() {
   return (
     <LanguageProvider>
       <Router>
+        <PageTracker />
         <Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Loading...</div>}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -55,6 +63,7 @@ function App() {
               <Route path="/transfer-inventory" element={<TransferInventoryPage />} />
               <Route path="/import-export" element={<ImportExportPage />} />
               <Route path="/management" element={<ManagementPage />} />
+              <Route path="/user-dashboard" element={<UserDashboardPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

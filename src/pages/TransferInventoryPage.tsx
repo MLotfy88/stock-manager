@@ -18,12 +18,15 @@ import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard
 import { getStores } from '@/data/operations/storesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getInventoryItems, transferInventoryItems } from '@/data/operations/suppliesOperations';
+import { useAuth } from '@/contexts/AuthContext';
+import { trackEvent } from '@/lib/tracking';
 
 interface TransferItem extends InventoryItem {
     transferQuantity: number;
 }
 
 const TransferInventoryPage = () => {
+  const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { t, direction } = useLanguage();
@@ -142,6 +145,21 @@ const TransferInventoryPage = () => {
       await transferInventoryItems(itemsToTransfer);
 
       toast({ title: t('success'), description: t('transfer_successful') });
+
+      // Track the event
+      const fromStoreName = stores.find(s => s.id === fromStoreId)?.name || 'Unknown';
+      const toStoreName = stores.find(s => s.id === toStoreId)?.name || 'Unknown';
+      const transferredItemsDetails = transferList.map(item => ({
+        product: productDefinitions.find(p => p.id === item.product_definition_id)?.name,
+        variant: item.variant,
+        quantity: item.transferQuantity,
+      }));
+
+      trackEvent('Inventory Transferred', user, {
+        from: fromStoreName,
+        to: toStoreName,
+        items: transferredItemsDetails,
+      });
       
       // Refresh data
       const updatedInventory = await getInventoryItems();

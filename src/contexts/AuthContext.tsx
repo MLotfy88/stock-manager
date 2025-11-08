@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { getSession, onAuthStateChange } from '@/data/operations/authOperations';
+import { trackEvent } from '@/lib/tracking';
 
 interface AuthContextType {
   session: Session | null;
@@ -31,6 +32,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchSession();
 
     const subscription = onAuthStateChange((newSession) => {
+      // Track login event only when a session is newly created
+      if (!session && newSession) {
+        trackEvent('User Logged In', newSession.user);
+      }
+      
       setSession(newSession);
       setUser(newSession?.user ?? null);
       // Ensure loading is false after the first auth event

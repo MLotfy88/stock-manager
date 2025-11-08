@@ -19,12 +19,15 @@ import DateSelector from './DateSelector';
 import NotesInput from './NotesInput';
 import ConsumptionItemsTable from './ConsumptionItemsTable';
 import FormActions from './FormActions';
+import { useAuth } from '@/contexts/AuthContext';
+import { trackEvent } from '@/lib/tracking';
 
 interface ConsumptionFormProps {
   onSuccess?: () => void;
 }
 
 const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
+  const { user } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
 
@@ -181,6 +184,24 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     try {
       await addConsumptionRecord(recordPayload, itemsPayload);
       toast({ title: t('success'), description: t('consumption_record_created') });
+
+      // Track the event
+      const consumedItemsDetails = items.map(item => {
+        const inventoryItem = inventory.find(i => i.id === item.inventory_item_id);
+        const product = productDefs.find(p => p.id === inventoryItem?.product_definition_id);
+        return {
+          product: product?.name || 'Unknown',
+          variant: inventoryItem?.variant || 'N/A',
+          quantity: item.quantity,
+        };
+      });
+
+      trackEvent('Consumption Recorded', user, {
+        department: recordPayload.department,
+        notes: recordPayload.notes,
+        items: consumedItemsDetails,
+      });
+
       if (onSuccess) onSuccess();
     } catch (error: any) {
       const msg = error.message === 'insufficient_quantity' ? t('insufficient_quantity') : t('error_processing_consumption');
