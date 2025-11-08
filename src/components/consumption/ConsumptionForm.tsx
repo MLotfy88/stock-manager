@@ -3,7 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { Plus, ScanBarcode, Camera } from 'lucide-react';
+import { Plus, ScanBarcode, Camera, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { ConsumptionRecord, ConsumptionItem, InventoryItem, ProductDefinition, Store } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -40,6 +41,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<(Partial<ConsumptionItem> & { id: string; availableQuantity?: number })[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+  const [manualBarcode, setManualBarcode] = useState('');
   const [isContinuousScanning, setIsContinuousScanning] = useState(false);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
 
@@ -55,7 +57,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
         setStores(storesData);
       } catch (error) {
         console.error("Failed to fetch initial form data", error);
-        toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
+          toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
       } finally {
         setIsLoading(false);
       }
@@ -69,6 +71,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
         try {
           const inventoryData = await getInventoryItems(selectedStoreId);
           setInventory(inventoryData);
+          console.log(`Inventory for store ${selectedStoreId}:`, inventoryData); // DEBUG LOG
         } catch (error) {
           console.error(`Failed to fetch inventory for store ${selectedStoreId}`, error);
           toast({ title: t('error'), description: t('error_fetching_inventory'), variant: 'destructive' });
@@ -79,6 +82,28 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
       setInventory([]); // Clear inventory if no store is selected
     }
   }, [selectedStoreId, toast, t]);
+
+  const findAndAddItemByBarcode = useCallback((barcode: string) => {
+    const trimmedBarcode = barcode.trim();
+    if (!trimmedBarcode) return;
+
+    const foundItem = inventory.find(item => item.barcode && item.barcode.trim() === trimmedBarcode);
+
+    if (foundItem) {
+      if (navigator.vibrate) navigator.vibrate(100);
+      const newItemId = `item_${Date.now()}`;
+      setItems(prev => [...prev, { id: newItemId, inventory_item_id: foundItem.id, quantity: 1, availableQuantity: foundItem.quantity }]);
+      toast({ title: t('item_added'), description: `${productDefs.find(p => p.id === foundItem.product_definition_id)?.name} - ${foundItem.variant}` });
+      setManualBarcode(''); // Clear input after successful add
+    } else {
+      toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${trimmedBarcode} ${t('not_found_in_store')}.`, variant: 'destructive' });
+    }
+  }, [inventory, productDefs, t, toast]);
+
+  const handleManualBarcodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    findAndAddItemByBarcode(manualBarcode);
+  };
 
   const availableSupplies = inventory; // Already filtered by store
 
@@ -105,21 +130,34 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     captureAndDecode,
   } = useBarcodeScanner({
     onScanSuccess: (scannedBarcode: string) => {
-      const foundItem = availableSupplies.find(item => item.barcode === scannedBarcode);
+      // Enhanced Debugging
+      const trimmedBarcode = scannedBarcode.trim();
+      console.log(`--- Barcode Scan Event ---`);
+      console.log(`Original Scanned: "${scannedBarcode}" | Trimmed: "${trimmedBarcode}"`);
+      console.log(`Store ID: ${selectedStoreId}`);
+      console.log(`Available Supplies Count: ${availableSupplies.length}`);
+      
+      // Log all available barcodes for easy comparison
+      const availableBarcodes = availableSupplies.map(item => item.barcode);
+      console.log('Available Barcodes:', availableBarcodes);
+
+      const foundItem = availableSupplies.find(item => item.barcode && item.barcode.trim() === trimmedBarcode);
+      
+      console.log('Found Item:', foundItem);
+      console.log(`--------------------------`);
+
       if (foundItem) {
         if (navigator.vibrate) navigator.vibrate(100);
 
         if (isContinuousScanning) {
-          const newItemId = `item_${Date.now()}`;
-          setItems(prev => [...prev, { id: newItemId, inventory_item_id: foundItem.id, quantity: 1, availableQuantity: foundItem.quantity }]);
-          toast({ title: t('item_added'), description: `${productDefs.find(p => p.id === foundItem.product_definition_id)?.name} - ${foundItem.variant}` });
+          findAndAddItemByBarcode(scannedBarcode);
         } else if (activeScannerId) {
           handleItemChange(activeScannerId, 'inventory_item_id', foundItem.id);
           toast({ title: t('item_found'), description: `${t('item_with_barcode')} ${scannedBarcode} ${t('selected')}.` });
           stopScanner();
         }
       } else {
-        toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${scannedBarcode} ${t('not_found_in_store')}.`, variant: 'destructive' });
+        toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${trimmedBarcode} ${t('not_found_in_store')}.`, variant: 'destructive' });
       }
     },
     onScanFailure: (error: Error) => {
@@ -227,9 +265,21 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
           <NotesInput notes={notes} setNotes={setNotes} useTextarea={true} />
           
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-2">
               <h3 className="text-lg font-medium">{t('items')}</h3>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                 <form onSubmit={handleManualBarcodeSubmit} className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder={t('enter_barcode_manually')}
+                    value={manualBarcode}
+                    onChange={(e) => setManualBarcode(e.target.value)}
+                    disabled={!selectedStoreId}
+                  />
+                  <Button type="submit" variant="secondary" size="sm" disabled={!selectedStoreId || !manualBarcode}>
+                    <Search className="h-4 w-4 mr-1" />{t('find_item')}
+                  </Button>
+                </form>
                 <Button type="button" variant="outline" size="sm" onClick={() => startScan('continuous', true)} disabled={!selectedStoreId}>
                   <Camera className="h-4 w-4 mr-1" />{t('scan_continuously')}
                 </Button>

@@ -1,32 +1,7 @@
--- CathLab Stock Manager - Supabase Schema v7
--- Adds "on_shelf" tracking and a dedicated view for on-shelf item status reporting.
+-- CathLab Stock Manager - Supabase Schema v8 (Idempotent)
+-- This script is safe to run multiple times. It checks for existence before creating objects.
 
--- 1. DROP EXISTING OBJECTS
--- Drop functions and views first to remove dependencies
-DROP FUNCTION IF EXISTS delete_consumption_record(uuid);
-DROP FUNCTION IF EXISTS create_consumption_record(date, text, text, text, text, jsonb);
-DROP FUNCTION IF EXISTS transfer_inventory(jsonb);
-DROP FUNCTION IF EXISTS get_public_tables();
-DROP VIEW IF EXISTS on_shelf_item_status; -- NEW
-DROP VIEW IF EXISTS inventory_items_with_status;
-
--- Drop tables using CASCADE to handle dependencies
-DROP TABLE IF EXISTS consumption_record_items CASCADE;
-DROP TABLE IF EXISTS consumption_records CASCADE;
-DROP TABLE IF EXISTS inventory_items CASCADE;
-DROP TABLE IF EXISTS supply_vouchers CASCADE;
-DROP TABLE IF EXISTS product_definitions CASCADE;
-DROP TABLE IF EXISTS suppliers CASCADE;
-DROP TABLE IF EXISTS manufacturers CASCADE;
-DROP TABLE IF EXISTS supply_types CASCADE;
-DROP TABLE IF EXISTS stores CASCADE;
--- Drop legacy tables if they exist from a previous version
-DROP TABLE IF EXISTS supplies CASCADE;
-DROP TABLE IF EXISTS consumption_items CASCADE;
-
--- 2. RECREATE FUNCTIONS AND TABLES
-
--- Helper Function to Get Table Names
+-- Helper Function to Get Table Names (Always replace)
 CREATE OR REPLACE FUNCTION get_public_tables()
 RETURNS TABLE(table_name TEXT) AS $$
 BEGIN
@@ -37,27 +12,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create Tables
-CREATE TABLE stores (
+-- Create Tables IF THEY DON'T EXIST
+CREATE TABLE IF NOT EXISTS stores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   location TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE supply_types (
+CREATE TABLE IF NOT EXISTS supply_types (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   description TEXT
 );
 
-CREATE TABLE manufacturers (
+CREATE TABLE IF NOT EXISTS manufacturers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE suppliers (
+CREATE TABLE IF NOT EXISTS suppliers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   contact TEXT,
@@ -66,7 +41,7 @@ CREATE TABLE suppliers (
   alert_period INT DEFAULT 30
 );
 
-CREATE TABLE product_definitions (
+CREATE TABLE IF NOT EXISTS product_definitions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   type_id UUID REFERENCES supply_types(id),
@@ -77,7 +52,7 @@ CREATE TABLE product_definitions (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE supply_vouchers (
+CREATE TABLE IF NOT EXISTS supply_vouchers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   voucher_number TEXT UNIQUE,
   supplier_id UUID REFERENCES suppliers(id),
@@ -87,14 +62,14 @@ CREATE TABLE supply_vouchers (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE inventory_items (
+CREATE TABLE IF NOT EXISTS inventory_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_definition_id UUID NOT NULL REFERENCES product_definitions(id),
   supply_voucher_id UUID REFERENCES supply_vouchers(id) ON DELETE SET NULL,
   variant TEXT NOT NULL,
   barcode TEXT UNIQUE,
   quantity INT NOT NULL CHECK (quantity >= 0),
-  initial_quantity INT NOT NULL CHECK (initial_quantity >= 0), -- NEW: To track original quantity
+  initial_quantity INT NOT NULL CHECK (initial_quantity >= 0),
   store_id UUID NOT NULL REFERENCES stores(id),
   manufacturer_id UUID REFERENCES manufacturers(id),
   supplier_id UUID REFERENCES suppliers(id),
@@ -107,7 +82,7 @@ CREATE TABLE inventory_items (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE consumption_records (
+CREATE TABLE IF NOT EXISTS consumption_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   date DATE NOT NULL,
   department TEXT,
@@ -117,7 +92,7 @@ CREATE TABLE consumption_records (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE consumption_record_items (
+CREATE TABLE IF NOT EXISTS consumption_record_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   consumption_record_id UUID NOT NULL REFERENCES consumption_records(id) ON DELETE CASCADE,
   inventory_item_id UUID NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
@@ -125,9 +100,13 @@ CREATE TABLE consumption_record_items (
   is_invoiced BOOLEAN DEFAULT FALSE
 );
 
--- 3. CREATE VIEWS
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'user'
+);
 
--- View for general inventory status
+
+-- VIEWS (Always replace)
 CREATE OR REPLACE VIEW inventory_items_with_status AS
 SELECT
     ii.id, ii.barcode, ii.batch_number, ii.expiry_date, ii.quantity, ii.purchase_price, ii.variant,
@@ -150,7 +129,6 @@ LEFT JOIN supply_types sty ON pd.type_id = sty.id
 LEFT JOIN manufacturers m ON ii.manufacturer_id = m.id
 LEFT JOIN suppliers s ON ii.supplier_id = s.id;
 
--- NEW VIEW: For on-shelf item reporting
 CREATE OR REPLACE VIEW on_shelf_item_status AS
 SELECT
     ii.id as inventory_item_id,
@@ -179,7 +157,6 @@ LEFT JOIN (
 ) cri ON ii.id = cri.inventory_item_id
 WHERE ii.stock_type = 'on_shelf';
 
--- NEW VIEW: For on-shelf invoicing page
 CREATE OR REPLACE VIEW on_shelf_invoice_items AS
 SELECT
     cri.id as consumption_item_id,
@@ -202,7 +179,11 @@ JOIN suppliers s ON ii.supplier_id = s.id
 WHERE ii.stock_type = 'on_shelf' AND cri.is_invoiced = false;
 
 
--- 4. ROW LEVEL SECURITY (RLS)
+-- ROW LEVEL SECURITY (Apply policies if not already applied)
+-- Note: Supabase does not have a simple "CREATE POLICY IF NOT EXISTS". 
+-- We will assume policies are managed from the dashboard after initial setup.
+-- The following lines are for initial setup. Re-running them might cause errors if policies exist.
+-- It's safer to manage RLS policies in the Supabase UI after the first run.
 ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE supply_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE manufacturers ENABLE ROW LEVEL SECURITY;
@@ -212,28 +193,10 @@ ALTER TABLE supply_vouchers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE consumption_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE consumption_record_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public read access" ON stores FOR SELECT USING (true);
-CREATE POLICY "Public read access" ON supply_types FOR SELECT USING (true);
-CREATE POLICY "Public read access" ON manufacturers FOR SELECT USING (true);
-CREATE POLICY "Public read access" ON suppliers FOR SELECT USING (true);
-CREATE POLICY "Public read access" ON product_definitions FOR SELECT USING (true);
-CREATE POLICY "Public read access" ON supply_vouchers FOR SELECT USING (true);
-CREATE POLICY "Public read access" ON inventory_items FOR SELECT USING (true);
-CREATE POLICY "Public read access" ON consumption_records FOR SELECT USING (true);
-CREATE POLICY "Public read access" ON consumption_record_items FOR SELECT USING (true);
 
-CREATE POLICY "Allow all for authenticated users" ON stores FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated users" ON supply_types FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated users" ON manufacturers FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated users" ON suppliers FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated users" ON product_definitions FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated users" ON supply_vouchers FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated users" ON inventory_items FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated users" ON consumption_records FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow all for authenticated users" ON consumption_record_items FOR ALL USING (auth.role() = 'authenticated');
-
--- 5. RPC FUNCTIONS FOR TRANSACTIONS
+-- RPC FUNCTIONS (Always replace to ensure they are up-to-date)
 CREATE OR REPLACE FUNCTION create_consumption_record(
     p_date DATE, p_department TEXT, p_purpose TEXT, p_requested_by TEXT, p_notes TEXT, p_items JSONB
 )
@@ -305,7 +268,7 @@ BEGIN
                 product_definition_id, variant, barcode, quantity, store_id, manufacturer_id, supplier_id,
                 batch_number, expiry_date, purchase_price, notes, stock_type, initial_quantity
             ) VALUES (
-                source_item.product_definition_id, source_item.variant, source_item.barcode, item."quantity", item."toStoreId",
+                source_item.product_definition_id, source_item.variant, NULL, item."quantity", item."toStoreId", -- Set barcode to NULL for the new entry
                 source_item.manufacturer_id, source_item.supplier_id, source_item.batch_number, source_item.expiry_date,
                 source_item.purchase_price, 'Transferred from store ' || item."fromStoreId"::text || '. Original item ID: ' || source_item.id::text,
                 source_item.stock_type, item."quantity" -- Set initial quantity for the new batch
@@ -326,23 +289,7 @@ BEGIN
 END;
 $$;
 
--- 6. USER PROFILES & ROLES
--- Create the profiles table to store user roles
-CREATE TABLE public.profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'user'
-);
-
--- Enable Row Level Security for the profiles table
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
--- Policies for profiles table
--- 1. Allow users to read their own profile
-CREATE POLICY "Allow individual user access to their own profile"
-ON public.profiles FOR SELECT
-USING (auth.uid() = id);
-
--- 2. Create a helper function to check if a user is an admin
+-- USER PROFILES & ROLES (Safe to re-run)
 CREATE OR REPLACE FUNCTION is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -354,27 +301,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Allow admins to read all profiles
-CREATE POLICY "Allow admin access to all profiles"
-ON public.profiles FOR SELECT
-USING (is_admin());
-
--- 4. Allow admins to update any profile (to assign roles)
-CREATE POLICY "Allow admin to update profiles"
-ON public.profiles FOR UPDATE
-USING (is_admin());
-
--- 5. Create a trigger to automatically create a profile when a new user signs up
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+DO $$
 BEGIN
-  INSERT INTO public.profiles (id, role)
-  VALUES (new.id, 'user'); -- Default role is 'user'
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'on_auth_user_created') THEN
+    CREATE OR REPLACE FUNCTION public.handle_new_user()
+    RETURNS TRIGGER AS $function$
+    BEGIN
+      INSERT INTO public.profiles (id, role)
+      VALUES (new.id, 'user'); -- Default role is 'user'
+      RETURN new;
+    END;
+    $function$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 6. Attach the trigger to the auth.users table
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+    CREATE TRIGGER on_auth_user_created
+      AFTER INSERT ON auth.users
+      FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+  END IF;
+END;
+$$;
