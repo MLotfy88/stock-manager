@@ -325,3 +325,56 @@ BEGIN
     WHERE id = ANY(p_consumption_item_ids);
 END;
 $$;
+
+-- 6. USER PROFILES & ROLES
+-- Create the profiles table to store user roles
+CREATE TABLE public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'user'
+);
+
+-- Enable Row Level Security for the profiles table
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Policies for profiles table
+-- 1. Allow users to read their own profile
+CREATE POLICY "Allow individual user access to their own profile"
+ON public.profiles FOR SELECT
+USING (auth.uid() = id);
+
+-- 2. Create a helper function to check if a user is an admin
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. Allow admins to read all profiles
+CREATE POLICY "Allow admin access to all profiles"
+ON public.profiles FOR SELECT
+USING (is_admin());
+
+-- 4. Allow admins to update any profile (to assign roles)
+CREATE POLICY "Allow admin to update profiles"
+ON public.profiles FOR UPDATE
+USING (is_admin());
+
+-- 5. Create a trigger to automatically create a profile when a new user signs up
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, role)
+  VALUES (new.id, 'user'); -- Default role is 'user'
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 6. Attach the trigger to the auth.users table
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();

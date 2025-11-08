@@ -2,10 +2,18 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Session, User } from '@supabase/supabase-js';
 import { getSession, onAuthStateChange } from '@/data/operations/authOperations';
 import { trackEvent } from '@/lib/tracking';
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+// Extend the User type to include our custom profile data
+export type UserWithProfile = User & {
+  profile: {
+    role: string;
+  } | null;
+};
 
 interface AuthContextType {
   session: Session | null;
-  user: User | null;
+  user: UserWithProfile | null;
   isLoading: boolean;
 }
 
@@ -13,42 +21,56 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserWithProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        const currentSession = await getSession();
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-      } catch (error) {
-        console.error("Error fetching initial session:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
 
-    fetchSession();
+    const fetchUserAndProfile = async (currentUser: User | null): Promise<UserWithProfile | null> => {
+      if (!currentUser) return null;
 
-    const subscription = onAuthStateChange((newSession) => {
-      // Track login event only when a session is newly created
-      if (!session && newSession) {
-        trackEvent('User Logged In', newSession.user);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return { ...currentUser, profile: null };
       }
       
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      // Ensure loading is false after the first auth event
-      if (isLoading) {
-        setIsLoading(false);
+      return { ...currentUser, profile };
+    };
+
+    const handleAuthChange = async (newSession: Session | null) => {
+      const userWithProfile = await fetchUserAndProfile(newSession?.user ?? null);
+      
+      // Track login event only when a session is newly created
+      if (!session && newSession) {
+        trackEvent('User Logged In', userWithProfile);
       }
+
+      setSession(newSession);
+      setUser(userWithProfile);
+      setIsLoading(false);
+    };
+
+    // Fetch initial session
+    getSession().then(currentSession => {
+      handleAuthChange(currentSession);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleAuthChange(session);
     });
 
     return () => {
-      subscription?.unsubscribe();
+      authListener?.subscription.unsubscribe();
     };
-  }, [isLoading]);
+  }, []);
 
   const value = {
     session,

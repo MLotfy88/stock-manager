@@ -28,7 +28,7 @@ const ProtectedRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const userRole = user?.app_metadata?.userrole || 'user';
+  const userRole = user?.profile?.role || 'user';
 
   if (userRole === 'admin') {
     return (
