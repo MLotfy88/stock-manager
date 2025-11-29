@@ -71,6 +71,7 @@ export interface SupplyVoucher {
 
 export interface InventoryItem {
   id: string;
+  gtin: string | null; // رقم التعريف العالمي للمنتج (GTIN) من AI (01)
   barcode: string | null;
   batch_number: string | null;
   expiry_date: string;

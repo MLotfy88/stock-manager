@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Store, ProductDefinition, InventoryItem } from '@/types';
 import { ArrowRightLeft, ScanBarcode, Trash2, Camera } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { useBarcodeScanner, extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
@@ -22,7 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { trackEvent } from '@/lib/tracking';
 
 interface TransferItem extends InventoryItem {
-    transferQuantity: number;
+  transferQuantity: number;
 }
 
 const TransferInventoryPage = () => {
@@ -46,7 +46,7 @@ const TransferInventoryPage = () => {
   const [fromStoreId, setFromStoreId] = useState<string>('');
   const [toStoreId, setToStoreId] = useState<string>('');
   const [transferList, setTransferList] = useState<TransferItem[]>([]);
-  
+
   const [isContinuousScanning, setIsContinuousScanning] = useState(false);
   const [scannedItem, setScannedItem] = useState<InventoryItem | null>(null);
   const [scannedQuantity, setScannedQuantity] = useState('1');
@@ -86,11 +86,23 @@ const TransferInventoryPage = () => {
     captureAndDecode,
   } = useBarcodeScanner({
     onScanSuccess: (barcode: string) => {
-      const itemInStore = inventory.find(i => i.barcode === barcode && i.store_id === fromStoreId);
+      // محاولة استخراج بيانات GS1
+      const gs1Data = extractGS1DataForSupply(barcode);
+      const searchValue = gs1Data?.gtin || barcode;
+
+      // البحث بـ GTIN أو الباركود الكامل في المخزن المصدر
+      const itemInStore = inventory.find(i =>
+        ((i.gtin && i.gtin === searchValue) || (i.barcode === searchValue)) &&
+        i.store_id === fromStoreId
+      );
+
       if (itemInStore) {
         if (isContinuousScanning) {
           addItemToTransferList(itemInStore, 1);
-          toast({ title: t('item_added'), description: `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}` });
+          const itemInfo = gs1Data
+            ? `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}\nLOT: ${itemInStore.batch_number}`
+            : `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}`;
+          toast({ title: t('item_added'), description: itemInfo, duration: 4000 });
         } else {
           setScannedItem(itemInStore);
           stopScanner();
@@ -119,10 +131,10 @@ const TransferInventoryPage = () => {
     if (!scannedItem) return;
     const quantity = parseInt(scannedQuantity);
     if (isNaN(quantity) || quantity <= 0 || quantity > scannedItem.quantity) {
-        toast({ title: t('error'), description: t('invalid_or_insufficient_quantity'), variant: 'destructive' });
-        return;
+      toast({ title: t('error'), description: t('invalid_or_insufficient_quantity'), variant: 'destructive' });
+      return;
     }
-    
+
     addItemToTransferList(scannedItem, quantity);
     setScannedItem(null);
     setScannedQuantity('1');
@@ -141,7 +153,7 @@ const TransferInventoryPage = () => {
         fromStoreId: fromStoreId,
         toStoreId: toStoreId,
       }));
-      
+
       await transferInventoryItems(itemsToTransfer);
 
       toast({ title: t('success'), description: t('transfer_successful') });
@@ -160,7 +172,7 @@ const TransferInventoryPage = () => {
         to: toStoreName,
         items: transferredItemsDetails,
       });
-      
+
       // Refresh data
       const updatedInventory = await getInventoryItems();
       setInventory(updatedInventory);
@@ -176,8 +188,8 @@ const TransferInventoryPage = () => {
   return (
     <div className="page-container bg-background" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         closeSidebar={closeSidebar}
       />

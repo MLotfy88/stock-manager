@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ConsumptionRecord, ConsumptionItem, InventoryItem, ProductDefinition, Store } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { useBarcodeScanner, extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 import { addConsumptionRecord } from '@/data/operations/consumptionOperations';
@@ -36,7 +36,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
   const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<(Partial<ConsumptionItem> & { id: string; availableQuantity?: number })[]>([]);
@@ -57,7 +57,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
         setStores(storesData);
       } catch (error) {
         console.error("Failed to fetch initial form data", error);
-          toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
+        toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
       } finally {
         setIsLoading(false);
       }
@@ -87,16 +87,30 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     const trimmedBarcode = barcode.trim();
     if (!trimmedBarcode) return;
 
-    const foundItem = inventory.find(item => item.barcode && item.barcode.trim() === trimmedBarcode);
+    // محاولة استخراج بيانات GS1 أولاً
+    const gs1Data = extractGS1DataForSupply(trimmedBarcode);
+    const searchValue = gs1Data?.gtin || trimmedBarcode;
+
+    // البحث بـ GTIN أو الباركود الكامل
+    const foundItem = inventory.find(item =>
+      (item.gtin && item.gtin.trim() === searchValue) ||
+      (item.barcode && item.barcode.trim() === searchValue)
+    );
 
     if (foundItem) {
       if (navigator.vibrate) navigator.vibrate(100);
       const newItemId = `item_${Date.now()}`;
       setItems(prev => [...prev, { id: newItemId, inventory_item_id: foundItem.id, quantity: 1, availableQuantity: foundItem.quantity }]);
-      toast({ title: t('item_added'), description: `${productDefs.find(p => p.id === foundItem.product_definition_id)?.name} - ${foundItem.variant}` });
+
+      const productName = productDefs.find(p => p.id === foundItem.product_definition_id)?.name;
+      const description = gs1Data
+        ? `${productName} - ${foundItem.variant}\nLOT: ${foundItem.batch_number}\nExp: ${foundItem.expiry_date}`
+        : `${productName} - ${foundItem.variant}`;
+
+      toast({ title: t('item_added'), description, duration: 5000 });
       setManualBarcode(''); // Clear input after successful add
     } else {
-      toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${trimmedBarcode} ${t('not_found_in_store')}.`, variant: 'destructive' });
+      toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${searchValue} ${t('not_found_in_store')}.`, variant: 'destructive' });
     }
   }, [inventory, productDefs, t, toast]);
 
@@ -130,19 +144,25 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     captureAndDecode,
   } = useBarcodeScanner({
     onScanSuccess: (scannedBarcode: string) => {
-      // Enhanced Debugging
       const trimmedBarcode = scannedBarcode.trim();
       console.log(`--- Barcode Scan Event ---`);
       console.log(`Original Scanned: "${scannedBarcode}" | Trimmed: "${trimmedBarcode}"`);
+
+      // محاولة استخراج بيانات GS1
+      const gs1Data = extractGS1DataForSupply(trimmedBarcode);
+      const searchValue = gs1Data?.gtin || trimmedBarcode;
+
+      console.log(`GS1 Data:`, gs1Data);
+      console.log(`Search Value: ${searchValue}`);
       console.log(`Store ID: ${selectedStoreId}`);
       console.log(`Available Supplies Count: ${availableSupplies.length}`);
-      
-      // Log all available barcodes for easy comparison
-      const availableBarcodes = availableSupplies.map(item => item.barcode);
-      console.log('Available Barcodes:', availableBarcodes);
 
-      const foundItem = availableSupplies.find(item => item.barcode && item.barcode.trim() === trimmedBarcode);
-      
+      // البحث بـ GTIN أو الباركود الكامل
+      const foundItem = availableSupplies.find(item =>
+        (item.gtin && item.gtin.trim() === searchValue) ||
+        (item.barcode && item.barcode.trim() === searchValue)
+      );
+
       console.log('Found Item:', foundItem);
       console.log(`--------------------------`);
 
@@ -153,11 +173,14 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
           findAndAddItemByBarcode(scannedBarcode);
         } else if (activeScannerId) {
           handleItemChange(activeScannerId, 'inventory_item_id', foundItem.id);
-          toast({ title: t('item_found'), description: `${t('item_with_barcode')} ${scannedBarcode} ${t('selected')}.` });
+          const itemInfo = gs1Data
+            ? `GTIN: ${gs1Data.gtin}\nLOT: ${foundItem.batch_number}\nExp: ${foundItem.expiry_date}`
+            : `${t('barcode')}: ${scannedBarcode}`;
+          toast({ title: t('item_found'), description: itemInfo, duration: 5000 });
           stopScanner();
         }
       } else {
-        toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${trimmedBarcode} ${t('not_found_in_store')}.`, variant: 'destructive' });
+        toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${searchValue} ${t('not_found_in_store')}.`, variant: 'destructive' });
       }
     },
     onScanFailure: (error: Error) => {
@@ -205,7 +228,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
       toast({ title: t('error'), description: t('please_complete_all_fields_correctly'), variant: 'destructive' });
       return;
     }
-    
+
     const recordPayload: Omit<ConsumptionRecord, 'id' | 'created_at' | 'items' | 'status'> = {
       date: date!.toISOString().split('T')[0],
       department: stores.find(s => s.id === selectedStoreId)?.name || 'N/A',
@@ -263,12 +286,12 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
             </div>
           </div>
           <NotesInput notes={notes} setNotes={setNotes} useTextarea={true} />
-          
+
           <div className="space-y-4">
             <div className="flex justify-between items-center flex-wrap gap-2">
               <h3 className="text-lg font-medium">{t('items')}</h3>
               <div className="flex gap-2 flex-wrap">
-                 <form onSubmit={handleManualBarcodeSubmit} className="flex gap-2">
+                <form onSubmit={handleManualBarcodeSubmit} className="flex gap-2">
                   <Input
                     type="text"
                     placeholder={t('enter_barcode_manually')}
@@ -297,7 +320,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
                 </div>
               </div>
             )}
-            
+
             <ConsumptionItemsTable
               items={items}
               handleItemChange={handleItemChange}
@@ -307,7 +330,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
               productDefs={productDefs}
             />
           </div>
-          
+
           <FormActions onReset={() => setItems([])} isValid={isFormValid()} />
         </form>
       </CardContent>

@@ -2,23 +2,65 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
-const parseGS1Barcode = (rawValue: string): string => {
-  // GS1-128 barcodes scanned by some devices start with ]C1
+// واجهة البيانات المحللة من GS1-128
+export interface ParsedGS1Data {
+  gtin?: string;          // AI (01) - رقم التعريف العالمي
+  expiryDate?: string;    // AI (17) - تاريخ الصلاحية بصيغة ISO (YYYY-MM-DD)
+  lotNumber?: string;     // AI (10) - رقم الباتش
+  quantity?: string;      // AI (30) - الكمية (إن وجدت)
+  rawValue: string;       // القيمة الخام الكاملة
+  formattedValue: string; // القيمة المنسقة مع الأقواس
+}
+
+// دالة لتحويل تاريخ GS1 (YYMMDD) إلى صيغة ISO (YYYY-MM-DD)
+const convertGS1DateToISO = (gs1Date: string): string | null => {
+  if (!gs1Date || gs1Date.length !== 6) return null;
+
+  try {
+    const yy = parseInt(gs1Date.substring(0, 2), 10);
+    const mm = gs1Date.substring(2, 4);
+    const dd = gs1Date.substring(4, 6);
+
+    // تحديد القرن: إذا كان السنة < 50، نفترض 20xx، وإلا 19xx
+    const yyyy = yy < 50 ? 2000 + yy : 1900 + yy;
+
+    // التحقق من صحة الشهر واليوم
+    const month = parseInt(mm, 10);
+    const day = parseInt(dd, 10);
+
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+      return null;
+    }
+
+    return `${yyyy}-${mm}-${dd}`;
+  } catch (error) {
+    console.error('Error converting GS1 date:', error);
+    return null;
+  }
+};
+
+// دالة لاستخراج بيانات المستلزمات الطبية من باركود GS1-128
+export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null => {
+  // التحقق من أنه باركود GS1-128
   if (!rawValue.startsWith(']C1')) {
-    return rawValue; // Not a GS1-128 barcode, return as is
+    return null;
   }
 
-  let data = rawValue.substring(3); // Remove the GS1 prefix
-  let result = '';
-  
-  // A simplified map of Application Identifiers (AIs) and their fixed lengths.
-  // -1 indicates a variable length field.
+  let data = rawValue.substring(3); // إزالة البادئة GS1
+  const result: ParsedGS1Data = {
+    rawValue,
+    formattedValue: ''
+  };
+
+  // قواعد Application Identifiers
   const aiRules: { [key: string]: number } = {
     '01': 14, // GTIN
-    '17': 6,  // Expiration Date (YYMMDD)
-    '10': -1, // Batch/Lot Number (variable length up to 20 chars)
-    '30': -1, // Count of items (variable length up to 8 digits)
+    '17': 6,  // تاريخ الصلاحية (YYMMDD)
+    '10': -1, // رقم الباتش (متغير)
+    '30': -1, // الكمية (متغير)
   };
+
+  let formatted = '';
 
   while (data.length > 0) {
     const ai = data.substring(0, 2);
@@ -29,38 +71,58 @@ const parseGS1Barcode = (rawValue: string): string => {
       const length = aiRules[ai];
 
       if (length > 0) {
-        // Fixed length AI
+        // AI بطول ثابت
         value = data.substring(0, length);
         data = data.substring(length);
       } else {
-        // Variable length AI. GS1 uses FNC1 as a separator, which is often not present in raw data.
-        // We'll look for the next AI as a delimiter. This is a simplification.
+        // AI بطول متغير - البحث عن AI التالي
         let nextAiIndex = -1;
         for (let i = 1; i < data.length - 1; i++) {
-            const nextPotentialAi = data.substring(i, i + 2);
-            if(aiRules[nextPotentialAi] !== undefined) {
-                nextAiIndex = i;
-                break;
-            }
+          const nextPotentialAi = data.substring(i, i + 2);
+          if (aiRules[nextPotentialAi] !== undefined) {
+            nextAiIndex = i;
+            break;
+          }
         }
 
         if (nextAiIndex !== -1) {
           value = data.substring(0, nextAiIndex);
           data = data.substring(nextAiIndex);
         } else {
-          value = data; // Assume it's the last field
+          value = data;
           data = '';
         }
       }
-      result += `(${ai})${value} `;
+
+      // حفظ البيانات حسب نوع AI
+      if (ai === '01') {
+        result.gtin = value;
+      } else if (ai === '17') {
+        const isoDate = convertGS1DateToISO(value);
+        if (isoDate) {
+          result.expiryDate = isoDate;
+        }
+      } else if (ai === '10') {
+        result.lotNumber = value;
+      } else if (ai === '30') {
+        result.quantity = value;
+      }
+
+      formatted += `(${ai})${value} `;
     } else {
-      // If we encounter an AI not in our rules, we stop parsing.
-      // This is a safeguard against incorrect parsing of variable length fields.
+      // إيقاف التحليل عند AI غير معروف
       break;
     }
   }
 
-  return result.trim();
+  result.formattedValue = formatted.trim();
+  return result;
+};
+
+// دالة قديمة للتوافق - تُرجع النص المنسق
+const parseGS1Barcode = (rawValue: string): string => {
+  const parsed = extractGS1DataForSupply(rawValue);
+  return parsed ? parsed.formattedValue : rawValue;
 };
 
 // Define the structure of the BarcodeDetector, as it might not be in all TypeScript lib versions
@@ -207,7 +269,7 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
       setIsScannerActive(true);
     }
   }, [isSupported]);
-  
+
   const stopScanner = useCallback(() => setIsScannerActive(false), []);
 
   return {

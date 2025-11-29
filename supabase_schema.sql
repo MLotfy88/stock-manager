@@ -67,7 +67,8 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   product_definition_id UUID NOT NULL REFERENCES product_definitions(id),
   supply_voucher_id UUID REFERENCES supply_vouchers(id) ON DELETE SET NULL,
   variant TEXT NOT NULL,
-  barcode TEXT UNIQUE,
+  gtin TEXT, -- رقم التعريف العالمي للمنتج من AI (01) في GS1-128
+  barcode TEXT UNIQUE, -- الباركود الكامل (قد يكون GS1-128 أو أي نوع آخر)
   quantity INT NOT NULL CHECK (quantity >= 0),
   initial_quantity INT NOT NULL CHECK (initial_quantity >= 0),
   store_id UUID NOT NULL REFERENCES stores(id),
@@ -109,7 +110,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- VIEWS (Always replace)
 CREATE OR REPLACE VIEW inventory_items_with_status AS
 SELECT
-    ii.id, ii.barcode, ii.batch_number, ii.expiry_date, ii.quantity, ii.purchase_price, ii.variant,
+    ii.id, ii.gtin, ii.barcode, ii.batch_number, ii.expiry_date, ii.quantity, ii.purchase_price, ii.variant,
     ii.product_definition_id, ii.store_id, ii.manufacturer_id, ii.supplier_id, ii.stock_type, ii.initial_quantity, ii.created_at,
     st.name AS store_name,
     pd.name AS product_name, pd.reorder_point,

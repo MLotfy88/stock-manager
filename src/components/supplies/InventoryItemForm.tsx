@@ -13,7 +13,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
-import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { useBarcodeScanner, extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 
@@ -65,8 +65,41 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
   } = useBarcodeScanner({
     onScanSuccess: (scannedBarcode: string) => {
       if (activeScannerId) {
-        handleItemChange(activeScannerId, 'barcode', scannedBarcode);
-        toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
+        // محاولة استخراج بيانات GS1-128
+        const gs1Data = extractGS1DataForSupply(scannedBarcode);
+
+        if (gs1Data) {
+          // باركود GS1-128 - ملء البيانات تلقائياً
+          const updates: Partial<PurchaseOrderItem> = {
+            barcode: gs1Data.formattedValue, // حفظ الباركود المنسق
+          };
+
+          // ملء تاريخ الصلاحية إذا كان موجوداً
+          if (gs1Data.expiryDate) {
+            updates.expiryDate = new Date(gs1Data.expiryDate);
+          }
+
+          // ملء رقم الباتش إذا كان موجوداً
+          if (gs1Data.lotNumber) {
+            updates.batchNumber = gs1Data.lotNumber;
+          }
+
+          // تحديث جميع الحقول دفعة واحدة
+          onItemsChange(items.map(item =>
+            item.id === activeScannerId ? { ...item, ...updates } : item
+          ));
+
+          toast({
+            title: t('barcode_scanned'),
+            description: `GTIN: ${gs1Data.gtin || 'N/A'}\n${t('expiry_date')}: ${gs1Data.expiryDate || 'N/A'}\nLOT: ${gs1Data.lotNumber || 'N/A'}`,
+            duration: 5000
+          });
+        } else {
+          // باركود عادي - فقط ملء حقل الباركود
+          handleItemChange(activeScannerId, 'barcode', scannedBarcode);
+          toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
+        }
+
         if (navigator.vibrate) navigator.vibrate(150);
         stopScanner();
         setActiveScannerId(null);
