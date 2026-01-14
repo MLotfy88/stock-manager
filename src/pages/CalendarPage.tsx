@@ -7,7 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertTriangle, Package, CheckCircle
 } from 'lucide-react';
 import { InventoryItem, ProductDefinition } from '@/types';
@@ -22,7 +22,7 @@ const getExpiryStatus = (date: Date) => {
   const today = new Date();
   const timeDiff = date.getTime() - today.getTime();
   const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
-  
+
   if (daysRemaining < 0) return 'expired';
   if (daysRemaining < 30) return 'critical';
   if (daysRemaining < 90) return 'warning';
@@ -41,7 +41,7 @@ const CalendarPage = () => {
       setIsSidebarOpen(false);
     }
   };
-  
+
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,29 +69,29 @@ const CalendarPage = () => {
   const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth());
   const [currentYear, setCurrentYear] = useState(currentDate.getFullYear());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  
+
   // Get the number of days in the current month
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  
+
   // Get the first day of the month (0-6, where 0 is Sunday)
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
-  
+
   // Adjust first day for Arabic calendar (starts with Saturday)
   const adjustedFirstDay = direction === 'rtl' ? firstDayOfMonth : (firstDayOfMonth + 1) % 7;
-  
+
   // Get the month name
   const monthName = new Date(currentYear, currentMonth).toLocaleDateString(
-    language === 'ar' ? 'ar-EG' : 'en-US', 
+    language === 'ar' ? 'ar-EG' : 'en-US',
     { month: 'long' }
   );
-  
+
   // Group supplies by expiry date
   const expiryDateMap: Record<string, InventoryItem[]> = {};
-  
+
   inventory.forEach((item) => {
     const expiryDate = new Date(item.expiry_date);
     const dateKey = expiryDate.toISOString().split('T')[0];
-    
+
     // Only include dates in the current month and year
     if (expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear) {
       if (!expiryDateMap[dateKey]) {
@@ -100,7 +100,7 @@ const CalendarPage = () => {
       expiryDateMap[dateKey].push(item);
     }
   });
-  
+
   // Navigation functions
   const goToPreviousMonth = () => {
     if (currentMonth === 0) {
@@ -111,7 +111,7 @@ const CalendarPage = () => {
     }
     setSelectedDate(null);
   };
-  
+
   const goToNextMonth = () => {
     if (currentMonth === 11) {
       setCurrentMonth(0);
@@ -121,52 +121,51 @@ const CalendarPage = () => {
     }
     setSelectedDate(null);
   };
-  
+
   // Handle day click
   const handleDayClick = (day: number) => {
     const clickedDate = new Date(currentYear, currentMonth, day);
     setSelectedDate(clickedDate);
   };
-  
+
   // Get supplies for the selected date
   const getSuppliesForSelectedDate = () => {
     if (!selectedDate) return [];
-    
+
     const dateKey = selectedDate.toISOString().split('T')[0];
     return expiryDateMap[dateKey] || [];
   };
-  
+
   // Days of the week
-  const weekDays = [
-    t('saturday'), t('sunday'), t('monday'), t('tuesday'), 
-    t('wednesday'), t('thursday'), t('friday')
-  ];
-  
+  const weekDays = isMobile
+    ? [t('sat_short'), t('sun_short'), t('mon_short'), t('tue_short'), t('wed_short'), t('thu_short'), t('fri_short')]
+    : [t('saturday'), t('sunday'), t('monday'), t('tuesday'), t('wednesday'), t('thursday'), t('friday')];
+
   // Calendar grid cells
   const calendarCells = [];
-  
+
   // Add empty cells for days before the first day of the month
   for (let i = 0; i < adjustedFirstDay; i++) {
-    calendarCells.push(<div key={`empty-${i}`} className="h-24 p-1 bg-gray-50 border border-gray-100"></div>);
+    calendarCells.push(<div key={`empty-${i}`} className={`${isMobile ? 'h-16' : 'h-24'} p-1 bg-gray-50 border border-gray-100`}></div>);
   }
-  
+
   // Add cells for each day in the month
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(currentYear, currentMonth, day);
     const dateKey = date.toISOString().split('T')[0];
     const hasExpiries = !!expiryDateMap[dateKey];
     const suppliesForDay = expiryDateMap[dateKey] || [];
-    
+
     // Determine if it's today
-    const isToday = day === currentDate.getDate() && 
-                    currentMonth === currentDate.getMonth() && 
-                    currentYear === currentDate.getFullYear();
-    
+    const isToday = day === currentDate.getDate() &&
+      currentMonth === currentDate.getMonth() &&
+      currentYear === currentDate.getFullYear();
+
     // Determine if it's selected
-    const isSelected = selectedDate && day === selectedDate.getDate() && 
-                     currentMonth === selectedDate.getMonth() && 
-                     currentYear === selectedDate.getFullYear();
-    
+    const isSelected = selectedDate && day === selectedDate.getDate() &&
+      currentMonth === selectedDate.getMonth() &&
+      currentYear === selectedDate.getFullYear();
+
     // Find the most critical status for the day
     let mostCriticalStatus = 'ok';
     if (hasExpiries) {
@@ -182,9 +181,11 @@ const CalendarPage = () => {
         }
       });
     }
-    
+
     const cellClasses = cn({
-      "h-24 p-2 border border-gray-200 transition-colors": true,
+      "p-2 border border-gray-200 transition-colors cursor-pointer": true,
+      "h-16": isMobile,
+      "h-24": !isMobile,
       "bg-primary/10 border-primary": isToday && !isSelected,
       "bg-secondary/10 border-secondary font-bold": isSelected,
       "bg-red-50 border-red-200": !isSelected && !isToday && mostCriticalStatus === 'expired',
@@ -192,65 +193,66 @@ const CalendarPage = () => {
       "bg-yellow-50 border-yellow-200": !isSelected && !isToday && mostCriticalStatus === 'warning',
       "hover:bg-gray-50": !isSelected && !isToday && mostCriticalStatus === 'ok'
     });
-    
+
     calendarCells.push(
-      <div 
-        key={`day-${day}`} 
+      <div
+        key={`day-${day}`}
         className={cellClasses}
         onClick={() => handleDayClick(day)}
       >
-        <div className="flex justify-between">
-          <span className={isToday ? "font-bold" : ""}>{day}</span>
+        <div className="flex justify-between items-start">
+          <span className={isToday ? "font-bold text-sm" : "text-sm"}>{day}</span>
           {hasExpiries && (
-            <Badge 
+            <Badge
               variant={
-                mostCriticalStatus === 'expired' ? 'destructive' : 
-                mostCriticalStatus === 'critical' ? 'outline' : 
-                mostCriticalStatus === 'warning' ? 'outline' : 'outline'
+                mostCriticalStatus === 'expired' ? 'destructive' :
+                  mostCriticalStatus === 'critical' ? 'outline' :
+                    mostCriticalStatus === 'warning' ? 'outline' : 'outline'
               }
-              className={
-                mostCriticalStatus === 'critical' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' : 
-                mostCriticalStatus === 'warning' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' : ''
-              }
+              className={cn(
+                "px-1 min-w-[1.2rem] h-4.5 text-[9px] flex items-center justify-center",
+                mostCriticalStatus === 'critical' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                  mostCriticalStatus === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''
+              )}
             >
               {suppliesForDay.length}
             </Badge>
           )}
         </div>
-        
-        {/* Show up to 2 expiring items */}
-        {hasExpiries && suppliesForDay.slice(0, 2).map((item, index) => {
+
+        {/* Show up to 2 expiring items - ONLY ON DESKTOP */}
+        {!isMobile && hasExpiries && suppliesForDay.slice(0, 2).map((item, index) => {
           const def = productDefs.find(d => d.id === item.product_definition_id);
           return (
-            <div 
-              key={item.id} 
-              className="text-xs truncate mt-1 p-1 rounded bg-white/80"
+            <div
+              key={item.id}
+              className="text-[10px] truncate mt-1 p-1 rounded bg-white/80 border border-gray-100"
               title={def?.name || ''}
             >
               {def?.name || 'N/A'}
             </div>
           );
         })}
-        
-        {/* Show count of remaining items if more than 2 */}
-        {hasExpiries && suppliesForDay.length > 2 && (
-          <div className="text-xs text-muted-foreground mt-1">
+
+        {/* Show count of remaining items if more than 2 - ONLY ON DESKTOP */}
+        {!isMobile && hasExpiries && suppliesForDay.length > 2 && (
+          <div className="text-[10px] text-muted-foreground mt-0.5 px-0.5">
             +{suppliesForDay.length - 2} {t('more')}
           </div>
         )}
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         closeSidebar={closeSidebar}
       />
-      
+
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -260,23 +262,24 @@ const CalendarPage = () => {
                 {t('calendar_overview')}
               </p>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={direction === 'rtl' ? goToNextMonth : goToPreviousMonth}>
+
+            <div className="flex items-center gap-1 md:gap-2">
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={direction === 'rtl' ? goToNextMonth : goToPreviousMonth}>
                 {direction === 'rtl' ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </Button>
-              
-              <div className="text-lg font-medium">
+
+              <div className="text-sm md:text-lg font-bold min-w-[120px] text-center">
                 {language === 'ar' ? `${monthName} ${currentYear}` : `${monthName} ${currentYear}`}
               </div>
-              
-              <Button variant="outline" size="sm" onClick={direction === 'rtl' ? goToPreviousMonth : goToNextMonth}>
+
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={direction === 'rtl' ? goToPreviousMonth : goToNextMonth}>
                 {direction === 'rtl' ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </Button>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
                 onClick={() => {
                   setCurrentMonth(currentDate.getMonth());
                   setCurrentYear(currentDate.getFullYear());
@@ -287,7 +290,7 @@ const CalendarPage = () => {
               </Button>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card className="col-span-3 md:col-span-2">
               <CardHeader className="pb-2">
@@ -297,20 +300,20 @@ const CalendarPage = () => {
                 {/* Days of Week Headers */}
                 <div className="grid grid-cols-7 gap-1 mb-1">
                   {weekDays.map((day) => (
-                    <div 
-                      key={day} 
-                      className="text-center font-medium py-2 bg-gray-100 rounded"
+                    <div
+                      key={day}
+                      className="text-center font-bold py-2 bg-gray-100 rounded text-[10px] md:text-sm"
                     >
                       {day}
                     </div>
                   ))}
                 </div>
-                
+
                 {/* Calendar Grid */}
                 <div className="grid grid-cols-7 gap-1">
                   {calendarCells}
                 </div>
-                
+
                 {/* Calendar Legend */}
                 <div className="flex flex-wrap gap-4 mt-4 justify-end">
                   <div className="flex items-center gap-1">
@@ -332,7 +335,7 @@ const CalendarPage = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="col-span-3 md:col-span-1">
               <CardHeader className="pb-2">
                 <CardTitle>
@@ -348,10 +351,10 @@ const CalendarPage = () => {
                           const expiryDate = new Date(item.expiry_date);
                           const status = getExpiryStatus(expiryDate);
                           const def = productDefs.find(d => d.id === item.product_definition_id);
-                          
+
                           return (
-                            <div 
-                              key={item.id} 
+                            <div
+                              key={item.id}
                               className={cn({
                                 "p-3 rounded-md border": true,
                                 "bg-red-50 border-red-200": status === 'expired',

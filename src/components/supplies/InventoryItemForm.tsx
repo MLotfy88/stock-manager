@@ -7,11 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ProductDefinition } from '@/types';
-import { CalendarIcon, ScanBarcode, PlusCircle, Trash2, Copy, Sparkles } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { useBarcodeScanner, extractGS1DataForSupply, ParsedGS1Data } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
@@ -278,13 +274,14 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[150px]">{t('barcode')}</TableHead>
+                  <TableHead className="w-[150px]">GTIN</TableHead>
+                  <TableHead className="w-[120px]">{t('batch_number')}</TableHead>
+                  <TableHead className="w-[150px]">{t('expiry_date')}</TableHead>
                   <TableHead>{t('product')}</TableHead>
-                  <TableHead>{t('variant')}</TableHead>
-                  <TableHead>{t('batch_number')}</TableHead>
-                  <TableHead>{t('expiry_date')}</TableHead>
-                  <TableHead className="w-[100px]">{t('quantity')}</TableHead>
-                  <TableHead className="w-[120px]">{t('purchase_price')}</TableHead>
-                  <TableHead className="w-[100px]"></TableHead>
+                  <TableHead className="w-[200px]">{t('variant')}</TableHead>
+                  <TableHead className="w-[80px]">{t('quantity')}</TableHead>
+                  <TableHead className="w-[100px]">{t('purchase_price')}</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -299,85 +296,60 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                         "transition-colors",
                         isHighlighted && "bg-blue-100 animate-pulse"
                       )}>
-                        <TableCell className="p-2 md:p-4">
-                          <div className="flex items-center gap-2">
+                        {/* 1. Barcode */}
+                        <TableCell className="p-2">
+                          <div className="flex items-center gap-1">
                             <Input
                               value={item.barcode}
                               onChange={(e) => handleItemChange(item.id, 'barcode', e.target.value)}
-                              placeholder={t('scan_or_enter_barcode')}
-                              className="font-mono text-xs"
+                              placeholder={t('barcode')}
+                              className="font-mono text-xs h-8"
                             />
                             <Button
                               type="button"
                               size="icon"
                               variant="ghost"
+                              className="h-8 w-8"
                               onClick={() => handleStartScan(item.id)}
-                              title="Scan barcode"
                             >
-                              <ScanBarcode className="h-5 w-5" />
+                              <ScanBarcode className="h-4 w-4" />
                             </Button>
-                            {item.gtin && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Sparkles className="h-3 w-3 mr-1" />
-                                GTIN
-                              </Badge>
-                            )}
                           </div>
                         </TableCell>
-                        <TableCell className="p-2 md:p-4">
-                          <Select
-                            value={item.productDefinitionId}
-                            onValueChange={(val) => {
-                              handleItemChange(item.id, 'productDefinitionId', val);
-                              handleItemChange(item.id, 'variant', ''); // Reset variant
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={t('select_product')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {productDefinitions.map((def) => (
-                                <SelectItem key={def.id} value={def.id}>{def.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+
+                        {/* 2. GTIN */}
+                        <TableCell className="p-2">
+                          <Input
+                            value={item.gtin || ''}
+                            onChange={(e) => handleItemChange(item.id, 'gtin', e.target.value)}
+                            placeholder="GTIN"
+                            className="font-mono text-xs h-8"
+                          />
                         </TableCell>
-                        <TableCell className="p-2 md:p-4">
-                          {selectedDefinition ? (
-                            <VariantQuickPicker
-                              variants={selectedDefinition.variants}
-                              selectedVariant={item.variant}
-                              onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
-                              recentVariants={recentVariants}
-                            />
-                          ) : (
-                            <Select value={item.variant} disabled>
-                              <SelectTrigger>
-                                <SelectValue placeholder={t('select_product_first')} />
-                              </SelectTrigger>
-                            </Select>
-                          )}
-                        </TableCell>
-                        <TableCell className="p-2 md:p-4">
+
+                        {/* 3. LOT */}
+                        <TableCell className="p-2">
                           <Input
                             value={item.batchNumber}
                             onChange={(e) => handleItemChange(item.id, 'batchNumber', e.target.value)}
                             placeholder="LOT"
-                            className="font-mono text-xs"
+                            className="font-mono text-xs h-8"
                           />
                         </TableCell>
-                        <TableCell className="p-2 md:p-4">
+
+                        {/* 4. Expiry */}
+                        <TableCell className="p-2">
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
                                 className={cn(
-                                  "w-full justify-start text-left font-normal text-xs",
+                                  "w-full justify-start text-left font-normal text-xs h-8 px-2",
                                   !item.expiryDate && "text-muted-foreground"
                                 )}
                               >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {item.expiryDate ? format(item.expiryDate, "PPP") : <span>{t('pick_date')}</span>}
+                                <CalendarIcon className="mr-1 h-3 w-3" />
+                                {item.expiryDate ? format(item.expiryDate, "yyyy-MM-dd") : <span>{t('pick_date')}</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
@@ -390,44 +362,90 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             </PopoverContent>
                           </Popover>
                         </TableCell>
-                        <TableCell className="p-2 md:p-4">
+
+                        {/* 5. Product */}
+                        <TableCell className="p-2">
+                          <Select
+                            value={item.productDefinitionId}
+                            onValueChange={(val) => {
+                              handleItemChange(item.id, 'productDefinitionId', val);
+                              handleItemChange(item.id, 'variant', '');
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder={t('select_product')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {productDefinitions.map((def) => (
+                                <SelectItem key={def.id} value={def.id}>{def.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+
+                        {/* 6. Variant */}
+                        <TableCell className="p-2">
+                          {selectedDefinition ? (
+                            <VariantQuickPicker
+                              variants={selectedDefinition.variants}
+                              selectedVariant={item.variant}
+                              onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                              recentVariants={recentVariants}
+                            />
+                          ) : (
+                            <Input
+                              value={item.variant}
+                              onChange={(e) => handleItemChange(item.id, 'variant', e.target.value)}
+                              placeholder={t('variant')}
+                              className="text-xs h-8"
+                            />
+                          )}
+                        </TableCell>
+
+                        {/* 7. Quantity */}
+                        <TableCell className="p-2">
                           <Input
                             type="number"
                             min="1"
                             value={item.quantity}
                             onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
-                            className="text-center font-bold"
+                            className="text-center font-bold h-8 text-xs"
                           />
                         </TableCell>
-                        <TableCell className="p-2 md:p-4">
+
+                        {/* 8. Price */}
+                        <TableCell className="p-2">
                           <Input
                             type="number"
                             min="0"
                             step="0.01"
                             value={item.purchasePrice}
                             onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)}
+                            className="h-8 text-xs"
                           />
                         </TableCell>
-                        <TableCell className="p-2 md:p-4">
-                          <div className="flex gap-1">
+
+                        {/* Actions */}
+                        <TableCell className="p-2">
+                          <div className="flex gap-1 justify-end">
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
+                              className="h-7 w-7"
                               onClick={() => duplicateItem(item.id)}
-                              title="Duplicate item"
                             >
-                              <Copy className="h-4 w-4" />
+                              <Copy className="h-3 w-3" />
                             </Button>
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
+                              className="h-7 w-7"
                               onClick={() => removeItem(item.id)}
                               disabled={items.length <= 1}
-                              title="Remove item"
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-3 w-3 text-destructive" />
                             </Button>
                           </div>
                         </TableCell>
@@ -454,66 +472,52 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                   onDuplicate={() => duplicateItem(item.id)}
                   canRemove={items.length > 1}
                 >
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
+                  {/* 1 & 2: Barcode & GTIN */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-muted-foreground">{t('barcode')}</Label>
                       <Input
                         value={item.barcode}
                         onChange={(e) => handleItemChange(item.id, 'barcode', e.target.value)}
-                        placeholder={t('scan_or_enter_barcode')}
-                        className="font-mono"
+                        placeholder={t('barcode')}
+                        className="font-mono h-9 text-xs"
                       />
-                      {item.gtin && (
-                        <Badge variant="secondary" className="text-xs">
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Auto
-                        </Badge>
-                      )}
                     </div>
-
-                    <Select
-                      value={item.productDefinitionId}
-                      onValueChange={(val) => {
-                        handleItemChange(item.id, 'productDefinitionId', val);
-                        handleItemChange(item.id, 'variant', '');
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('select_product')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {productDefinitions.map((def) => (
-                          <SelectItem key={def.id} value={def.id}>{def.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {selectedDefinition && (
-                      <VariantQuickPicker
-                        variants={selectedDefinition.variants}
-                        selectedVariant={item.variant}
-                        onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
-                        recentVariants={recentVariants}
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-muted-foreground">GTIN</Label>
+                      <Input
+                        value={item.gtin || ''}
+                        onChange={(e) => handleItemChange(item.id, 'gtin', e.target.value)}
+                        placeholder="GTIN"
+                        className="font-mono h-9 text-xs"
                       />
-                    )}
+                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                  {/* 3 & 4: LOT & Expiry */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-muted-foreground">LOT</Label>
                       <Input
                         value={item.batchNumber}
                         onChange={(e) => handleItemChange(item.id, 'batchNumber', e.target.value)}
-                        placeholder={t('batch_number')}
-                        className="font-mono"
+                        placeholder="LOT"
+                        className="font-mono h-9 text-xs"
                       />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-muted-foreground">{t('expiry_date')}</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full justify-start text-left font-normal",
+                              "w-full justify-start text-left font-normal h-9 px-2 text-xs",
                               !item.expiryDate && "text-muted-foreground"
                             )}
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {item.expiryDate ? format(item.expiryDate, "P") : <span>{t('pick_date')}</span>}
+                            <CalendarIcon className="mr-2 h-3 w-3" />
+                            {item.expiryDate ? format(item.expiryDate, "yyyy-MM-dd") : <span>{t('pick_date')}</span>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -526,15 +530,66 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                         </PopoverContent>
                       </Popover>
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="border-t pt-2 my-2 border-dashed" />
+
+                  {/* 5: Product */}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase text-muted-foreground">{t('product')}</Label>
+                    <Select
+                      value={item.productDefinitionId}
+                      onValueChange={(val) => {
+                        handleItemChange(item.id, 'productDefinitionId', val);
+                        handleItemChange(item.id, 'variant', '');
+                      }}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder={t('select_product')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productDefinitions.map((def) => (
+                          <SelectItem key={def.id} value={def.id}>{def.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 6: Variant */}
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase text-muted-foreground">{t('variant')}</Label>
+                    {selectedDefinition ? (
+                      <VariantQuickPicker
+                        variants={selectedDefinition.variants}
+                        selectedVariant={item.variant}
+                        onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                        recentVariants={recentVariants}
+                      />
+                    ) : (
+                      <Input
+                        value={item.variant}
+                        onChange={(e) => handleItemChange(item.id, 'variant', e.target.value)}
+                        placeholder={t('variant')}
+                        className="h-9 text-xs"
+                      />
+                    )}
+                  </div>
+
+                  {/* 7 & 8: Quantity & Price */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-muted-foreground">{t('quantity')}</Label>
                       <Input
                         type="number"
                         min="1"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
                         placeholder={t('quantity')}
+                        className="h-9 text-xs font-bold"
                       />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-muted-foreground">{t('purchase_price')}</Label>
                       <Input
                         type="number"
                         min="0"
@@ -542,6 +597,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                         value={item.purchasePrice}
                         onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)}
                         placeholder={t('purchase_price')}
+                        className="h-9 text-xs"
                       />
                     </div>
                   </div>

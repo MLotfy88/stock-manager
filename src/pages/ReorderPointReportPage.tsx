@@ -144,7 +144,48 @@ const ReorderPointReportPage = () => {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <p>Loading...</p>
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                </div>
+              ) : isMobile ? (
+                <div className="space-y-4">
+                  {reorderItems.length > 0 ? (
+                    reorderItems.map((item, index) => (
+                      <Card key={index} className={`p-4 border shadow-sm ${item.currentStock === 0 ? 'bg-red-50/50 border-red-200' : ''}`}>
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-bold text-lg leading-tight">{item.productName}</h3>
+                            <p className="text-sm text-muted-foreground">{item.variantName}</p>
+                          </div>
+                          {item.currentStock === 0 && (
+                            <Badge variant="destructive" className="animate-pulse">
+                              {t('out_of_stock')}
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="bg-gray-50 p-3 rounded-lg border">
+                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">{t('current_stock')}</p>
+                            <p className={`text-xl font-black ${item.currentStock <= item.reorderPoint ? 'text-destructive' : 'text-primary'}`}>
+                              {item.currentStock}
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 p-3 rounded-lg border">
+                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">{t('reorder_point')}</p>
+                            <p className="text-xl font-black text-gray-700">
+                              {item.reorderPoint}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-muted-foreground border rounded-lg bg-gray-50">
+                      {t('no_items_below_reorder_point')}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table className="min-w-[800px]">

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ArrowLeft, FileSpreadsheet, Package, DollarSign, Warehouse, Building2, Tag, ChevronDown } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { getStores } from '@/data/operations/storesOperations';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { getInventoryItems } from '@/data/operations/suppliesOperations';
@@ -219,44 +220,104 @@ const InventoryReportPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border overflow-x-auto">
-                <Table className="min-w-[1200px]">
-                  <TableHeader>
-                    <TableRow>
-                      {Object.values(ALL_COLUMNS).map(col => visibleColumns[col.key] && <TableHead key={col.key}>{t(col.label)}</TableHead>)}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      [...Array(10)].map((_, i) => (
-                        <TableRow key={i}>
-                          {Object.keys(visibleColumns).filter(k => visibleColumns[k]).map(key => <TableCell key={key}><Skeleton className="h-5 w-full" /></TableCell>)}
-                        </TableRow>
-                      ))
-                    ) : filteredInventory.length > 0 ? (
-                      filteredInventory.map((item) => (
-                        <TableRow key={item.id}>
-                          {visibleColumns.store_name && <TableCell>{item.store_name}</TableCell>}
-                          {visibleColumns.product_name && <TableCell>{item.product_name}</TableCell>}
-                          {visibleColumns.supply_type_name && <TableCell>{item.supply_type_name}</TableCell>}
-                          {visibleColumns.variant && <TableCell>{item.variant}</TableCell>}
-                          {visibleColumns.manufacturer_name && <TableCell>{item.manufacturer_name}</TableCell>}
-                          {visibleColumns.supplier_name && <TableCell>{item.supplier_name}</TableCell>}
-                          {visibleColumns.barcode && <TableCell>{item.barcode}</TableCell>}
-                          {visibleColumns.batch_number && <TableCell>{item.batch_number}</TableCell>}
-                          {visibleColumns.expiry_date && <TableCell>{format(new Date(item.expiry_date), 'P')}</TableCell>}
-                          {visibleColumns.quantity && <TableCell>{item.quantity}</TableCell>}
-                          {visibleColumns.purchase_price && <TableCell>{item.purchase_price?.toFixed(2)}</TableCell>}
-                          {visibleColumns.reorder_point && <TableCell>{item.reorder_point}</TableCell>}
-                          {visibleColumns.stock_type && <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ${item.stock_type === 'on_shelf' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{t(item.stock_type)}</span></TableCell>}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow><TableCell colSpan={Object.values(visibleColumns).filter(v => v).length} className="text-center h-24">{t('no_data_for_filters')}</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              {isMobile ? (
+                <div className="space-y-4">
+                  {isLoading ? (
+                    [...Array(5)].map((_, i) => (
+                      <Card key={i} className="p-4 space-y-2">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-4 w-1/4" />
+                      </Card>
+                    ))
+                  ) : filteredInventory.length > 0 ? (
+                    filteredInventory.map((item) => (
+                      <Card key={item.id} className="p-4 border shadow-sm">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-bold text-lg leading-tight">{item.product_name}</h3>
+                            <p className="text-sm text-muted-foreground">{item.variant}</p>
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            className={item.stock_type === 'on_shelf' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}
+                          >
+                            {t(item.stock_type)}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('store')}</p>
+                            <p className="font-medium">{item.store_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('quantity')}</p>
+                            <p className="font-bold text-primary">{item.quantity}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('batch_number')}</p>
+                            <p className="font-medium truncate">{item.batch_number}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('expiry_date')}</p>
+                            <p className="font-medium">{format(new Date(item.expiry_date), 'P')}</p>
+                          </div>
+                          {item.supplier_name && (
+                            <div className="col-span-2">
+                              <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('supplier')}</p>
+                              <p className="font-medium">{item.supplier_name}</p>
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-muted-foreground border rounded-lg bg-gray-50">
+                      {t('no_data_for_filters')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-md border overflow-x-auto">
+                  <Table className="min-w-[1200px]">
+                    <TableHeader>
+                      <TableRow>
+                        {Object.values(ALL_COLUMNS).map(col => visibleColumns[col.key] && <TableHead key={col.key}>{t(col.label)}</TableHead>)}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        [...Array(10)].map((_, i) => (
+                          <TableRow key={i}>
+                            {Object.keys(visibleColumns).filter(k => visibleColumns[k]).map(key => <TableCell key={key}><Skeleton className="h-5 w-full" /></TableCell>)}
+                          </TableRow>
+                        ))
+                      ) : filteredInventory.length > 0 ? (
+                        filteredInventory.map((item) => (
+                          <TableRow key={item.id}>
+                            {visibleColumns.store_name && <TableCell>{item.store_name}</TableCell>}
+                            {visibleColumns.product_name && <TableCell>{item.product_name}</TableCell>}
+                            {visibleColumns.supply_type_name && <TableCell>{item.supply_type_name}</TableCell>}
+                            {visibleColumns.variant && <TableCell>{item.variant}</TableCell>}
+                            {visibleColumns.manufacturer_name && <TableCell>{item.manufacturer_name}</TableCell>}
+                            {visibleColumns.supplier_name && <TableCell>{item.supplier_name}</TableCell>}
+                            {visibleColumns.barcode && <TableCell>{item.barcode}</TableCell>}
+                            {visibleColumns.batch_number && <TableCell>{item.batch_number}</TableCell>}
+                            {visibleColumns.expiry_date && <TableCell>{format(new Date(item.expiry_date), 'P')}</TableCell>}
+                            {visibleColumns.quantity && <TableCell>{item.quantity}</TableCell>}
+                            {visibleColumns.purchase_price && <TableCell>{item.purchase_price?.toFixed(2)}</TableCell>}
+                            {visibleColumns.reorder_point && <TableCell>{item.reorder_point}</TableCell>}
+                            {visibleColumns.stock_type && <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ${item.stock_type === 'on_shelf' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{t(item.stock_type)}</span></TableCell>}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow><TableCell colSpan={Object.values(visibleColumns).filter(v => v).length} className="text-center h-24">{t('no_data_for_filters')}</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

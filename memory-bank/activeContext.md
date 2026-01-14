@@ -1,14 +1,36 @@
 # Active Context
 
-## Current Focus: Advanced Invoice Entry System with GTIN Intelligence
+## Current Focus: Mobile Responsiveness & UI Optimization
 
 ### Recent Major Update (2026-01-16)
 
-Implemented comprehensive mobile responsiveness for new management pages, GTIN auto-detection, Smart Grouping, and Undo functionality for scanning.
+Implemented comprehensive mobile responsiveness across all remaining application pages, including complex reports, invoicing workflows, and calendars.
 
 ---
 
-## What We're Working On
+### ✅ Completed: Mobile Responsiveness Fixes
+
+Transformed all wide tables and complex layouts into mobile-friendly card views and responsive grids.
+
+**Key Improvements Implemented:**
+
+1. **Table-to-Card Transformation**
+   - `ConsumptionReportPage.tsx`, `OnShelfReportPage.tsx`, `OnShelfInvoicingPage.tsx`
+   - Replaced horizontal scroll tables with vertical card stacks
+   - Optimized spacing and font sizes for mobile viewports
+
+2. **Responsive Component Updates**
+   - **Stepper**: Added `orientation` prop support (horizontal/vertical) to `src/components/ui/stepper.tsx`.
+   - **Form Layouts**: Fixed `isMobile` context issues in nested components in `ReplacementVoucherPage.tsx`.
+   - **Calendar**: Compact grid grid with short day names and optimized cell heights in `CalendarPage.tsx`.
+   - **Header/Sidebar**: Verified overlay and closing behavior on mobile
+
+3. **Touch-First Design**
+   - Increased click area for interactive items (cards, list items)
+   - Visual selection states (multi-select cards change color)
+   - Optimized button sizes and placements
+
+---
 
 ### ✅ Completed: Invoice Entry Enhancement System
 
@@ -117,8 +139,8 @@ A complete overhaul of the invoice entry workflow with intelligent features:
 ### Immediate:
 1. Run migration script on Supabase
 2. Test GTIN auto-detection workflow
-3. Test smart grouping with duplicate scans
-4. Verify variant quick picker on mobile
+3. Final mobile verification on actual devices
+4. User testing for scanning workflow
 
 ### Future Enhancements (Optional):
 1. Batch scan mode page for rapid entry

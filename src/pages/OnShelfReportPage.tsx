@@ -127,42 +127,86 @@ const OnShelfReportPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table className="min-w-[1000px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('product_name')}</TableHead>
-                      <TableHead>{t('variant')}</TableHead>
-                      <TableHead>{t('batch_number')}</TableHead>
-                      <TableHead>{t('supplier')}</TableHead>
-                      <TableHead>{t('initial_quantity')}</TableHead>
-                      <TableHead>{t('consumed_quantity')}</TableHead>
-                      <TableHead>{t('remaining_quantity')}</TableHead>
-                      <TableHead>{t('invoicing_status')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow><TableCell colSpan={8} className="text-center">{t('loading')}...</TableCell></TableRow>
-                    ) : filteredData.length > 0 ? (
-                      filteredData.map((item) => (
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                </div>
+              ) : isMobile ? (
+                <div className="space-y-4">
+                  {filteredData.length > 0 ? (
+                    filteredData.map((item) => (
+                      <Card key={item.inventory_item_id} className="p-4 border shadow-sm">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-bold text-lg leading-tight">{item.product_name}</h3>
+                            <p className="text-sm text-muted-foreground">{item.variant}</p>
+                          </div>
+                          {getStatusBadge(item.invoicing_status)}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('batch_number')}</p>
+                            <p className="font-medium truncate">{item.batch_number}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('supplier')}</p>
+                            <p className="font-medium truncate">{item.supplier_name}</p>
+                          </div>
+
+                          <div className="bg-gray-50 p-2 rounded border text-center">
+                            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">{t('initial_quantity')}</p>
+                            <p className="font-bold">{item.initial_quantity}</p>
+                          </div>
+                          <div className="bg-gray-50 p-2 rounded border text-center">
+                            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">{t('consumed_quantity')}</p>
+                            <p className="font-bold text-blue-600">{item.consumed_quantity}</p>
+                          </div>
+                          <div className="col-span-2 bg-primary/5 p-2 rounded border text-center">
+                            <p className="text-primary text-[10px] uppercase tracking-wider mb-0.5">{t('remaining_quantity')}</p>
+                            <p className="font-black text-lg">{item.remaining_quantity}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-muted-foreground border rounded-lg bg-gray-50">
+                      {t('no_data_found')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[1000px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('product_name')}</TableHead>
+                        <TableHead>{t('variant')}</TableHead>
+                        <TableHead>{t('batch_number')}</TableHead>
+                        <TableHead>{t('supplier')}</TableHead>
+                        <TableHead>{t('initial_quantity')}</TableHead>
+                        <TableHead>{t('consumed_quantity')}</TableHead>
+                        <TableHead>{t('remaining_quantity')}</TableHead>
+                        <TableHead>{t('invoicing_status')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.map((item) => (
                         <TableRow key={item.inventory_item_id}>
-                          <TableCell>{item.product_name}</TableCell>
+                          <TableCell className="font-medium">{item.product_name}</TableCell>
                           <TableCell>{item.variant}</TableCell>
                           <TableCell>{item.batch_number}</TableCell>
                           <TableCell>{item.supplier_name}</TableCell>
                           <TableCell>{item.initial_quantity}</TableCell>
                           <TableCell>{item.consumed_quantity}</TableCell>
-                          <TableCell>{item.remaining_quantity}</TableCell>
+                          <TableCell className="font-bold">{item.remaining_quantity}</TableCell>
                           <TableCell>{getStatusBadge(item.invoicing_status)}</TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow><TableCell colSpan={8} className="text-center">{t('no_data_found')}</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

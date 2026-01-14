@@ -4,7 +4,7 @@
 
 ## ملخص التغييرات (Summary of Changes)
 
-تم تطوير وتنفيذ **نظام إدخال فواتير متقدم مع ذكاء GTIN** بشكل كامل. هذا النظام يحول عملية إدخال الفواتير من عملية يدوية بطيئة إلى عملية شبه تلقائية سريعة للغاية.
+تم تطوير وتنفيذ **نظام إدخال فواتير متقدم مع ذكاء GTIN** و **تحسينات شاملة لاستجابة الموبايل (Mobile Responsiveness)**. التطبيق الآن يدعم تجربة مستخدم سلسة على جميع أحجام الشاشات مع ميزات إدخال بيانات ذكية وسريعة.
 
 ## التحسينات الرئيسية (Key Improvements)
 
@@ -161,6 +161,12 @@ await batchSaveGTINMappings(gtinMappings);
 - **Smart Grouping**: دمج تلقائي للكميات عند مسح نفس الباركود
 - **Undo System**: التراجع عن الصرخة الأخيرة في نماذج الاستهلاك والإضافة
 - **Auto-Detect**: ربط تلقائي فوري بين GTIN والمنتج/المتغير
+- **Refined Layout**: إعادة ترتيب الحقول لتسهيل المسح (Barcode > GTIN > LOT > Expiry) ثم الإدخال (Product > Variant)
+- **Auto-Save Mapping**: حفظ تلقائي للباركودات الجديدة في الفواتير
+- **Table-to-Card**: تحويل جميع جداول التقارير والفواتير المعقدة إلى بطاقات (Cards) في الموبايل
+- **Calendar Optimization**: واجهة تقويم مدمجة ومحسنة للشاشات الصغيرة
+- **Responsive Steppers**: تحويل مراحل العمليات إلى تنسيق رأسي في الموبايل
+- **Bug Fix**: تم إصلاح مسار استيراد `supabase` في `gtinMappingOperations.ts` ليكون `@/lib/supabaseClient`.
 
 ## ملفات جديدة (New Files)
 
@@ -183,9 +189,11 @@ await batchSaveGTINMappings(gtinMappings);
 - [x] All utility modules
 - [x] Smart Grouping logic
 - [x] Undo functionality
-- [x] Mobile responsiveness for management pages
-- [x] Audio/Haptic logic integration
-- [x] Documentation & Walkthrough
+- [x] Responsive Calendar grid optimization
+- [x] Mobile-friendly Consumption and On-Shelf reports
+- [x] Responsive Replacement Voucher stepper and item selection
+- [x] Verified sidebar and navigation usability on mobile
+- [x] Documentation & Walkthrough updated for mobile fixes
 
 ### ⏳ في الانتظار
 - [ ] Run migration: `add_gtin_product_mapping.sql`

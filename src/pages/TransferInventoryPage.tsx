@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Store, ProductDefinition, InventoryItem } from '@/types';
 import { ArrowRightLeft, ScanBarcode, Trash2, Camera } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useBarcodeScanner, extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
+import { useBarcodeScanner, extractGS1DataForSupply, ParsedGS1Data } from '@/hooks/useBarcodeScanner';
+import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
@@ -85,10 +86,8 @@ const TransferInventoryPage = () => {
     stopScanner,
     captureAndDecode,
   } = useBarcodeScanner({
-    onScanSuccess: (barcode: string) => {
-      // محاولة استخراج بيانات GS1
-      const gs1Data = extractGS1DataForSupply(barcode);
-      const searchValue = gs1Data?.gtin || barcode;
+    onScanSuccess: (data: ParsedGS1Data) => {
+      const searchValue = data.gtin || data.rawValue;
 
       // البحث بـ GTIN أو الباركود الكامل في المخزن المصدر
       const itemInStore = inventory.find(i =>
@@ -99,9 +98,7 @@ const TransferInventoryPage = () => {
       if (itemInStore) {
         if (isContinuousScanning) {
           addItemToTransferList(itemInStore, 1);
-          const itemInfo = gs1Data
-            ? `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}\nLOT: ${itemInStore.batch_number}`
-            : `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}`;
+          const itemInfo = `${productDefinitions.find(p => p.id === itemInStore.product_definition_id)?.name} - ${itemInStore.variant}\nLOT: ${itemInStore.batch_number}`;
           toast({ title: t('item_added'), description: itemInfo, duration: 4000 });
         } else {
           setScannedItem(itemInStore);
@@ -241,21 +238,35 @@ const TransferInventoryPage = () => {
                   <table className="w-full">
                     <thead className="bg-muted/50">
                       <tr className="border-b">
-                        <th className="p-2 text-left">{t('product')}</th>
-                        <th className="p-2 text-left">{t('variant')}</th>
-                        <th className="p-2 text-center">{t('quantity')}</th>
+                        <th className="p-2 text-left text-xs">{t('barcode')} / GTIN</th>
+                        <th className="p-2 text-left text-xs">LOT / {t('expiry_date')}</th>
+                        <th className="p-2 text-left text-xs">{t('product')}</th>
+                        <th className="p-2 text-left text-xs">{t('variant')}</th>
+                        <th className="p-2 text-center text-xs">{t('quantity')}</th>
                         <th className="p-2 text-right"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {transferList.length === 0 ? (
-                        <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">{t('no_items_added')}</td></tr>
+                        <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">{t('no_items_added')}</td></tr>
                       ) : (
                         transferList.map(item => (
-                          <tr key={item.id} className="border-b">
+                          <tr key={item.id} className="border-b text-xs">
+                            <td className="p-2">
+                              <div className="flex flex-col">
+                                <span className="font-mono">{item.barcode || '-'}</span>
+                                <span className="text-[10px] text-muted-foreground font-mono">{item.gtin || '-'}</span>
+                              </div>
+                            </td>
+                            <td className="p-2">
+                              <div className="flex flex-col">
+                                <span className="font-mono">{item.batch_number}</span>
+                                <span className="text-[10px] text-muted-foreground">{format(new Date(item.expiry_date), 'yyyy-MM-dd')}</span>
+                              </div>
+                            </td>
                             <td className="p-2">{productDefinitions.find(p => p.id === item.product_definition_id)?.name}</td>
                             <td className="p-2">{item.variant}</td>
-                            <td className="p-2 text-center">{item.transferQuantity}</td>
+                            <td className="p-2 text-center font-bold text-sm">{item.transferQuantity}</td>
                             <td className="p-2 text-right">
                               <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -275,10 +286,22 @@ const TransferInventoryPage = () => {
                     transferList.map(item => (
                       <Card key={item.id} className="p-4">
                         <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-bold">{productDefinitions.find(p => p.id === item.product_definition_id)?.name}</p>
-                            <p className="text-sm text-muted-foreground">{item.variant}</p>
-                            <p className="text-sm">{t('quantity')}: {item.transferQuantity}</p>
+                          <div className="space-y-3 w-full">
+                            <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-muted-foreground">
+                              <div>BC: {item.barcode || '-'}</div>
+                              <div>GTIN: {item.gtin || '-'}</div>
+                              <div>LOT: {item.batch_number}</div>
+                              <div>EXP: {format(new Date(item.expiry_date), 'yyyy-MM-dd')}</div>
+                            </div>
+                            <div className="border-t border-dashed" />
+                            <div>
+                              <p className="font-bold">{productDefinitions.find(p => p.id === item.product_definition_id)?.name}</p>
+                              <p className="text-sm text-muted-foreground">{item.variant}</p>
+                            </div>
+                            <div className="flex justify-between items-center bg-muted/30 p-2 rounded">
+                              <span className="text-sm">{t('quantity')}:</span>
+                              <span className="font-bold">{item.transferQuantity}</span>
+                            </div>
                           </div>
                           <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />

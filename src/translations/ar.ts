@@ -437,4 +437,5 @@ export default {
   consumed_not_invoiced: 'مستهلكة, لم تصدر فاتورة',
   partially_invoiced: 'تمت فوترة جزء',
   fully_invoiced: 'تمت الفوترة بالكامل',
+  no_variants_added: 'لم يتم إضافة متغيرات بعد',
 };

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ConsumptionItem, InventoryItem, ProductDefinition } from '@/types';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 
 interface ConsumptionItemsTableProps {
@@ -36,29 +37,76 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[250px]">{t('product')}</TableHead>
-            <TableHead>{t('batch_number')}</TableHead>
-            <TableHead>{t('expiry_date')}</TableHead>
-            <TableHead className="text-center">{t('available_quantity')}</TableHead>
-            <TableHead className="w-[100px]">{t('quantity')}</TableHead>
-            <TableHead className="w-[50px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((item) => {
-            const selectedSupply = availableSupplies.find(s => s.id === item.inventory_item_id);
-            const productDef = selectedSupply ? productDefs.find(p => p.id === selectedSupply.product_definition_id) : null;
-            const isExceeded = item.quantity && item.availableQuantity ? item.quantity > item.availableQuantity : false;
+              <TableHead className="w-[150px]">{t('barcode')}</TableHead>
+              <TableHead className="w-[150px]">GTIN</TableHead>
+              <TableHead className="w-[120px]">{t('batch_number')}</TableHead>
+              <TableHead className="w-[120px]">{t('expiry_date')}</TableHead>
+              <TableHead>{t('product')}</TableHead>
+              <TableHead className="text-center w-[80px]">{t('available_quantity')}</TableHead>
+              <TableHead className="w-[100px]">{t('quantity')}</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => {
+              const selectedSupply = availableSupplies.find(s => s.id === item.inventory_item_id);
+              const productDef = selectedSupply ? productDefs.find(p => p.id === selectedSupply.product_definition_id) : null;
+              const isExceeded = item.quantity && item.availableQuantity ? item.quantity > item.availableQuantity : false;
 
-            return (
-              <TableRow key={item.id} className="flex flex-col md:table-row mb-4 md:mb-0 border md:border-none rounded-lg md:rounded-none">
-                <TableCell className="min-w-[300px] p-2 md:p-4" data-label={t('product')}>
-                  <div className="flex items-center gap-2">
+              return (
+                <TableRow key={item.id} className="transition-colors">
+                  {/* 1. Barcode */}
+                  <TableCell className="p-2">
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={selectedSupply?.barcode || ''}
+                        readOnly
+                        placeholder={t('barcode')}
+                        className="font-mono text-xs h-8 bg-muted/30"
+                      />
+                      <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => startScan(item.id)}>
+                        <ScanBarcode className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+
+                  {/* 2. GTIN */}
+                  <TableCell className="p-2">
+                    <Input
+                      value={selectedSupply?.gtin || ''}
+                      readOnly
+                      placeholder="GTIN"
+                      className="font-mono text-xs h-8 bg-muted/30"
+                    />
+                  </TableCell>
+
+                  {/* 3. LOT */}
+                  <TableCell className="p-2">
+                    <Input
+                      value={selectedSupply?.batch_number || ''}
+                      readOnly
+                      placeholder="LOT"
+                      className="font-mono text-xs h-8 bg-muted/30"
+                    />
+                  </TableCell>
+
+                  {/* 4. Expiry */}
+                  <TableCell className="p-2">
+                    <Input
+                      value={selectedSupply ? format(new Date(selectedSupply.expiry_date), 'yyyy-MM-dd') : ''}
+                      readOnly
+                      placeholder={t('expiry_date')}
+                      className="text-xs h-8 bg-muted/30"
+                    />
+                  </TableCell>
+
+                  {/* 5. Product (Choice) */}
+                  <TableCell className="p-2">
                     <Select
                       value={item.inventory_item_id}
                       onValueChange={(value) => handleItemChange(item.id, 'inventory_item_id', value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder={t('select_supply')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -66,107 +114,134 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
                           const def = productDefs.find(p => p.id === supply.product_definition_id);
                           return (
                             <SelectItem key={supply.id} value={supply.id}>
-                              {def?.name || '...'} - {supply.variant} (Batch: {supply.batch_number})
+                              {def?.name || '...'} - {supply.variant} (LOT: {supply.batch_number})
                             </SelectItem>
                           );
                         })}
                       </SelectContent>
                     </Select>
-                     <Button type="button" size="icon" variant="ghost" onClick={() => startScan(item.id)}><ScanBarcode className="h-5 w-5" /></Button>
-                  </div>
-                </TableCell>
-                <TableCell className="p-2 md:p-4" data-label={t('batch_number')}>{selectedSupply?.batch_number || '-'}</TableCell>
-                <TableCell className="p-2 md:p-4" data-label={t('expiry_date')}>{selectedSupply ? format(new Date(selectedSupply.expiry_date), 'yyyy-MM-dd') : '-'}</TableCell>
-                <TableCell className="text-center p-2 md:p-4" data-label={t('available_quantity')}>
-                  {selectedSupply && <Badge variant="secondary">{selectedSupply.quantity}</Badge>}
-                </TableCell>
-                <TableCell className="p-2 md:p-4" data-label={t('quantity')}>
-                  <Input
-                    type="number"
-                    min="1"
-                    max={selectedSupply?.quantity || undefined}
-                    value={item.quantity || ''}
-                    onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                    className={isExceeded ? "border-destructive" : ""}
-                  />
-                </TableCell>
-                <TableCell className="p-2 md:p-4 text-right">
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(item.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+                  </TableCell>
 
-    {/* Mobile Cards */}
-    <div className="md:hidden space-y-4">
-      {items.map((item) => {
-        const selectedSupply = availableSupplies.find(s => s.id === item.inventory_item_id);
-        const productDef = selectedSupply ? productDefs.find(p => p.id === selectedSupply.product_definition_id) : null;
-        const isExceeded = item.quantity && item.availableQuantity ? item.quantity > item.availableQuantity : false;
+                  {/* 6. Available */}
+                  <TableCell className="text-center p-2">
+                    {selectedSupply && <Badge variant="secondary" className="text-xs">{selectedSupply.quantity}</Badge>}
+                  </TableCell>
 
-        return (
-          <MobileSupplyItemCard
-            key={item.id}
-            itemId={item.id}
-            onScan={() => startScan(item.id, false)}
-            onRemove={() => removeItem(item.id)}
-            canRemove={items.length > 0}
-          >
-            <div className="space-y-4">
-              <Select
-                value={item.inventory_item_id}
-                onValueChange={(value) => handleItemChange(item.id, 'inventory_item_id', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('select_supply')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableSupplies.map(supply => {
-                    const def = productDefs.find(p => p.id === supply.product_definition_id);
-                    return (
-                      <SelectItem key={supply.id} value={supply.id}>
-                        {def?.name || '...'} - {supply.variant} (Batch: {supply.batch_number})
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              {selectedSupply && (
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">{t('batch_number')}</p>
-                    <p>{selectedSupply.batch_number}</p>
+                  {/* 7. Quantity */}
+                  <TableCell className="p-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      max={selectedSupply?.quantity || undefined}
+                      value={item.quantity || ''}
+                      onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                      className={cn("h-8 text-xs font-bold", isExceeded && "border-destructive")}
+                    />
+                  </TableCell>
+
+                  {/* Actions */}
+                  <TableCell className="p-2 text-right">
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeItem(item.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-4">
+        {items.map((item) => {
+          const selectedSupply = availableSupplies.find(s => s.id === item.inventory_item_id);
+          const productDef = selectedSupply ? productDefs.find(p => p.id === selectedSupply.product_definition_id) : null;
+          const isExceeded = item.quantity && item.availableQuantity ? item.quantity > item.availableQuantity : false;
+
+          return (
+            <MobileSupplyItemCard
+              key={item.id}
+              itemId={item.id}
+              onScan={() => startScan(item.id, false)}
+              onRemove={() => removeItem(item.id)}
+              canRemove={items.length > 0}
+            >
+              <div className="space-y-4">
+                {/* 1 & 2: Barcode & GTIN (Display Only) */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase text-muted-foreground">{t('barcode')}</p>
+                    <p className="font-mono text-xs">{selectedSupply?.barcode || '-'}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">{t('expiry_date')}</p>
-                    <p>{format(new Date(selectedSupply.expiry_date), 'yyyy-MM-dd')}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">{t('available_quantity')}</p>
-                    <p><Badge variant="secondary">{selectedSupply.quantity}</Badge></p>
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase text-muted-foreground">GTIN</p>
+                    <p className="font-mono text-xs">{selectedSupply?.gtin || '-'}</p>
                   </div>
                 </div>
-              )}
-              <Input
-                type="number"
-                min="1"
-                max={selectedSupply?.quantity || undefined}
-                value={item.quantity || ''}
-                onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                className={isExceeded ? "border-destructive" : ""}
-                placeholder={t('quantity')}
-              />
-            </div>
-          </MobileSupplyItemCard>
-        );
-      })}
+
+                {/* 3 & 4: LOT & Expiry (Display Only) */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase text-muted-foreground">LOT</p>
+                    <p className="font-mono text-xs">{selectedSupply?.batch_number || '-'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase text-muted-foreground">{t('expiry_date')}</p>
+                    <p className="text-xs">{selectedSupply ? format(new Date(selectedSupply.expiry_date), 'yyyy-MM-dd') : '-'}</p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-2 my-1 border-dashed" />
+
+                {/* 5: Product Selection */}
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase text-muted-foreground">{t('product')}</p>
+                  <Select
+                    value={item.inventory_item_id}
+                    onValueChange={(value) => handleItemChange(item.id, 'inventory_item_id', value)}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder={t('select_supply')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSupplies.map(supply => {
+                        const def = productDefs.find(p => p.id === supply.product_definition_id);
+                        return (
+                          <SelectItem key={supply.id} value={supply.id}>
+                            {def?.name || '...'} - {supply.variant} (LOT: {supply.batch_number})
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 6 & 7: Available & Quantity */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase text-muted-foreground">{t('available_quantity')}</p>
+                    <p><Badge variant="secondary" className="text-xs">{selectedSupply?.quantity || 0}</Badge></p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase text-muted-foreground">{t('quantity')}</p>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={selectedSupply?.quantity || undefined}
+                      value={item.quantity || ''}
+                      onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                      className={cn("h-9 text-xs font-bold", isExceeded && "border-destructive")}
+                      placeholder={t('quantity')}
+                    />
+                  </div>
+                </div>
+              </div>
+            </MobileSupplyItemCard>
+          );
+        })}
+      </div>
     </div>
-  </div>
   );
 };
 

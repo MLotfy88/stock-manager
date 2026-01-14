@@ -110,7 +110,29 @@ const ConsumptionReportPage = () => {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <p>Loading...</p>
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                </div>
+              ) : isMobile ? (
+                <div className="space-y-3">
+                  {groupedData.length > 0 ? (
+                    groupedData.map((group, index) => (
+                      <Card key={index} className="p-4 border shadow-sm flex justify-between items-center">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-base leading-tight">{group.name}</h3>
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">{t('quantity')}</p>
+                          <p className="text-xl font-black text-primary">{group.totalQuantity}</p>
+                        </div>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-muted-foreground border rounded-lg bg-gray-50">
+                      {t('no_consumption_records_found')}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table className="min-w-[800px]">
@@ -124,7 +146,7 @@ const ConsumptionReportPage = () => {
                       {groupedData.map((group, index) => (
                         <TableRow key={index}>
                           <TableCell>{group.name}</TableCell>
-                          <TableCell className="text-right">{group.totalQuantity}</TableCell>
+                          <TableCell className="text-right font-medium">{group.totalQuantity}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

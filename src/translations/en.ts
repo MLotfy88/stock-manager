@@ -437,4 +437,5 @@ export default {
   consumed_not_invoiced: 'Consumed, Not Invoiced',
   partially_invoiced: 'Partially Invoiced',
   fully_invoiced: 'Fully Invoiced',
+  no_variants_added: 'No variants added yet',
 };

@@ -69,8 +69,18 @@ export const ProductDefinitionsPageContent = () => {
     }
   };
 
-  const handleRemoveVariant = (variantToRemove: string) => {
-    setVariants(variants.filter(v => v.name !== variantToRemove));
+  const handleRemoveVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateVariant = (index: number, field: keyof ProductVariant, value: string | number) => {
+    const updatedVariants = [...variants];
+    if (field === 'reorder_point') {
+      updatedVariants[index] = { ...updatedVariants[index], [field]: parseInt(value as string) || 0 };
+    } else {
+      updatedVariants[index] = { ...updatedVariants[index], [field]: value as string };
+    }
+    setVariants(updatedVariants);
   };
 
   const resetForm = () => {
@@ -304,13 +314,39 @@ export const ProductDefinitionsPageContent = () => {
                   <Input type="number" placeholder={t('reorder_point')} value={variantReorderPointInput} onChange={(e) => setVariantReorderPointInput(e.target.value)} className="w-24" />
                   <Button type="submit" size="sm">{t('add')}</Button>
                 </form>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {variants.map(v => (
-                    <Badge key={v.name} variant="secondary" className="flex items-center gap-2">
-                      <span>{v.name} ({t('reorder_point')}: {v.reorder_point})</span>
-                      <button onClick={() => handleRemoveVariant(v.name)}><X className="h-3 w-3" /></button>
-                    </Badge>
+                <div className="space-y-2 mt-4 max-h-[200px] overflow-y-auto pr-2">
+                  {variants.map((v, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-muted/30 p-2 rounded-md border border-dashed hover:border-primary/50 transition-colors">
+                      <Input
+                        value={v.name}
+                        onChange={(e) => handleUpdateVariant(index, 'name', e.target.value)}
+                        placeholder={t('variant_name')}
+                        className="h-8 text-xs font-bold"
+                      />
+                      <div className="flex items-center gap-1 w-32">
+                        <Label className="text-[10px] whitespace-nowrap">{t('reorder_point')}</Label>
+                        <Input
+                          type="number"
+                          value={v.reorder_point}
+                          onChange={(e) => handleUpdateVariant(index, 'reorder_point', e.target.value)}
+                          className="h-8 text-xs w-16"
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => handleRemoveVariant(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ))}
+                  {variants.length === 0 && (
+                    <p className="text-center text-xs text-muted-foreground py-4 border border-dashed rounded-md">
+                      {t('no_variants_added')}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

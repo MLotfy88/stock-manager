@@ -4,18 +4,24 @@ import { cn } from '@/lib/utils';
 interface StepperProps {
   activeStep: number;
   children: React.ReactNode;
+  orientation?: 'horizontal' | 'vertical';
   className?: string;
 }
 
-export const Stepper = ({ activeStep, children, className }: StepperProps) => {
+export const Stepper = ({ activeStep, children, orientation = 'horizontal', className }: StepperProps) => {
   return (
-    <div className={cn("flex items-center justify-between w-full", className)}>
+    <div className={cn(
+      "flex w-full",
+      orientation === 'vertical' ? "flex-col items-start gap-4" : "items-center justify-between",
+      className
+    )}>
       {React.Children.map(children, (child, index) => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child as React.ReactElement<any>, {
             isActive: index === activeStep,
             isCompleted: index < activeStep,
             isLast: index === React.Children.count(children) - 1,
+            orientation
           });
         }
         return child;
@@ -28,16 +34,20 @@ interface StepProps {
   isActive?: boolean;
   isCompleted?: boolean;
   isLast?: boolean;
+  orientation?: 'horizontal' | 'vertical';
   children: React.ReactNode;
 }
 
-export const Step = ({ isActive, isCompleted, isLast, children }: StepProps) => {
+export const Step = ({ isActive, isCompleted, isLast, orientation = 'horizontal', children }: StepProps) => {
   return (
-    <div className="flex items-center w-full">
+    <div className={cn(
+      "flex",
+      orientation === 'vertical' ? "flex-row items-start w-full" : "items-center w-full"
+    )}>
       <div className="flex flex-col items-center">
         <div
           className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center text-white",
+            "w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0",
             isCompleted ? "bg-blue-600" : isActive ? "bg-blue-500" : "bg-gray-300"
           )}
         >
@@ -47,15 +57,30 @@ export const Step = ({ isActive, isCompleted, isLast, children }: StepProps) => 
             </svg>
           ) : null}
         </div>
+        {orientation === 'vertical' && !isLast && (
+          <div
+            className={cn(
+              "w-0.5 h-full min-h-[1.5rem] border-l-2 transition-colors duration-500 my-1",
+              isCompleted ? "border-blue-600" : "border-gray-300"
+            )}
+          />
+        )}
       </div>
-      {!isLast && (
-        <div
-          className={cn(
-            "flex-auto border-t-2 transition-colors duration-500",
-            isCompleted ? "border-blue-600" : "border-gray-300"
-          )}
-        />
-      )}
+
+      <div className={cn(
+        "flex items-center grow",
+        orientation === 'vertical' ? "mr-4 rtl:ml-4" : ""
+      )}>
+        {children}
+        {orientation === 'horizontal' && !isLast && (
+          <div
+            className={cn(
+              "flex-auto border-t-2 transition-colors duration-500 mx-4",
+              isCompleted ? "border-blue-600" : "border-gray-300"
+            )}
+          />
+        )}
+      </div>
     </div>
   );
 };
@@ -66,6 +91,6 @@ interface StepLabelProps {
 
 export const StepLabel = ({ children }: StepLabelProps) => {
   return (
-    <div className="text-center mt-2 text-sm text-gray-600">{children}</div>
+    <div className="text-sm text-gray-600 py-1">{children}</div>
   );
 };

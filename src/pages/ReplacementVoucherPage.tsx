@@ -23,14 +23,15 @@ import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { ScanBarcode } from 'lucide-react';
 
-const Step1Content = ({ 
+const Step1Content = ({
   productDefs,
-  suppliers, 
-  selectedSupplier, 
+  suppliers,
+  selectedSupplier,
   setSelectedSupplier,
   handleAddItem,
   returnedItems,
-  inventory
+  inventory,
+  isMobile
 }: {
   productDefs: ProductDefinition[],
   suppliers: Supplier[],
@@ -38,7 +39,8 @@ const Step1Content = ({
   setSelectedSupplier: (id: string) => void,
   handleAddItem: (barcode: string) => void,
   returnedItems: InventoryItem[],
-  inventory: InventoryItem[]
+  inventory: InventoryItem[],
+  isMobile: boolean
 }) => {
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -52,9 +54,10 @@ const Step1Content = ({
     stopScanner,
     captureAndDecode,
   } = useBarcodeScanner({
-    onScanSuccess: (scannedBarcode: string) => {
-      handleAddItem(scannedBarcode);
-      toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${scannedBarcode}` });
+    onScanSuccess: (data) => {
+      const barcode = data.gtin || data.rawValue;
+      handleAddItem(barcode);
+      toast({ title: t('barcode_scanned'), description: `${t('barcode')}: ${barcode}` });
       if (navigator.vibrate) navigator.vibrate(150);
       stopScanner();
     },
@@ -69,7 +72,7 @@ const Step1Content = ({
       setBarcodeInput('');
     }
   };
-  
+
   const handleManualAdd = () => {
     if (selectedManualItem) {
       const item = inventory.find(i => i.id === selectedManualItem);
@@ -84,91 +87,126 @@ const Step1Content = ({
 
   return (
     <>
-    <div className="space-y-4">
-      <div>
-        <Label>{t('supplier')}</Label>
-        <Select onValueChange={setSelectedSupplier} value={selectedSupplier || ''}>
-          <SelectTrigger>
-            <SelectValue placeholder={t('select_supplier')} />
-          </SelectTrigger>
-          <SelectContent>
-            {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex items-end gap-2">
-          <div className="flex-grow">
-            <Label htmlFor="barcode">{t('scan_or_enter_barcode')}</Label>
-            <Input 
-              id="barcode" 
-              value={barcodeInput} 
-              onChange={(e) => setBarcodeInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && onAddItem()}
-              disabled={!selectedSupplier}
-            />
-          </div>
-          <Button onClick={() => startScanner()} disabled={!selectedSupplier} size="icon" variant="outline"><ScanBarcode /></Button>
-          <Button onClick={onAddItem} disabled={!selectedSupplier}>{t('add')}</Button>
+      <div className="space-y-4">
+        <div>
+          <Label>{t('supplier')}</Label>
+          <Select onValueChange={setSelectedSupplier} value={selectedSupplier || ''}>
+            <SelectTrigger>
+              <SelectValue placeholder={t('select_supplier')} />
+            </SelectTrigger>
+            <SelectContent>
+              {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex items-end gap-2">
-          <div className="flex-grow">
-            <Label>{t('select_item_manually')}</Label>
-            <Select value={selectedManualItem} onValueChange={setSelectedManualItem} disabled={!selectedSupplier}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('select_item')} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableItems.map(item => {
-                  const def = productDefs.find(d => d.id === item.product_definition_id);
-                  return <SelectItem key={item.id} value={item.id}>{`${def?.name} (${item.variant}) - ${t('batch')}: ${item.batch_number}`}</SelectItem>
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleManualAdd} disabled={!selectedSupplier || !selectedManualItem}>{t('add')}</Button>
-        </div>
-      </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('product')}</TableHead>
-              <TableHead>{t('variant')}</TableHead>
-              <TableHead>{t('batch_number')}</TableHead>
-              <TableHead>{t('quantity')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {returnedItems.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center">{t('no_items_added')}</TableCell></TableRow>
-            ) : (
-              returnedItems.map(item => {
-                const def = productDefs.find(d => d.id === item.product_definition_id);
-                return (
-                <TableRow key={item.id}>
-                  <TableCell>{def?.name || 'N/A'}</TableCell>
-                  <TableCell>{item.variant}</TableCell>
-                  <TableCell>{item.batch_number}</TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                </TableRow>
-              )})
-            )}
-          </TableBody>
-        </Table>
-      </Card>
-    </div>
-    {isScannerActive && (
-      <div className="fixed inset-0 bg-black z-50">
-        <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay />
-        <BarcodeScannerViewfinder onCapture={captureAndDecode} />
-        <div className="absolute top-4 right-4 z-[51]">
-          <Button variant="destructive" onClick={stopScanner}>{t('stop_scanning')}</Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-end gap-2">
+            <div className="flex-grow">
+              <Label htmlFor="barcode">{t('scan_or_enter_barcode')}</Label>
+              <Input
+                id="barcode"
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && onAddItem()}
+                disabled={!selectedSupplier}
+              />
+            </div>
+            <Button onClick={() => startScanner()} disabled={!selectedSupplier} size="icon" variant="outline"><ScanBarcode /></Button>
+            <Button onClick={onAddItem} disabled={!selectedSupplier}>{t('add')}</Button>
+          </div>
+          <div className="flex items-end gap-2">
+            <div className="flex-grow">
+              <Label>{t('select_item_manually')}</Label>
+              <Select value={selectedManualItem} onValueChange={setSelectedManualItem} disabled={!selectedSupplier}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('select_item')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableItems.map(item => {
+                    const def = productDefs.find(d => d.id === item.product_definition_id);
+                    return <SelectItem key={item.id} value={item.id}>{`${def?.name} (${item.variant}) - ${t('batch')}: ${item.batch_number}`}</SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleManualAdd} disabled={!selectedSupplier || !selectedManualItem}>{t('add')}</Button>
+          </div>
         </div>
+
+        <Card>
+          {isMobile ? (
+            <div className="p-4 space-y-3">
+              {returnedItems.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground border rounded-lg bg-gray-50">
+                  {t('no_items_added')}
+                </div>
+              ) : (
+                returnedItems.map(item => {
+                  const def = productDefs.find(d => d.id === item.product_definition_id);
+                  return (
+                    <div key={item.id} className="p-3 border rounded-lg shadow-sm bg-white">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-bold text-sm leading-tight">{def?.name || 'N/A'}</h4>
+                          <p className="text-xs text-muted-foreground">{item.variant}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t mt-2">
+                        <div>
+                          <p className="text-muted-foreground mb-0.5">{t('batch')}</p>
+                          <p className="font-medium truncate">{item.batch_number}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-muted-foreground mb-0.5">{t('quantity')}</p>
+                          <p className="font-bold">{item.quantity}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('product')}</TableHead>
+                  <TableHead>{t('variant')}</TableHead>
+                  <TableHead>{t('batch_number')}</TableHead>
+                  <TableHead>{t('quantity')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {returnedItems.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} className="text-center">{t('no_items_added')}</TableCell></TableRow>
+                ) : (
+                  returnedItems.map(item => {
+                    const def = productDefs.find(d => d.id === item.product_definition_id);
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell>{def?.name || 'N/A'}</TableCell>
+                        <TableCell>{item.variant}</TableCell>
+                        <TableCell>{item.batch_number}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </Card>
       </div>
-    )}
+      {isScannerActive && (
+        <div className="fixed inset-0 bg-black z-50">
+          <video ref={videoRef} className="w-full h-full object-cover" playsInline autoPlay />
+          <BarcodeScannerViewfinder onCapture={captureAndDecode} />
+          <div className="absolute top-4 right-4 z-[51]">
+            <Button variant="destructive" onClick={stopScanner}>{t('stop_scanning')}</Button>
+          </div>
+        </div>
+      )}
     </>
   );
 };
@@ -183,7 +221,7 @@ const Step2Content = ({ items, onItemsChange }: { items: PurchaseOrderItem[], on
   );
 }
 
-const Step3Content = ({ returnedItems, newItems, productDefs }: { returnedItems: InventoryItem[], newItems: PurchaseOrderItem[], productDefs: ProductDefinition[] }) => {
+const Step3Content = ({ returnedItems, newItems, productDefs, isMobile }: { returnedItems: InventoryItem[], newItems: PurchaseOrderItem[], productDefs: ProductDefinition[], isMobile: boolean }) => {
   const { t } = useLanguage();
 
   const totalReturnedValue = returnedItems.reduce((acc, item) => acc + (item.purchase_price || 0) * item.quantity, 0);
@@ -195,68 +233,130 @@ const Step3Content = ({ returnedItems, newItems, productDefs }: { returnedItems:
       <div>
         <h3 className="text-lg font-semibold mb-2">{t('returned_items')}</h3>
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('product')}</TableHead>
-                <TableHead>{t('variant')}</TableHead>
-                <TableHead>{t('quantity')}</TableHead>
-                <TableHead className="text-right">{t('value')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          {isMobile ? (
+            <div className="p-4 space-y-3">
               {returnedItems.map(item => {
                 const def = productDefs.find(d => d.id === item.product_definition_id);
                 const value = (item.purchase_price || 0) * item.quantity;
                 return (
-                  <TableRow key={item.id}>
-                    <TableCell>{def?.name || 'N/A'}</TableCell>
-                    <TableCell>{item.variant}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell className="text-right">{value.toFixed(2)}</TableCell>
-                  </TableRow>
+                  <div key={item.id} className="p-3 border rounded-lg shadow-sm bg-white">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-bold text-sm">{def?.name || 'N/A'}</h4>
+                        <p className="text-[10px] text-muted-foreground">{item.variant}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-muted-foreground uppercase">{t('quantity')}</p>
+                        <p className="font-bold text-sm">{item.quantity}</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">{t('value')}</span>
+                      <span className="font-bold">{value.toFixed(2)}</span>
+                    </div>
+                  </div>
                 );
               })}
-              <TableRow className="font-bold">
-                <TableCell colSpan={3} className="text-right">{t('total_returned_value')}</TableCell>
-                <TableCell className="text-right">{totalReturnedValue.toFixed(2)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+              <div className="mt-4 pt-3 border-t-2 border-dashed flex justify-between items-center font-bold">
+                <span>{t('total_returned_value')}</span>
+                <span className="text-lg text-primary">{totalReturnedValue.toFixed(2)}</span>
+              </div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('product')}</TableHead>
+                  <TableHead>{t('variant')}</TableHead>
+                  <TableHead>{t('quantity')}</TableHead>
+                  <TableHead className="text-right">{t('value')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {returnedItems.map(item => {
+                  const def = productDefs.find(d => d.id === item.product_definition_id);
+                  const value = (item.purchase_price || 0) * item.quantity;
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>{def?.name || 'N/A'}</TableCell>
+                      <TableCell>{item.variant}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell className="text-right">{value.toFixed(2)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableRow className="font-bold">
+                  <TableCell colSpan={3} className="text-right">{t('total_returned_value')}</TableCell>
+                  <TableCell className="text-right">{totalReturnedValue.toFixed(2)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
         </Card>
       </div>
 
       <div>
         <h3 className="text-lg font-semibold mb-2">{t('new_items')}</h3>
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('product')}</TableHead>
-                <TableHead>{t('variant')}</TableHead>
-                <TableHead>{t('quantity')}</TableHead>
-                <TableHead className="text-right">{t('value')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          {isMobile ? (
+            <div className="p-4 space-y-3">
               {newItems.map(item => {
                 const def = productDefs.find(d => d.id === item.productDefinitionId);
                 const value = parseFloat(item.purchasePrice || '0') * parseFloat(item.quantity || '0');
                 return (
-                  <TableRow key={item.id}>
-                    <TableCell>{def?.name || 'N/A'}</TableCell>
-                    <TableCell>{item.variant}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell className="text-right">{value.toFixed(2)}</TableCell>
-                  </TableRow>
+                  <div key={item.id} className="p-3 border rounded-lg shadow-sm bg-white">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-bold text-sm">{def?.name || 'N/A'}</h4>
+                        <p className="text-[10px] text-muted-foreground">{item.variant}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-muted-foreground uppercase">{t('quantity')}</p>
+                        <p className="font-bold text-sm">{item.quantity}</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">{t('value')}</span>
+                      <span className="font-bold">{value.toFixed(2)}</span>
+                    </div>
+                  </div>
                 );
               })}
-              <TableRow className="font-bold">
-                <TableCell colSpan={3} className="text-right">{t('total_new_value')}</TableCell>
-                <TableCell className="text-right">{totalNewValue.toFixed(2)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+              <div className="mt-4 pt-3 border-t-2 border-dashed flex justify-between items-center font-bold">
+                <span>{t('total_new_value')}</span>
+                <span className="text-lg text-primary">{totalNewValue.toFixed(2)}</span>
+              </div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('product')}</TableHead>
+                  <TableHead>{t('variant')}</TableHead>
+                  <TableHead>{t('quantity')}</TableHead>
+                  <TableHead className="text-right">{t('value')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {newItems.map(item => {
+                  const def = productDefs.find(d => d.id === item.productDefinitionId);
+                  const value = parseFloat(item.purchasePrice || '0') * parseFloat(item.quantity || '0');
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>{def?.name || 'N/A'}</TableCell>
+                      <TableCell>{item.variant}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell className="text-right">{value.toFixed(2)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableRow className="font-bold">
+                  <TableCell colSpan={3} className="text-right">{t('total_new_value')}</TableCell>
+                  <TableCell className="text-right">{totalNewValue.toFixed(2)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
         </Card>
       </div>
 
@@ -396,7 +496,7 @@ const ReplacementVoucherPage = () => {
   const getStepContent = (step: number) => {
     switch (step) {
       case 0:
-        return <Step1Content 
+        return <Step1Content
           productDefs={productDefs}
           suppliers={suppliers}
           selectedSupplier={selectedSupplier}
@@ -404,11 +504,12 @@ const ReplacementVoucherPage = () => {
           handleAddItem={handleAddItem}
           returnedItems={returnedItems}
           inventory={inventory}
+          isMobile={isMobile}
         />;
       case 1:
         return <Step2Content items={newItems} onItemsChange={setNewItems} />;
       case 2:
-        return <Step3Content returnedItems={returnedItems} newItems={newItems} productDefs={productDefs} />;
+        return <Step3Content returnedItems={returnedItems} newItems={newItems} productDefs={productDefs} isMobile={isMobile} />;
       default:
         return 'Unknown step';
     }
@@ -417,19 +518,19 @@ const ReplacementVoucherPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         closeSidebar={closeSidebar}
       />
-      
+
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl md:text-3xl font-bold mb-6">{t('replacement_voucher')}</h1>
-          
+
           <Card>
             <CardHeader>
-              <Stepper activeStep={activeStep}>
+              <Stepper activeStep={activeStep} orientation={isMobile ? 'vertical' : 'horizontal'}>
                 {steps.map((label) => (
                   <Step key={label}>
                     <StepLabel>{label}</StepLabel>
