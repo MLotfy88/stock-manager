@@ -2,9 +2,9 @@
 
 ## Current Focus: Advanced Invoice Entry System with GTIN Intelligence
 
-### Recent Major Update (2026-01-14)
+### Recent Major Update (2026-01-16)
 
-Implemented comprehensive invoice entry improvements specifically designed for cardiac catheterization supplies with multiple variants and GTIN tracking.
+Implemented comprehensive mobile responsiveness for new management pages, GTIN auto-detection, Smart Grouping, and Undo functionality for scanning.
 
 ---
 

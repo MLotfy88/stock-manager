@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ConsumptionRecord, ConsumptionItem, InventoryItem, ProductDefinition, Store } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useBarcodeScanner, extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
+import { useBarcodeScanner, extractGS1DataForSupply, ParsedGS1Data } from '@/hooks/useBarcodeScanner';
 import { getProcedureTypes, getProcedureTemplatesByType, ProcedureType, ProcedureTemplateWithItems } from '@/data/operations/procedureTemplatesOperations';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
@@ -55,6 +55,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
   const [manualBarcode, setManualBarcode] = useState('');
   const [isContinuousScanning, setIsContinuousScanning] = useState(false);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
+  const [scanHistory, setScanHistory] = useState<string[][]>([]); // To support Undo
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -135,36 +136,71 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     }
   }, [selectedStoreId, toast, t]);
 
-  const findAndAddItemByBarcode = useCallback((barcode: string) => {
+  const saveHistory = useCallback(() => {
+    setScanHistory(prev => [...prev.slice(-19), items.map(item => JSON.stringify(item))]);
+  }, [items]);
+
+  const handleUndo = useCallback(() => {
+    if (scanHistory.length === 0) return;
+    const previousState = scanHistory[scanHistory.length - 1];
+    setItems(previousState.map(s => JSON.parse(s)));
+    setScanHistory(prev => prev.slice(0, -1));
+    toast({ title: t('undo'), description: t('last_action_undone') });
+  }, [scanHistory, t, toast]);
+
+  const findAndAddItemByBarcode = useCallback((barcode: string, autoDetectedData?: ParsedGS1Data) => {
     const trimmedBarcode = barcode.trim();
     if (!trimmedBarcode) return;
 
     // محاولة استخراج بيانات GS1 أولاً
-    const gs1Data = extractGS1DataForSupply(trimmedBarcode);
+    const gs1Data = autoDetectedData || extractGS1DataForSupply(trimmedBarcode);
     const searchValue = gs1Data?.gtin || trimmedBarcode;
 
-    // البحث بـ GTIN أو الباركود الكامل
+    // البحث بـ GTIN أو الباركود الكامل أو عبر الـ product_id المكتشف تلقائياً
     const foundItem = inventory.find(item =>
+      (autoDetectedData?.product_id && item.product_definition_id === autoDetectedData.product_id && (autoDetectedData.variant_name ? item.variant === autoDetectedData.variant_name : true)) ||
       (item.gtin && item.gtin.trim() === searchValue) ||
       (item.barcode && item.barcode.trim() === searchValue)
     );
 
     if (foundItem) {
       if (navigator.vibrate) navigator.vibrate(100);
-      const newItemId = `item_${Date.now()}`;
-      setItems(prev => [...prev, { id: newItemId, inventory_item_id: foundItem.id, quantity: 1, availableQuantity: foundItem.quantity }]);
 
-      const productName = productDefs.find(p => p.id === foundItem.product_definition_id)?.name;
-      const description = gs1Data
-        ? `${productName} - ${foundItem.variant}\nLOT: ${foundItem.batch_number}\nExp: ${foundItem.expiry_date}`
-        : `${productName} - ${foundItem.variant}`;
+      saveHistory();
 
-      toast({ title: t('item_added'), description, duration: 5000 });
+      // Smart Grouping: Check if item already exists
+      const existingItemIndex = items.findIndex(item => item.inventory_item_id === foundItem.id);
+
+      if (existingItemIndex !== -1) {
+        // Increment quantity
+        setItems(prev => {
+          const newItems = [...prev];
+          const currentQty = newItems[existingItemIndex].quantity || 0;
+          if (currentQty < foundItem.quantity) {
+            newItems[existingItemIndex].quantity = currentQty + 1;
+            toast({ title: t('quantity_updated'), description: `${productDefs.find(p => p.id === foundItem.product_definition_id)?.name}: ${currentQty + 1}` });
+          } else {
+            toast({ title: t('insufficient_quantity'), variant: 'destructive' });
+          }
+          return newItems;
+        });
+      } else {
+        // Add new row
+        const newItemId = `item_${Date.now()}`;
+        setItems(prev => [...prev, { id: newItemId, inventory_item_id: foundItem.id, quantity: 1, availableQuantity: foundItem.quantity }]);
+
+        const productName = productDefs.find(p => p.id === foundItem.product_definition_id)?.name;
+        const description = gs1Data
+          ? `${productName} - ${foundItem.variant}\nLOT: ${foundItem.batch_number}\nExp: ${foundItem.expiry_date}`
+          : `${productName} - ${foundItem.variant}`;
+
+        toast({ title: t('item_added'), description, duration: 5000 });
+      }
       setManualBarcode(''); // Clear input after successful add
     } else {
       toast({ title: t('not_found'), description: `${t('item_with_barcode')} ${searchValue} ${t('not_found_in_store')}.`, variant: 'destructive' });
     }
-  }, [inventory, productDefs, t, toast]);
+  }, [inventory, productDefs, t, toast, items, saveHistory]);
 
   const handleManualBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,22 +231,15 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     stopScanner,
     captureAndDecode,
   } = useBarcodeScanner({
-    onScanSuccess: (scannedBarcode: string) => {
-      const trimmedBarcode = scannedBarcode.trim();
+    onScanSuccess: (data: ParsedGS1Data) => {
+      const trimmedBarcode = data.rawValue.trim();
       console.log(`--- Barcode Scan Event ---`);
-      console.log(`Original Scanned: "${scannedBarcode}" | Trimmed: "${trimmedBarcode}"`);
+      console.log(`Original Scanned: "${data.rawValue}" | Trimmed: "${trimmedBarcode}"`);
 
-      // محاولة استخراج بيانات GS1
-      const gs1Data = extractGS1DataForSupply(trimmedBarcode);
-      const searchValue = gs1Data?.gtin || trimmedBarcode;
-
-      console.log(`GS1 Data:`, gs1Data);
-      console.log(`Search Value: ${searchValue}`);
-      console.log(`Store ID: ${selectedStoreId}`);
-      console.log(`Available Supplies Count: ${availableSupplies.length}`);
-
-      // البحث بـ GTIN أو الباركود الكامل
+      // البحث بـ GTIN أو الباركود الكامل أو عبر البيانات المكتشفة تلقائياً
+      const searchValue = data.gtin || trimmedBarcode;
       const foundItem = availableSupplies.find(item =>
+        (data.product_id && item.product_definition_id === data.product_id && (data.variant_name ? item.variant === data.variant_name : true)) ||
         (item.gtin && item.gtin.trim() === searchValue) ||
         (item.barcode && item.barcode.trim() === searchValue)
       );
@@ -222,12 +251,13 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
         if (navigator.vibrate) navigator.vibrate(100);
 
         if (isContinuousScanning) {
-          findAndAddItemByBarcode(scannedBarcode);
+          findAndAddItemByBarcode(data.rawValue, data);
         } else if (activeScannerId) {
+          saveHistory();
           handleItemChange(activeScannerId, 'inventory_item_id', foundItem.id);
-          const itemInfo = gs1Data
-            ? `GTIN: ${gs1Data.gtin}\nLOT: ${foundItem.batch_number}\nExp: ${foundItem.expiry_date}`
-            : `${t('barcode')}: ${scannedBarcode}`;
+          const itemInfo = data.gtin
+            ? `GTIN: ${data.gtin}\nLOT: ${foundItem.batch_number}\nExp: ${foundItem.expiry_date}`
+            : `${t('barcode')}: ${data.rawValue}`;
           toast({ title: t('item_found'), description: itemInfo, duration: 5000 });
           stopScanner();
         }
@@ -406,6 +436,11 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
                 <Button type="button" variant="outline" size="sm" onClick={addNewItem} disabled={!selectedStoreId}>
                   <Plus className="h-4 w-4 mr-1" />{t('add_item')}
                 </Button>
+                {scanHistory.length > 0 && (
+                  <Button type="button" variant="ghost" size="sm" onClick={handleUndo} className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+                    {t('undo')}
+                  </Button>
+                )}
               </div>
             </div>
             {isScannerActive && (

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { getGTINMapping, updateLastScanned } from '@/data/operations/gtinMappingOperations';
 
 // واجهة البيانات المحللة من GS1-128
 export interface ParsedGS1Data {
@@ -10,6 +11,8 @@ export interface ParsedGS1Data {
   quantity?: string;      // AI (30) - الكمية (إن وجدت)
   rawValue: string;       // القيمة الخام الكاملة
   formattedValue: string; // القيمة المنسقة مع الأقواس
+  product_id?: string;    // معرف المنتج المرتبط (إن وُجد)
+  variant_name?: string;  // اسم المتغير المرتبط (إن وُجد)
 }
 
 // دالة لتحويل تاريخ GS1 (YYMMDD) إلى صيغة ISO (YYYY-MM-DD)
@@ -140,7 +143,7 @@ declare global {
 }
 
 interface UseBarcodeScannerProps {
-  onScanSuccess: (text: string) => void;
+  onScanSuccess: (data: ParsedGS1Data) => void;
   onScanFailure?: (error: Error) => void;
 }
 
@@ -180,8 +183,26 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     try {
       const barcodes = await barcodeDetector.current.detect(videoRef.current);
       if (barcodes.length > 0) {
-        const parsedValue = parseGS1Barcode(barcodes[0].rawValue);
-        callbackRef.current.onScanSuccess(parsedValue);
+        const rawValue = barcodes[0].rawValue;
+        const parsedData = extractGS1DataForSupply(rawValue);
+
+        let finalData: ParsedGS1Data = parsedData || {
+          rawValue,
+          formattedValue: rawValue
+        };
+
+        // Auto-detect GTIN
+        const gtin = parsedData?.gtin || (rawValue.length === 14 ? rawValue : null);
+        if (gtin) {
+          const mapping = await getGTINMapping(gtin);
+          if (mapping) {
+            finalData.product_id = mapping.product_definition_id;
+            finalData.variant_name = mapping.variant_name;
+            updateLastScanned(gtin).catch(console.error);
+          }
+        }
+
+        callbackRef.current.onScanSuccess(finalData);
       } else {
         callbackRef.current.onScanFailure?.(new Error("No barcode detected."));
       }
@@ -250,8 +271,26 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
             try {
               const barcodes = await barcodeDetector.current.detect(img);
               if (barcodes.length > 0) {
-                const parsedValue = parseGS1Barcode(barcodes[0].rawValue);
-                callbackRef.current.onScanSuccess(parsedValue);
+                const rawValue = barcodes[0].rawValue;
+                const parsedData = extractGS1DataForSupply(rawValue);
+
+                let finalData: ParsedGS1Data = parsedData || {
+                  rawValue,
+                  formattedValue: rawValue
+                };
+
+                // Auto-detect GTIN
+                const gtin = parsedData?.gtin || (rawValue.length === 14 ? rawValue : null);
+                if (gtin) {
+                  const mapping = await getGTINMapping(gtin);
+                  if (mapping) {
+                    finalData.product_id = mapping.product_definition_id;
+                    finalData.variant_name = mapping.variant_name;
+                    updateLastScanned(gtin).catch(console.error);
+                  }
+                }
+
+                callbackRef.current.onScanSuccess(finalData);
               } else {
                 callbackRef.current.onScanFailure?.(new Error("No barcode detected in the image."));
               }

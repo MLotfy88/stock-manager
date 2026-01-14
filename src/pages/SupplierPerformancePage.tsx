@@ -153,55 +153,69 @@ const SupplierPerformancePage = () => {
                                 <CardContent>
                                     {isMobile ? (
                                         /* Mobile Card View */
-                                        <div className="space-y-3">
+                                        <div className="space-y-4">
                                             {performance.map((perf, index) => (
-                                                <Card key={perf.id} className="border-2">
-                                                    <CardContent className="p-4">
-                                                        <div className="flex justify-between items-start mb-3">
-                                                            <div>
-                                                                <span className="text-2xl font-bold text-muted-foreground">#{index + 1}</span>
-                                                                <h3 className="font-bold text-lg">{perf.name}</h3>
+                                                <Card key={perf.id} className="border-2 shadow-sm">
+                                                    <CardContent className="p-5">
+                                                        <div className="flex justify-between items-start mb-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-3xl font-black text-gray-100 leading-none">0{index + 1}</span>
+                                                                <div>
+                                                                    <h3 className="font-bold text-xl leading-tight">{perf.name}</h3>
+                                                                    <p className="text-xs text-muted-foreground">{perf.total_orders || 0} طلبية إجمالية</p>
+                                                                </div>
                                                             </div>
                                                             {perf.open_issues > 0 ? (
-                                                                <Badge variant="destructive">{perf.open_issues} مشاكل</Badge>
+                                                                <Badge variant="destructive" className="px-2 py-1 animate-pulse">
+                                                                    {perf.open_issues} مشاكل ناشطة
+                                                                </Badge>
                                                             ) : (
-                                                                <Badge variant="outline" className="bg-green-50">✓</Badge>
+                                                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-2 py-1">
+                                                                    أداء مستقر ✓
+                                                                </Badge>
                                                             )}
                                                         </div>
 
-                                                        <div className="flex items-center gap-2 mb-3">
-                                                            <div className="flex">{getRatingStars(perf.overall_rating)}</div>
-                                                            <span className={`font-bold ${getRatingColor(perf.overall_rating)}`}>
-                                                                {perf.overall_rating?.toFixed(1) || '-'}
-                                                            </span>
+                                                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-sm font-medium">التقييم العام:</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="flex text-yellow-400">{getRatingStars(perf.overall_rating)}</div>
+                                                                    <span className={`text-lg font-bold ${getRatingColor(perf.overall_rating)}`}>
+                                                                        {perf.overall_rating?.toFixed(1) || '-'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={`h-full transition-all duration-500 ${perf.overall_rating && perf.overall_rating >= 4 ? 'bg-green-500' : perf.overall_rating && perf.overall_rating >= 2.5 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                                    style={{ width: `${(perf.overall_rating || 0) * 20}%` }}
+                                                                />
+                                                            </div>
                                                         </div>
 
-                                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-muted-foreground">الجودة:</span>
-                                                                <span className={`font-semibold ${getRatingColor(perf.quality_rating)}`}>
+                                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-muted-foreground text-xs uppercase tracking-wider">الجودة</span>
+                                                                <span className={`text-base font-bold ${getRatingColor(perf.quality_rating)}`}>
                                                                     {perf.quality_rating?.toFixed(1) || '-'}
                                                                 </span>
                                                             </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-muted-foreground">التوصيل:</span>
-                                                                <span className={`font-semibold ${getRatingColor(perf.delivery_rating)}`}>
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-muted-foreground text-xs uppercase tracking-wider">التوصيل</span>
+                                                                <span className={`text-base font-bold ${getRatingColor(perf.delivery_rating)}`}>
                                                                     {perf.delivery_rating?.toFixed(1) || '-'}
                                                                 </span>
                                                             </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-muted-foreground">السعر:</span>
-                                                                <span className={`font-semibold ${getRatingColor(perf.price_rating)}`}>
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-muted-foreground text-xs uppercase tracking-wider">السعر</span>
+                                                                <span className={`text-base font-bold ${getRatingColor(perf.price_rating)}`}>
                                                                     {perf.price_rating?.toFixed(1) || '-'}
                                                                 </span>
                                                             </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-muted-foreground">الطلبات:</span>
-                                                                <span className="font-semibold">{perf.total_orders || 0}</span>
-                                                            </div>
-                                                            <div className="col-span-2 flex items-center gap-2">
-                                                                <span className="text-muted-foreground">بالموعد:</span>
-                                                                <span className="font-semibold">
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-muted-foreground text-xs uppercase tracking-wider">دقة المواعيد</span>
+                                                                <span className="text-base font-bold text-blue-600">
                                                                     {perf.total_orders > 0
                                                                         ? `${Math.round((perf.on_time_deliveries / perf.total_orders) * 100)}%`
                                                                         : '-'}

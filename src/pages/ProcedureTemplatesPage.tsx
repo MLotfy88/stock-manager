@@ -281,9 +281,9 @@ const ProcedureTemplatesPage = () => {
 
                             <div className="space-y-3">
                                 {formItems.map((item, index) => (
-                                    <div key={index} className="flex gap-2 items-end p-3 border rounded-lg">
-                                        <div className="flex-1">
-                                            <Label className="text-xs">المنتج</Label>
+                                    <div key={index} className="flex flex-col md:flex-row gap-4 md:items-end p-4 border rounded-lg bg-gray-50/50">
+                                        <div className="flex-1 space-y-2">
+                                            <Label className="text-xs font-semibold">المنتج</Label>
                                             <Select
                                                 value={item.product_definition_id}
                                                 onValueChange={(val) => {
@@ -291,7 +291,7 @@ const ProcedureTemplatesPage = () => {
                                                     handleItemChange(index, 'variant', '');
                                                 }}
                                             >
-                                                <SelectTrigger>
+                                                <SelectTrigger className="bg-white">
                                                     <SelectValue placeholder="اختر المنتج" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -302,14 +302,14 @@ const ProcedureTemplatesPage = () => {
                                             </Select>
                                         </div>
 
-                                        <div className="flex-1">
-                                            <Label className="text-xs">المتغير</Label>
+                                        <div className="flex-1 space-y-2">
+                                            <Label className="text-xs font-semibold">المتغير</Label>
                                             <Select
                                                 value={item.variant}
                                                 onValueChange={(val) => handleItemChange(index, 'variant', val)}
                                                 disabled={!item.product_definition_id}
                                             >
-                                                <SelectTrigger>
+                                                <SelectTrigger className="bg-white">
                                                     <SelectValue placeholder="اختر المتغير" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -320,19 +320,22 @@ const ProcedureTemplatesPage = () => {
                                             </Select>
                                         </div>
 
-                                        <div className="w-24">
-                                            <Label className="text-xs">الكمية</Label>
-                                            <Input
-                                                type="number"
-                                                min="1"
-                                                value={item.default_quantity}
-                                                onChange={(e) => handleItemChange(index, 'default_quantity', parseInt(e.target.value))}
-                                            />
-                                        </div>
+                                        <div className="flex gap-4 items-end">
+                                            <div className="flex-1 md:w-24 space-y-2">
+                                                <Label className="text-xs font-semibold">الكمية</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    value={item.default_quantity}
+                                                    onChange={(e) => handleItemChange(index, 'default_quantity', parseInt(e.target.value))}
+                                                    className="bg-white"
+                                                />
+                                            </div>
 
-                                        <Button type="button" size="icon" variant="destructive" onClick={() => handleRemoveItem(index)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                            <Button type="button" size="icon" variant="destructive" onClick={() => handleRemoveItem(index)} className="shrink-0 mb-[2px]">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

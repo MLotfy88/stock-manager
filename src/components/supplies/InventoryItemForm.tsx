@@ -13,7 +13,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
-import { useBarcodeScanner, extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
+import { useBarcodeScanner, extractGS1DataForSupply, ParsedGS1Data } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 import { VariantQuickPicker } from './VariantQuickPicker';
@@ -45,6 +45,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
   const [productDefinitions, setProductDefinitions] = useState<ProductDefinition[]>([]);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
+  const [scanHistory, setScanHistory] = useState<string[][]>([]);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -80,6 +81,18 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
     setTimeout(() => setHighlightedRowId(null), 2000);
   }, []);
 
+  const saveHistory = useCallback(() => {
+    setScanHistory(prev => [...prev.slice(-19), items.map(item => JSON.stringify(item))]);
+  }, [items]);
+
+  const handleUndo = useCallback(() => {
+    if (scanHistory.length === 0) return;
+    const previousState = scanHistory[scanHistory.length - 1];
+    onItemsChange(previousState.map(s => JSON.parse(s)));
+    setScanHistory(prev => prev.slice(0, -1));
+    toast({ title: t('undo'), description: t('last_action_undone') });
+  }, [scanHistory, onItemsChange, t, toast]);
+
   const {
     videoRef,
     isScannerActive,
@@ -88,9 +101,10 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
     stopScanner,
     captureAndDecode,
   } = useBarcodeScanner({
-    onScanSuccess: async (scannedBarcode: string) => {
+    onScanSuccess: async (data: ParsedGS1Data) => {
       if (activeScannerId) {
-        const gs1Data = extractGS1DataForSupply(scannedBarcode);
+        saveHistory();
+        const gs1Data = data;
 
         if (gs1Data && gs1Data.gtin) {
           // ✨ SMART GROUPING: Check if item already exists
@@ -100,7 +114,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
             item.expiryDate?.toDateString() === (gs1Data.expiryDate ? new Date(gs1Data.expiryDate).toDateString() : undefined)
           );
 
-          if (existingItemIndex !== -1 && existingItemIndex.toString() !== activeScannerId) {
+          if (existingItemIndex !== -1 && items[existingItemIndex].id !== activeScannerId) {
             // Item exists - increment quantity
             const existingItem = items[existingItemIndex];
             const newQuantity = parseInt(existingItem.quantity || '1') + 1;
@@ -127,9 +141,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
             return;
           }
 
-          // ✨ GTIN AUTO-DETECTION: Try to find mapping
-          const mapping = await getGTINMapping(gs1Data.gtin);
-
+          // Updates for the current item
           const updates: Partial<PurchaseOrderItem> = {
             barcode: gs1Data.formattedValue,
             gtin: gs1Data.gtin,
@@ -140,35 +152,46 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
             updates.expiryDate = new Date(gs1Data.expiryDate);
           }
 
-          if (mapping) {
-            // ✅ Auto-filled from mapping
-            updates.productDefinitionId = mapping.product_definition_id;
-            updates.variant = mapping.variant_name;
+          // Use auto-detected mapping if available from hook
+          if (data.product_id) {
+            updates.productDefinitionId = data.product_id;
+            updates.variant = data.variant_name || '';
 
-            if (mapping.average_price && !items.find(i => i.id === activeScannerId)?.purchasePrice) {
-              updates.purchasePrice = mapping.average_price.toString();
-            }
-
-            const productName = productDefinitions.find(p => p.id === mapping.product_definition_id)?.name || 'Unknown';
+            const productName = productDefinitions.find(p => p.id === data.product_id)?.name || 'Unknown';
 
             toast({
               title: "✅ تم التعرف تلقائياً",
-              description: `${productName} - ${mapping.variant_name}\nLOT: ${gs1Data.lotNumber || 'N/A'}`,
+              description: `${productName} - ${data.variant_name || 'N/A'}\nLOT: ${gs1Data.lotNumber || 'N/A'}`,
               duration: 4000,
               className: "bg-green-50 border-green-200"
             });
 
             scanSuccessFeedback(true);
           } else {
-            // ⚠️ New GTIN - needs manual selection
-            toast({
-              title: "⚠️ منتج جديد",
-              description: `GTIN: ${gs1Data.gtin}\nاختر المنتج والمتغير من القوائم`,
-              duration: 5000,
-              className: "bg-amber-50 border-amber-200"
-            });
+            // Fallback: check GTIN mapping manually just in case
+            const mapping = await getGTINMapping(gs1Data.gtin);
+            if (mapping) {
+              updates.productDefinitionId = mapping.product_definition_id;
+              updates.variant = mapping.variant_name;
 
-            scanSuccessFeedback(true);
+              const productName = productDefinitions.find(p => p.id === mapping.product_definition_id)?.name || 'Unknown';
+
+              toast({
+                title: "✅ تم التعرف تلقائياً",
+                description: `${productName} - ${mapping.variant_name}\nLOT: ${gs1Data.lotNumber || 'N/A'}`,
+                duration: 4000,
+                className: "bg-green-50 border-green-200"
+              });
+              scanSuccessFeedback(true);
+            } else {
+              toast({
+                title: "⚠️ منتج جديد",
+                description: `GTIN: ${gs1Data.gtin}\nاختر المنتج والمتغير من القوائم`,
+                duration: 5000,
+                className: "bg-amber-50 border-amber-200"
+              });
+              scanSuccessFeedback(true);
+            }
           }
 
           onItemsChange(items.map(item =>
@@ -176,10 +199,10 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
           ));
         } else {
           // Regular barcode
-          handleItemChange(activeScannerId, 'barcode', scannedBarcode);
+          handleItemChange(activeScannerId, 'barcode', data.rawValue);
           toast({
             title: t('barcode_scanned'),
-            description: `${t('barcode')}: ${scannedBarcode}`,
+            description: `${t('barcode')}: ${data.rawValue}`,
             duration: 2000
           });
           scanSuccessFeedback(true);
@@ -527,16 +550,26 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
             })}
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 flex gap-2">
             <Button
               type="button"
               onClick={addItem}
               variant="outline"
-              className="w-full"
+              className="flex-1"
             >
               <PlusCircle className="mr-2 h-4 w-4" />
               {t('add_item')}
             </Button>
+            {scanHistory.length > 0 && (
+              <Button
+                type="button"
+                onClick={handleUndo}
+                variant="ghost"
+                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              >
+                {t('undo')}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

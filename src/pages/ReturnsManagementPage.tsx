@@ -231,45 +231,49 @@ const ReturnsManagementPage = () => {
                                 ) : (
                                     <div className="space-y-3">
                                         {filterReturns().map(returnItem => (
-                                            <div key={returnItem.id} className="p-4 border rounded-lg">
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className="font-semibold">{returnItem.product_name}</span>
-                                                            <Badge variant="outline">{returnItem.variant}</Badge>
-                                                            <Badge>{returnTypeLabels[returnItem.return_type]}</Badge>
+                                            <div key={returnItem.id} className="p-4 border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+                                                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                                                    <div className="flex-1 w-full">
+                                                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                                                            <span className="font-bold text-lg">{returnItem.product_name}</span>
+                                                            <Badge variant="outline" className="bg-blue-50">{returnItem.variant}</Badge>
+                                                            <Badge variant="secondary">{returnTypeLabels[returnItem.return_type]}</Badge>
                                                             <Badge variant={
-                                                                returnItem.status === 'pending' ? 'secondary' :
+                                                                returnItem.status === 'pending' ? 'outline' :
                                                                     returnItem.status === 'approved' ? 'default' :
                                                                         returnItem.status === 'replaced' || returnItem.status === 'refunded' ? 'default' :
                                                                             'destructive'
-                                                            }>
+                                                            } className={returnItem.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : ''}>
                                                                 {statusLabels[returnItem.status]}
                                                             </Badge>
                                                         </div>
 
-                                                        <p className="text-sm mb-2"><strong>الكمية:</strong> {returnItem.quantity}</p>
-                                                        <p className="text-sm mb-2"><strong>السبب:</strong> {returnItem.reason}</p>
-                                                        {returnItem.supplier_name && (
-                                                            <p className="text-sm mb-2"><strong>المورد:</strong> {returnItem.supplier_name}</p>
-                                                        )}
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {new Date(returnItem.created_at).toLocaleDateString('ar-EG')}
-                                                        </p>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                                            <p><strong>الكمية:</strong> {returnItem.quantity}</p>
+                                                            <p><strong>التاريخ:</strong> {new Date(returnItem.created_at).toLocaleDateString('ar-EG')}</p>
+                                                            {returnItem.supplier_name && (
+                                                                <p className="sm:col-span-2"><strong>المورد:</strong> {returnItem.supplier_name}</p>
+                                                            )}
+                                                            <p className="sm:col-span-2 bg-gray-50 p-2 rounded mt-1">
+                                                                <strong>السبب:</strong> {returnItem.reason}
+                                                            </p>
+                                                        </div>
                                                     </div>
 
                                                     {returnItem.status === 'pending' && (
-                                                        <div className="flex gap-2">
-                                                            <Button size="sm" onClick={() => handleUpdateStatus(returnItem.id, 'approved')}>
+                                                        <div className="flex flex-wrap md:flex-col gap-2 w-full md:w-auto">
+                                                            <Button size="sm" onClick={() => handleUpdateStatus(returnItem.id, 'approved')} className="flex-1 md:w-full">
                                                                 موافقة
                                                             </Button>
-                                                            <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(returnItem.id, 'replaced')}>
-                                                                استبدال
-                                                            </Button>
-                                                            <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(returnItem.id, 'refunded')}>
-                                                                استرداد
-                                                            </Button>
-                                                            <Button size="sm" variant="destructive" onClick={() => handleUpdateStatus(returnItem.id, 'rejected')}>
+                                                            <div className="flex gap-2 w-full">
+                                                                <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(returnItem.id, 'replaced')} className="flex-1">
+                                                                    استبدال
+                                                                </Button>
+                                                                <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(returnItem.id, 'refunded')} className="flex-1">
+                                                                    استرداد
+                                                                </Button>
+                                                            </div>
+                                                            <Button size="sm" variant="destructive" onClick={() => handleUpdateStatus(returnItem.id, 'rejected')} className="flex-1 md:w-full">
                                                                 رفض
                                                             </Button>
                                                         </div>
