@@ -98,7 +98,7 @@ export async function getReturnStats() {
 
         const stats = {
             total: data.length,
-            pending find: data.filter(r => r.status === 'pending').length,
+            pending: data.filter(r => r.status === 'pending').length,
             approved: data.filter(r => r.status === 'approved').length,
             replaced: data.filter(r => r.status === 'replaced').length,
             refunded: data.filter(r => r.status === 'refunded').length,

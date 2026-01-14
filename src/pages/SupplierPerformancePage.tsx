@@ -145,26 +145,142 @@ const SupplierPerformancePage = () => {
                         <div className="text-center py-12">جاري التحميل...</div>
                     ) : (
                         <>
-                            {/* Performance Table */}
+                            {/* Performance Table/Cards */}
                             <Card className="mb-6">
                                 <CardHeader>
                                     <CardTitle>ترتيب الموردين</CardTitle>
                                 </CardHeader>
-                                {perf.open_issues > 0 ? (
-                                    <Badge variant="destructive">{perf.open_issues}</Badge>
-                                ) : (
-                                    <Badge variant="outline">0</Badge>
-                                )}
-                            </TableCell>
-                        </TableRow>
-                                            ))}
-                </TableBody>
-            </Table>
-        </CardContent>
-                            </Card >
+                                <CardContent>
+                                    {isMobile ? (
+                                        /* Mobile Card View */
+                                        <div className="space-y-3">
+                                            {performance.map((perf, index) => (
+                                                <Card key={perf.id} className="border-2">
+                                                    <CardContent className="p-4">
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <div>
+                                                                <span className="text-2xl font-bold text-muted-foreground">#{index + 1}</span>
+                                                                <h3 className="font-bold text-lg">{perf.name}</h3>
+                                                            </div>
+                                                            {perf.open_issues > 0 ? (
+                                                                <Badge variant="destructive">{perf.open_issues} مشاكل</Badge>
+                                                            ) : (
+                                                                <Badge variant="outline" className="bg-green-50">✓</Badge>
+                                                            )}
+                                                        </div>
 
-    {/* Issues List */ }
-    < Card >
+                                                        <div className="flex items-center gap-2 mb-3">
+                                                            <div className="flex">{getRatingStars(perf.overall_rating)}</div>
+                                                            <span className={`font-bold ${getRatingColor(perf.overall_rating)}`}>
+                                                                {perf.overall_rating?.toFixed(1) || '-'}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-muted-foreground">الجودة:</span>
+                                                                <span className={`font-semibold ${getRatingColor(perf.quality_rating)}`}>
+                                                                    {perf.quality_rating?.toFixed(1) || '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-muted-foreground">التوصيل:</span>
+                                                                <span className={`font-semibold ${getRatingColor(perf.delivery_rating)}`}>
+                                                                    {perf.delivery_rating?.toFixed(1) || '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-muted-foreground">السعر:</span>
+                                                                <span className={`font-semibold ${getRatingColor(perf.price_rating)}`}>
+                                                                    {perf.price_rating?.toFixed(1) || '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-muted-foreground">الطلبات:</span>
+                                                                <span className="font-semibold">{perf.total_orders || 0}</span>
+                                                            </div>
+                                                            <div className="col-span-2 flex items-center gap-2">
+                                                                <span className="text-muted-foreground">بالموعد:</span>
+                                                                <span className="font-semibold">
+                                                                    {perf.total_orders > 0
+                                                                        ? `${Math.round((perf.on_time_deliveries / perf.total_orders) * 100)}%`
+                                                                        : '-'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        /* Desktop Table View */
+                                        <div className="overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>#</TableHead>
+                                                        <TableHead>المورد</TableHead>
+                                                        <TableHead>التقييم الإجمالي</TableHead>
+                                                        <TableHead>الجودة</TableHead>
+                                                        <TableHead>التوصيل</TableHead>
+                                                        <TableHead>السعر</TableHead>
+                                                        <TableHead>عدد الطلبات</TableHead>
+                                                        <TableHead>توصيل بالموعد</TableHead>
+                                                        <TableHead>مشاكل مفتوحة</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {performance.map((perf, index) => (
+                                                        <TableRow key={perf.id}>
+                                                            <TableCell className="font-medium">{index + 1}</TableCell>
+                                                            <TableCell className="font-semibold">{perf.name}</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="flex">{getRatingStars(perf.overall_rating)}</div>
+                                                                    <span className={getRatingColor(perf.overall_rating)}>
+                                                                        {perf.overall_rating?.toFixed(1) || '-'}
+                                                                    </span>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <span className={getRatingColor(perf.quality_rating)}>
+                                                                    {perf.quality_rating?.toFixed(1) || '-'}
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <span className={getRatingColor(perf.delivery_rating)}>
+                                                                    {perf.delivery_rating?.toFixed(1) || '-'}
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <span className={getRatingColor(perf.price_rating)}>
+                                                                    {perf.price_rating?.toFixed(1) || '-'}
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell>{perf.total_orders || 0}</TableCell>
+                                                            <TableCell>
+                                                                {perf.total_orders > 0
+                                                                    ? `${Math.round((perf.on_time_deliveries / perf.total_orders) * 100)}%`
+                                                                    : '-'}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {perf.open_issues > 0 ? (
+                                                                    <Badge variant="destructive">{perf.open_issues}</Badge>
+                                                                ) : (
+                                                                    <Badge variant="outline">0</Badge>
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Issues List */}
+                            <Card>
                                 <CardHeader>
                                     <div className="flex justify-between items-center">
                                         <CardTitle>المشاكل المسجلة</CardTitle>
@@ -215,79 +331,79 @@ const SupplierPerformancePage = () => {
                                             })}
                                     </div>
                                 </CardContent>
-                            </Card >
+                            </Card>
                         </>
                     )}
-                </div >
-            </main >
-
-    {/* Add Issue Dialog */ }
-    < Dialog open = { isIssueDialogOpen } onOpenChange = { setIsIssueDialogOpen } >
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>تسجيل مشكلة مع مورد</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-                <div>
-                    <Label>المورد *</Label>
-                    <Select value={issueForm.supplier_id} onValueChange={(val) => setIssueForm({ ...issueForm, supplier_id: val })}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="اختر المورد" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {suppliers.map(s => (
-                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                 </div>
+            </main>
 
-                <div>
-                    <Label>نوع المشكلة *</Label>
-                    <Select value={issueForm.issue_type} onValueChange={(val: any) => setIssueForm({ ...issueForm, issue_type: val })}>
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Object.entries(issueTypeLabels).map(([key, label]) => (
-                                <SelectItem key={key} value={key}>{label}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+            {/* Add Issue Dialog */}
+            <Dialog open={isIssueDialogOpen} onOpenChange={setIsIssueDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>تسجيل مشكلة مع مورد</DialogTitle>
+                    </DialogHeader>
 
-                <div>
-                    <Label>الشدة (1-5)</Label>
-                    <Select value={String(issueForm.severity)} onValueChange={(val) => setIssueForm({ ...issueForm, severity: parseInt(val) })}>
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {[1, 2, 3, 4, 5].map(n => (
-                                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                    <div className="space-y-4">
+                        <div>
+                            <Label>المورد *</Label>
+                            <Select value={issueForm.supplier_id} onValueChange={(val) => setIssueForm({ ...issueForm, supplier_id: val })}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="اختر المورد" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {suppliers.map(s => (
+                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                <div>
-                    <Label>التفاصيل *</Label>
-                    <Textarea
-                        value={issueForm.description}
-                        onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })}
-                        rows={4}
-                    />
-                </div>
+                        <div>
+                            <Label>نوع المشكلة *</Label>
+                            <Select value={issueForm.issue_type} onValueChange={(val: any) => setIssueForm({ ...issueForm, issue_type: val })}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.entries(issueTypeLabels).map(([key, label]) => (
+                                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setIsIssueDialogOpen(false)}>إلغاء</Button>
-                    <Button onClick={handleAddIssue}>حفظ</Button>
-                </div>
-            </div>
-        </DialogContent>
-            </Dialog >
-        </div >
+                        <div>
+                            <Label>الشدة (1-5)</Label>
+                            <Select value={String(issueForm.severity)} onValueChange={(val) => setIssueForm({ ...issueForm, severity: parseInt(val) })}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {[1, 2, 3, 4, 5].map(n => (
+                                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div>
+                            <Label>التفاصيل *</Label>
+                            <Textarea
+                                value={issueForm.description}
+                                onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })}
+                                rows={4}
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setIsIssueDialogOpen(false)}>إلغاء</Button>
+                            <Button onClick={handleAddIssue}>حفظ</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 };
 

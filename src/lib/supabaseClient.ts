@@ -29,6 +29,8 @@ export const getSupabaseClient = (): SupabaseClient | null => {
   return supabaseInstance;
 };
 
+export const supabase = supabaseInstance as SupabaseClient;
+
 // The test function remains the same as it's for dynamically testing credentials
 // from the settings page, not for the main app client.
 interface ConnectionResult {
@@ -40,7 +42,7 @@ interface ConnectionResult {
 export const testSupabaseConnection = async (url: string, key: string): Promise<ConnectionResult> => {
   try {
     const testClient = createClient(url, key);
-    
+
     // Call the RPC function to get table names
     const { data, error } = await testClient.rpc('get_public_tables');
 
