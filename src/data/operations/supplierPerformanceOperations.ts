@@ -44,7 +44,7 @@ export async function getSupplierPerformanceSummary(): Promise<SupplierPerforman
         const { data, error } = await supabase
             .from('supplier_performance_summary')
             .select('*')
-            .order('overall_rating', { ascending: false, nullsLast: true });
+            .order('overall_rating', { ascending: false });
 
         if (error) throw error;
         return data || [];

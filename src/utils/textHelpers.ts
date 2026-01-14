@@ -19,7 +19,7 @@ export function fixBrokenUTF8(text: string): string {
  * Converts common patterns to correct unicode
  */
 export function normalizeProductVariant(variant: string): string {
-    if (!text) return variant;
+    if (!variant) return variant;
 
     // Fix broken characters first
     let normalized = fixBrokenUTF8(variant);

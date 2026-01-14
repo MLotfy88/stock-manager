@@ -63,7 +63,7 @@ const DetailedSupplyCard: React.FC<DetailedSupplyCardProps> = ({ supply }) => {
           <Building2 className="h-5 w-5 text-gray-500" />
           <div>
             <p className="font-semibold">{t('manufacturer')}</p>
-            <p>{supply.manufacturers?.name || t('unknown_manufacturer')}</p>
+            <p>{supply.manufacturer_name || t('unknown_manufacturer')}</p>
           </div>
         </div>
         {supply.supplierName && (

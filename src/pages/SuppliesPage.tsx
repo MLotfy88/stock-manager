@@ -6,13 +6,13 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   Package, Search, Plus, Filter, ArrowUpDown, AlertTriangle, Clock, CheckCircle, Eye
 } from 'lucide-react';
 import SupplyCard from '@/components/supplies/SupplyCard';
 import { InventoryItem, ProductDefinition, SupplyTypeItem, Store } from '@/types';
-import { 
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import { useNavigate, Link } from 'react-router-dom';
 import { getInventoryItems } from '@/data/operations/suppliesOperations';
@@ -33,7 +33,7 @@ const SuppliesPage = () => {
   const [supplyTypes, setSupplyTypes] = useState<SupplyTypeItem[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // States for filtering and sorting
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -81,22 +81,22 @@ const SuppliesPage = () => {
         name: definition?.name || 'Unknown',
         type_id: definition?.type_id || 'other',
         // The manufacturer and supplier names are now directly available on the item from the query
-        manufacturerName: item.manufacturers?.name || 'Unknown Manufacturer',
-        supplierName: item.suppliers?.name || 'Unknown Supplier',
+        manufacturerName: item.manufacturer_name || 'Unknown Manufacturer',
+        supplierName: item.supplier_name || 'Unknown Supplier',
       };
     });
   }, [inventoryItems, productDefinitions]);
 
   const filteredItems = useMemo(() => {
     return enrichedItems.filter(item => {
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch = searchQuery === '' ||
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.batch_number.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
       const matchesType = typeFilter === 'all' || item.type_id === typeFilter;
       const matchesStore = storeFilter === 'all' || item.store_id === storeFilter;
-      
+
       return matchesSearch && matchesStatus && matchesType && matchesStore;
     });
   }, [enrichedItems, searchQuery, statusFilter, typeFilter, storeFilter]);
@@ -134,12 +134,12 @@ const SuppliesPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         closeSidebar={closeSidebar}
       />
-      
+
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -162,13 +162,13 @@ const SuppliesPage = () => {
               </Button>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card className="bg-green-50 border-green-200"><CardContent className="p-4 flex items-center gap-3"><div className="p-2 bg-green-100 rounded-full"><CheckCircle className="h-5 w-5 text-green-600" /></div><div><p className="text-sm font-medium text-green-600">{t('valid_supplies')}</p><p className="text-2xl font-bold">{statusCounts.valid || 0}</p></div></CardContent></Card>
             <Card className="bg-amber-50 border-amber-200"><CardContent className="p-4 flex items-center gap-3"><div className="p-2 bg-amber-100 rounded-full"><Clock className="h-5 w-5 text-amber-600" /></div><div><p className="text-sm font-medium text-amber-600">{t('expiring_soon')}</p><p className="text-2xl font-bold">{statusCounts.expiring_soon || 0}</p></div></CardContent></Card>
             <Card className="bg-red-50 border-red-200"><CardContent className="p-4 flex items-center gap-3"><div className="p-2 bg-red-100 rounded-full"><AlertTriangle className="h-5 w-5 text-red-600" /></div><div><p className="text-sm font-medium text-red-600">{t('expired')}</p><p className="text-2xl font-bold">{statusCounts.expired || 0}</p></div></CardContent></Card>
           </div>
-          
+
           <Card className="mb-6">
             <CardContent className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -186,7 +186,7 @@ const SuppliesPage = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           {isLoading ? (
             <p className="text-center">{t('loading')}</p>
           ) : sortedItems.length > 0 ? (

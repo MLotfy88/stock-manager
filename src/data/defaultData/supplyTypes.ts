@@ -6,31 +6,31 @@ export const defaultSupplyTypes: SupplyTypeItem[] = [
   {
     id: 'st1',
     name: 'قسطرة',
-    nameEn: 'Catheter',
+    name_en: 'Catheter',
     description: 'جميع أنواع القساطر الطبية',
   },
   {
     id: 'st2',
     name: 'أداة جراحية',
-    nameEn: 'Surgical Tool',
+    name_en: 'Surgical Tool',
     description: 'الأدوات المستخدمة في العمليات الجراحية',
   },
   {
     id: 'st3',
     name: 'دواء',
-    nameEn: 'Medication',
+    name_en: 'Medication',
     description: 'الأدوية والعقاقير الطبية',
   },
   {
     id: 'st4',
     name: 'مستهلكات',
-    nameEn: 'Consumables',
+    name_en: 'Consumables',
     description: 'المواد الاستهلاكية المستخدمة في الرعاية الصحية',
   },
   {
     id: 'st5',
     name: 'غرسة',
-    nameEn: 'Implant',
+    name_en: 'Implant',
     description: 'الأجهزة القابلة للزرع',
   },
 ];

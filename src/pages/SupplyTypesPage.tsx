@@ -107,10 +107,10 @@ export const ProductDefinitionsPageContent = () => {
         await updateProductDefinition(currentDefinition.id, { name, type_id: typeId, variant_label: variantLabel, variants });
         toast({ title: t('success'), description: "Product definition updated." });
       } else {
-        await addProductDefinition({ name, type_id: typeId, variant_label: variantLabel, variants });
+        await addProductDefinition({ name, type_id: typeId, variant_label: variantLabel, variants, reorder_point: 5 });
         toast({ title: t('success'), description: "Product definition added." });
       }
-      
+
       loadData();
       setIsDialogOpen(false);
       resetForm();
@@ -193,6 +193,7 @@ export const ProductDefinitionsPageContent = () => {
               type_id: row.product_type_id,
               variant_label: row.variant_label,
               variants,
+              reorder_point: 5, // Default
             };
           }
           return null;
@@ -206,9 +207,9 @@ export const ProductDefinitionsPageContent = () => {
         try {
           // Save each new definition to the database
           await Promise.all(definitionsToCreate.map(def => addProductDefinition(def as any)));
-          
+
           toast({ title: t('success'), description: `${definitionsToCreate.length} products imported and saved successfully.` });
-          
+
           // Reload data from the database to show the new items
           loadData();
 
@@ -241,7 +242,7 @@ export const ProductDefinitionsPageContent = () => {
       <div className="text-right mb-4">
         <Button variant="link" onClick={handleDownloadTemplate}>{t('download_template')}</Button>
       </div>
-      
+
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -275,7 +276,7 @@ export const ProductDefinitionsPageContent = () => {
           </div>
         </CardContent>
       </Card>
-      
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader><DialogTitle>{currentDefinition ? t('edit_definition') : t('add_definition')}</DialogTitle></DialogHeader>
@@ -320,7 +321,7 @@ export const ProductDefinitionsPageContent = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -1,14 +1,14 @@
-export type SupplyType = 
-  | 'catheter' 
-  | 'surgical_tool' 
-  | 'medication' 
+export type SupplyType =
+  | 'catheter'
+  | 'surgical_tool'
+  | 'medication'
   | 'consumable'
   | 'implant'
   | 'other';
 
-export type SupplyStatus = 
-  | 'valid' 
-  | 'expiring_soon' 
+export type SupplyStatus =
+  | 'valid'
+  | 'expiring_soon'
   | 'expired'
   | 'needs_replacement_action';
 
@@ -17,6 +17,7 @@ export interface Manufacturer {
   name: string;
   logo?: string;
   created_at?: string;
+  alert_period?: number;
 }
 
 export interface Supplier {
@@ -47,7 +48,7 @@ export interface ProductVariant {
 }
 
 export interface ProductDefinition {
-  id:string;
+  id: string;
   name: string;
   type_id: string;
   variant_label: string; // e.g., "Size", "Curve"
@@ -85,7 +86,7 @@ export interface InventoryItem {
   supplier_id: string | null;
   supply_voucher_id?: string | null;
   stock_type: StockType;
-  
+
   // Joined fields from the new view
   store_name: string;
   product_name: string;
@@ -98,7 +99,10 @@ export interface InventoryItem {
 
   // Optional joined data
   product_definition?: ProductDefinition;
+  notes?: string;
 }
+
+export type MedicalSupply = InventoryItem;
 
 export type InvoicingStatus = 'not_consumed' | 'consumed_not_invoiced' | 'partially_invoiced' | 'fully_invoiced';
 

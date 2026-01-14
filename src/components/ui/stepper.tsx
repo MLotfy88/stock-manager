@@ -12,7 +12,7 @@ export const Stepper = ({ activeStep, children, className }: StepperProps) => {
     <div className={cn("flex items-center justify-between w-full", className)}>
       {React.Children.map(children, (child, index) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child, {
+          return React.cloneElement(child as React.ReactElement<any>, {
             isActive: index === activeStep,
             isCompleted: index < activeStep,
             isLast: index === React.Children.count(children) - 1,

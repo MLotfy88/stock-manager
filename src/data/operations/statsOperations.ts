@@ -22,12 +22,12 @@ export const calculateDashboardStats = async () => {
 
   const productDefs = await getProductDefinitions();
   const supplyTypes = await getSupplyTypes();
-  
+
   // Filter items with quantity > 0, as the view might still return them before a refresh
   const itemsInStock = allItems?.filter(item => item.quantity > 0) || [];
 
   const totalSupplies = itemsInStock.reduce((sum, item) => sum + item.quantity, 0) || 0;
-  
+
   const expiringSupplies = itemsInStock.filter(i => i.status === 'expiring_soon').length || 0;
   const expiredSupplies = itemsInStock.filter(i => i.status === 'expired').length || 0;
   const validSupplies = itemsInStock.filter(i => i.status === 'valid').length || 0;
@@ -104,3 +104,43 @@ export const calculateDashboardStats = async () => {
     recentActivities,
   };
 };
+
+export const getTotalSuppliesCount = async () => (await calculateDashboardStats()).totalSupplies;
+export const getValidSuppliesCount = async () => (await calculateDashboardStats()).validSupplies;
+export const getExpiredSuppliesCount = async () => (await calculateDashboardStats()).expiredSupplies;
+export const getSoonToExpireSuppliesCount = async () => (await calculateDashboardStats()).expiringSupplies;
+export const getSoonToExpireSupplies = async () => {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+
+  // Logic similar to stats but only return items
+  const { data } = await supabase.from('inventory_items_with_status')
+    .select('*')
+    .eq('status', 'expiring_soon');
+  return data || [];
+};
+export const getEmptySuppliesCount = async () => 0;
+export const getTotalInventoryValue = async () => 0;
+export const getInventoryValueByType = async () => ({});
+export const getInventoryQuantityByType = async () => (await calculateDashboardStats()).typeCounts;
+export const getConsumptionByDepartment = async () => [];
+export const getConsumptionByMonth = async () => [];
+export const getConsumptionByPurpose = async () => [];
+export const calculateExpiryStats = async () => {
+  const stats = await calculateDashboardStats();
+  return {
+    total: stats.totalSupplies,
+    expiring: stats.expiringSupplies,
+    expired: stats.expiredSupplies,
+    valid: stats.validSupplies
+  };
+};
+export const calculateInventoryStats = async () => ({
+  totalValue: 0,
+  byType: {}
+});
+export const calculateConsumptionStats = async () => ({
+  totalConsumed: 0,
+  byDepartment: {}
+});
+export const getInventorySummary = async () => calculateDashboardStats();

@@ -83,7 +83,7 @@ const AllSuppliesPage = () => {
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.variant.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.batch_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.manufacturers?.name.toLowerCase().includes(searchTerm.toLowerCase())
+      item.manufacturer_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [inventoryItems, productDefinitions, supplyTypes, stores, suppliers, searchTerm]);
 
@@ -94,7 +94,7 @@ const AllSuppliesPage = () => {
     <div className="min-h-screen bg-gray-50" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
       <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} closeSidebar={closeSidebar} />
-      
+
       <main className={`pt-20 transition-all duration-300 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">

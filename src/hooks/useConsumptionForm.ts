@@ -1,50 +1,75 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/components/ui/use-toast';
-import { ConsumptionItem, ConsumptionRecord, MedicalSupply } from '@/types';
-import { supplies, addConsumptionRecord } from '@/data/mockData';
+import { ConsumptionItem, ConsumptionRecord, InventoryItem } from '@/types';
+import { addConsumptionRecord } from '@/data/operations/consumptionOperations';
+import { getInventoryItems } from '@/data/operations/suppliesOperations';
 
 export const useConsumptionForm = (onSuccess?: () => void) => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  
+
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [department, setDepartment] = useState('');
   const [requestedBy, setRequestedBy] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<ConsumptionItem[]>([]);
-  
-  // Get available supplies
-  const availableSupplies = supplies.filter(s => s.status !== 'expired' && s.quantity > 0);
-  
+  const [availableSupplies, setAvailableSupplies] = useState<InventoryItem[]>([]);
+  const [loadingSupplies, setLoadingSupplies] = useState(false);
+
+  // Fetch available supplies on mount
+  useEffect(() => {
+    const fetchSupplies = async () => {
+      setLoadingSupplies(true);
+      try {
+        const data = await getInventoryItems(undefined, false); // Fetch all
+        // Filter locally if needed, or rely on the query. Here we want valid items in stock.
+        // But for consumption we might want to consume even expired items if purpose is 'expired'
+        // For now, let's just get everything that has quantity > 0
+        const inStock = data.filter(item => item.quantity > 0);
+        setAvailableSupplies(inStock);
+      } catch (error) {
+        console.error("Error fetching supplies:", error);
+        toast({
+          title: t('error'),
+          description: t('error_fetching_supplies'),
+          variant: 'destructive'
+        });
+      } finally {
+        setLoadingSupplies(false);
+      }
+    };
+    fetchSupplies();
+  }, [t, toast]);
+
   // Add a new item
   const addItem = () => {
     const newItem: ConsumptionItem = {
       id: `item_${Date.now()}`,
-      supplyId: '',
-      supplyName: '',
+      inventory_item_id: '', // Correct property name
+      item_name: '',
       quantity: 1,
       notes: ''
     };
     setItems([...items, newItem]);
   };
-  
+
   // Remove an item
   const removeItem = (itemId: string) => {
     setItems(items.filter(item => item.id !== itemId));
   };
-  
+
   // Update an item
   const updateItem = (itemId: string, field: keyof ConsumptionItem, value: any) => {
     setItems(items.map(item => {
       if (item.id === itemId) {
-        if (field === 'supplyId' && value) {
-          const selectedSupply = supplies.find(s => s.id === value);
+        if (field === 'inventory_item_id' && value) {
+          const selectedSupply = availableSupplies.find(s => s.id === value);
           return {
             ...item,
             [field]: value,
-            supplyName: selectedSupply?.name || ''
+            item_name: selectedSupply?.product_name || ''
           };
         }
         return { ...item, [field]: value };
@@ -52,7 +77,7 @@ export const useConsumptionForm = (onSuccess?: () => void) => {
       return item;
     }));
   };
-  
+
   // Reset the form
   const resetForm = () => {
     setDate(new Date());
@@ -61,72 +86,77 @@ export const useConsumptionForm = (onSuccess?: () => void) => {
     setNotes('');
     setItems([]);
   };
-  
+
   // Validate the form
   const isFormValid = () => {
     if (!date || !department || !requestedBy || items.length === 0) {
       return false;
     }
-    
+
     // Check items
     for (const item of items) {
-      if (!item.supplyId || item.quantity <= 0) {
+      if (!item.inventory_item_id || item.quantity <= 0) {
         return false;
       }
-      
+
       // Check if quantity is available
-      const supply = supplies.find(s => s.id === item.supplyId);
+      const supply = availableSupplies.find(s => s.id === item.inventory_item_id);
       if (!supply || supply.quantity < item.quantity) {
+        // You might want to allow this if purpose is 'expired' or 'damaged' and you are adjusting stock? 
+        // But for normal consumption flow, we usually check stock.
         return false;
       }
     }
-    
+
     return true;
   };
-  
+
   // Submit the form
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isFormValid()) {
       toast({
         title: t('error'),
-        description: t('please_complete_all_fields'),
+        description: t('please_complete_all_fields_or_check_quantity'),
         variant: "destructive"
       });
       return;
     }
-    
-    const newRecord: Partial<ConsumptionRecord> = {
-      date: date?.toISOString() || new Date().toISOString(),
-      department,
-      requestedBy,
-      notes,
-      status: 'completed',
-      items: items.map(item => ({
-        ...item,
+
+    try {
+      const recordData: Omit<ConsumptionRecord, 'id' | 'created_at' | 'items' | 'status'> = {
+        date: date?.toISOString() || new Date().toISOString(),
+        department,
+        requested_by: requestedBy, // Correct property name
+        notes,
+        purpose: 'use' // Default
+      };
+
+      const itemsPayload = items.map(item => ({
+        inventory_item_id: item.inventory_item_id,
         quantity: Number(item.quantity)
-      }))
-    };
-    
-    const result = addConsumptionRecord(newRecord as ConsumptionRecord);
-    
-    if (result) {
+      }));
+
+      await addConsumptionRecord(recordData, itemsPayload);
+
       toast({
         title: t('success'),
         description: t('consumption_record_created'),
       });
       resetForm();
       if (onSuccess) onSuccess();
-    } else {
+
+    } catch (error) {
+      console.error("Submission error:", error);
       toast({
         title: t('error'),
-        description: t('insufficient_quantity'),
+        description: t('error_saving_consumption'),
         variant: "destructive"
       });
     }
   };
-  
+
   return {
     date,
     setDate,
@@ -138,6 +168,7 @@ export const useConsumptionForm = (onSuccess?: () => void) => {
     setNotes,
     items,
     availableSupplies,
+    loadingSupplies,
     addItem,
     removeItem,
     updateItem,

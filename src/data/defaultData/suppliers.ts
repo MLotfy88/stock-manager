@@ -9,6 +9,7 @@ export const defaultSuppliers: Supplier[] = [
     contact: 'أحمد محمد',
     phone: '0123456789',
     email: 'supplier1@example.com',
+    alert_period: 30
   },
   {
     id: 's2',
@@ -16,5 +17,6 @@ export const defaultSuppliers: Supplier[] = [
     contact: 'محمد علي',
     phone: '0123456788',
     email: 'supplier2@example.com',
+    alert_period: 30
   },
 ];
