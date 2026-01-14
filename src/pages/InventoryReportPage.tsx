@@ -104,7 +104,7 @@ const InventoryReportPage = () => {
   };
 
   const filteredInventory = useMemo(() => {
-    return inventory.filter(item => 
+    return inventory.filter(item =>
       (filters.store === 'all' || item.store_id === filters.store) &&
       (filters.supplier === 'all' || item.supplier_id === filters.supplier) &&
       (filters.type === 'all' || item.supply_type_name === supplyTypes.find(st => st.id === filters.type)?.name) &&
@@ -124,7 +124,7 @@ const InventoryReportPage = () => {
   const handleExportCSV = () => {
     const headers = Object.values(ALL_COLUMNS).map(col => t(col.label));
     // Export ALL inventory data, not just filtered data
-    const rows = inventory.map(item => 
+    const rows = inventory.map(item =>
       Object.values(ALL_COLUMNS).map(col => {
         let value = item[col.key as keyof InventoryItem] ?? '';
         // Handle special formatting for stock_type
@@ -138,8 +138,8 @@ const InventoryReportPage = () => {
       }).join(',')
     );
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(',') + "\n" 
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(',') + "\n"
       + rows.join('\n');
 
     const encodedUri = encodeURI(csvContent);
@@ -155,7 +155,7 @@ const InventoryReportPage = () => {
     <div className="min-h-screen bg-gray-50" dir={direction}>
       <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
       <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} closeSidebar={() => setIsSidebarOpen(false)} />
-      
+
       <main className={`pt-20 pb-10 transition-all duration-300 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-8">
@@ -219,8 +219,8 @@ const InventoryReportPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
+              <div className="rounded-md border overflow-x-auto">
+                <Table className="min-w-[1200px]">
                   <TableHeader>
                     <TableRow>
                       {Object.values(ALL_COLUMNS).map(col => visibleColumns[col.key] && <TableHead key={col.key}>{t(col.label)}</TableHead>)}

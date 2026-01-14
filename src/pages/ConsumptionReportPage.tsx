@@ -80,7 +80,7 @@ const ConsumptionReportPage = () => {
   return (
     <div className="page-container bg-background" dir={direction}>
       <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-      <Sidebar 
+      <Sidebar
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         closeSidebar={() => setIsSidebarOpen(false)}
@@ -113,7 +113,7 @@ const ConsumptionReportPage = () => {
                 <p>Loading...</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="min-w-[800px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t('product_variant')}</TableHead>

@@ -41,11 +41,11 @@ CREATE INDEX IF NOT EXISTS idx_procedure_templates_type ON procedure_templates(p
 CREATE INDEX IF NOT EXISTS idx_procedure_template_items_template ON procedure_template_items(template_id);
 CREATE INDEX IF NOT EXISTS idx_procedure_template_items_product ON procedure_template_items(product_definition_id);
 
--- Insert default procedure types
+-- Insert default procedure types (using English to avoid encoding issues)
 INSERT INTO procedure_types (name, description) VALUES
-  ('قسطرة تشخيصية', 'Diagnostic Catheterization'),
-  ('قسطرة علاجية', 'Therapeutic/Interventional Catheterization'),
-  ('قسطرة علاجية معقدة', 'Complex Interventional Procedures')
+  ('Diagnostic Cath', 'Diagnostic Catheterization'),
+  ('Interventional Cath', 'Therapeutic/Interventional Catheterization'),
+  ('Complex Intervention', 'Complex Interventional Procedures')
 ON CONFLICT (name) DO NOTHING;
 
 -- Trigger for procedure_templates

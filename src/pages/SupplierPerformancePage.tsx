@@ -150,71 +150,21 @@ const SupplierPerformancePage = () => {
                                 <CardHeader>
                                     <CardTitle>ترتيب الموردين</CardTitle>
                                 </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>#</TableHead>
-                                                <TableHead>المورد</TableHead>
-                                                <TableHead>التقييم الإجمالي</TableHead>
-                                                <TableHead>الجودة</TableHead>
-                                                <TableHead>التوصيل</TableHead>
-                                                <TableHead>السعر</TableHead>
-                                                <TableHead>عدد الطلبات</TableHead>
-                                                <TableHead>توصيل بالموعد</TableHead>
-                                                <TableHead>مشاكل مفتوحة</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {performance.map((perf, index) => (
-                                                <TableRow key={perf.id}>
-                                                    <TableCell className="font-medium">{index + 1}</TableCell>
-                                                    <TableCell className="font-semibold">{perf.name}</TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="flex">{getRatingStars(perf.overall_rating)}</div>
-                                                            <span className={getRatingColor(perf.overall_rating)}>
-                                                                {perf.overall_rating?.toFixed(1) || '-'}
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <span className={getRatingColor(perf.quality_rating)}>
-                                                            {perf.quality_rating?.toFixed(1) || '-'}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <span className={getRatingColor(perf.delivery_rating)}>
-                                                            {perf.delivery_rating?.toFixed(1) || '-'}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <span className={getRatingColor(perf.price_rating)}>
-                                                            {perf.price_rating?.toFixed(1) || '-'}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell>{perf.total_orders || 0}</TableCell>
-                                                    <TableCell>
-                                                        {perf.total_orders > 0
-                                                            ? `${Math.round((perf.on_time_deliveries / perf.total_orders) * 100)}%`
-                                                            : '-'}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {perf.open_issues > 0 ? (
-                                                            <Badge variant="destructive">{perf.open_issues}</Badge>
-                                                        ) : (
-                                                            <Badge variant="outline">0</Badge>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
+                                {perf.open_issues > 0 ? (
+                                    <Badge variant="destructive">{perf.open_issues}</Badge>
+                                ) : (
+                                    <Badge variant="outline">0</Badge>
+                                )}
+                            </TableCell>
+                        </TableRow>
                                             ))}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
+                </TableBody>
+            </Table>
+        </CardContent>
+                            </Card >
 
-                            {/* Issues List */}
-                            <Card>
+    {/* Issues List */ }
+    < Card >
                                 <CardHeader>
                                     <div className="flex justify-between items-center">
                                         <CardTitle>المشاكل المسجلة</CardTitle>
@@ -265,79 +215,79 @@ const SupplierPerformancePage = () => {
                                             })}
                                     </div>
                                 </CardContent>
-                            </Card>
+                            </Card >
                         </>
                     )}
+                </div >
+            </main >
+
+    {/* Add Issue Dialog */ }
+    < Dialog open = { isIssueDialogOpen } onOpenChange = { setIsIssueDialogOpen } >
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>تسجيل مشكلة مع مورد</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+                <div>
+                    <Label>المورد *</Label>
+                    <Select value={issueForm.supplier_id} onValueChange={(val) => setIssueForm({ ...issueForm, supplier_id: val })}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="اختر المورد" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {suppliers.map(s => (
+                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
-            </main>
 
-            {/* Add Issue Dialog */}
-            <Dialog open={isIssueDialogOpen} onOpenChange={setIsIssueDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>تسجيل مشكلة مع مورد</DialogTitle>
-                    </DialogHeader>
+                <div>
+                    <Label>نوع المشكلة *</Label>
+                    <Select value={issueForm.issue_type} onValueChange={(val: any) => setIssueForm({ ...issueForm, issue_type: val })}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.entries(issueTypeLabels).map(([key, label]) => (
+                                <SelectItem key={key} value={key}>{label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
 
-                    <div className="space-y-4">
-                        <div>
-                            <Label>المورد *</Label>
-                            <Select value={issueForm.supplier_id} onValueChange={(val) => setIssueForm({ ...issueForm, supplier_id: val })}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="اختر المورد" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {suppliers.map(s => (
-                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                <div>
+                    <Label>الشدة (1-5)</Label>
+                    <Select value={String(issueForm.severity)} onValueChange={(val) => setIssueForm({ ...issueForm, severity: parseInt(val) })}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {[1, 2, 3, 4, 5].map(n => (
+                                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
 
-                        <div>
-                            <Label>نوع المشكلة *</Label>
-                            <Select value={issueForm.issue_type} onValueChange={(val: any) => setIssueForm({ ...issueForm, issue_type: val })}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(issueTypeLabels).map(([key, label]) => (
-                                        <SelectItem key={key} value={key}>{label}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                <div>
+                    <Label>التفاصيل *</Label>
+                    <Textarea
+                        value={issueForm.description}
+                        onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })}
+                        rows={4}
+                    />
+                </div>
 
-                        <div>
-                            <Label>الشدة (1-5)</Label>
-                            <Select value={String(issueForm.severity)} onValueChange={(val) => setIssueForm({ ...issueForm, severity: parseInt(val) })}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {[1, 2, 3, 4, 5].map(n => (
-                                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div>
-                            <Label>التفاصيل *</Label>
-                            <Textarea
-                                value={issueForm.description}
-                                onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })}
-                                rows={4}
-                            />
-                        </div>
-
-                        <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={() => setIsIssueDialogOpen(false)}>إلغاء</Button>
-                            <Button onClick={handleAddIssue}>حفظ</Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        </div>
+                <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsIssueDialogOpen(false)}>إلغاء</Button>
+                    <Button onClick={handleAddIssue}>حفظ</Button>
+                </div>
+            </div>
+        </DialogContent>
+            </Dialog >
+        </div >
     );
 };
 

@@ -58,7 +58,7 @@ const OnShelfReportPage = () => {
       t('product_name'), t('variant'), t('batch_number'), t('supplier'),
       t('initial_quantity'), t('consumed_quantity'), t('remaining_quantity'), t('invoicing_status')
     ];
-    
+
     const rows = filteredData.map(item => [
       `"${item.product_name.replace(/"/g, '""')}"`,
       `"${item.variant.replace(/"/g, '""')}"`,
@@ -70,8 +70,8 @@ const OnShelfReportPage = () => {
       `"${t(item.invoicing_status).replace(/"/g, '""')}"`
     ].join(','));
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(',') + "\n" 
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(',') + "\n"
       + rows.join('\n');
 
     const encodedUri = encodeURI(csvContent);
@@ -102,7 +102,7 @@ const OnShelfReportPage = () => {
     <div className="page-container bg-background" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
       <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} closeSidebar={closeSidebar} />
-      
+
       <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
         <div className="max-w-7xl mx-auto">
           <Card>
@@ -127,40 +127,42 @@ const OnShelfReportPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('product_name')}</TableHead>
-                    <TableHead>{t('variant')}</TableHead>
-                    <TableHead>{t('batch_number')}</TableHead>
-                    <TableHead>{t('supplier')}</TableHead>
-                    <TableHead>{t('initial_quantity')}</TableHead>
-                    <TableHead>{t('consumed_quantity')}</TableHead>
-                    <TableHead>{t('remaining_quantity')}</TableHead>
-                    <TableHead>{t('invoicing_status')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow><TableCell colSpan={8} className="text-center">{t('loading')}...</TableCell></TableRow>
-                  ) : filteredData.length > 0 ? (
-                    filteredData.map((item) => (
-                      <TableRow key={item.inventory_item_id}>
-                        <TableCell>{item.product_name}</TableCell>
-                        <TableCell>{item.variant}</TableCell>
-                        <TableCell>{item.batch_number}</TableCell>
-                        <TableCell>{item.supplier_name}</TableCell>
-                        <TableCell>{item.initial_quantity}</TableCell>
-                        <TableCell>{item.consumed_quantity}</TableCell>
-                        <TableCell>{item.remaining_quantity}</TableCell>
-                        <TableCell>{getStatusBadge(item.invoicing_status)}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow><TableCell colSpan={8} className="text-center">{t('no_data_found')}</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[1000px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('product_name')}</TableHead>
+                      <TableHead>{t('variant')}</TableHead>
+                      <TableHead>{t('batch_number')}</TableHead>
+                      <TableHead>{t('supplier')}</TableHead>
+                      <TableHead>{t('initial_quantity')}</TableHead>
+                      <TableHead>{t('consumed_quantity')}</TableHead>
+                      <TableHead>{t('remaining_quantity')}</TableHead>
+                      <TableHead>{t('invoicing_status')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow><TableCell colSpan={8} className="text-center">{t('loading')}...</TableCell></TableRow>
+                    ) : filteredData.length > 0 ? (
+                      filteredData.map((item) => (
+                        <TableRow key={item.inventory_item_id}>
+                          <TableCell>{item.product_name}</TableCell>
+                          <TableCell>{item.variant}</TableCell>
+                          <TableCell>{item.batch_number}</TableCell>
+                          <TableCell>{item.supplier_name}</TableCell>
+                          <TableCell>{item.initial_quantity}</TableCell>
+                          <TableCell>{item.consumed_quantity}</TableCell>
+                          <TableCell>{item.remaining_quantity}</TableCell>
+                          <TableCell>{getStatusBadge(item.invoicing_status)}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow><TableCell colSpan={8} className="text-center">{t('no_data_found')}</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </div>

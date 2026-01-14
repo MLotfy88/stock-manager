@@ -15,10 +15,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ReorderItem {
-    productName: string;
-    variantName: string;
-    currentStock: number;
-    reorderPoint: number;
+  productName: string;
+  variantName: string;
+  currentStock: number;
+  reorderPoint: number;
 }
 
 const ReorderPointReportPage = () => {
@@ -76,26 +76,26 @@ const ReorderPointReportPage = () => {
 
     const stockMap: { [key: string]: number } = {};
     filteredInventory.forEach(item => {
-        const key = `${item.product_definition_id}-${item.variant}`;
-        stockMap[key] = (stockMap[key] || 0) + item.quantity;
+      const key = `${item.product_definition_id}-${item.variant}`;
+      stockMap[key] = (stockMap[key] || 0) + item.quantity;
     });
 
     const itemsToReorder: ReorderItem[] = [];
     productDefs.forEach(def => {
-        if (def.variants && Array.isArray(def.variants)) {
-            def.variants.forEach(variant => {
-                const key = `${def.id}-${variant.name}`;
-                const currentStock = stockMap[key] || 0;
-                if (currentStock <= variant.reorder_point) {
-                    itemsToReorder.push({
-                        productName: def.name,
-                        variantName: variant.name,
-                        currentStock,
-                        reorderPoint: variant.reorder_point,
-                    });
-                }
+      if (def.variants && Array.isArray(def.variants)) {
+        def.variants.forEach(variant => {
+          const key = `${def.id}-${variant.name}`;
+          const currentStock = stockMap[key] || 0;
+          if (currentStock <= variant.reorder_point) {
+            itemsToReorder.push({
+              productName: def.name,
+              variantName: variant.name,
+              currentStock,
+              reorderPoint: variant.reorder_point,
             });
-        }
+          }
+        });
+      }
     });
 
     return itemsToReorder.sort((a, b) => a.productName.localeCompare(b.productName));
@@ -104,7 +104,7 @@ const ReorderPointReportPage = () => {
   return (
     <div className="page-container bg-background" dir={direction}>
       <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-      <Sidebar 
+      <Sidebar
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         closeSidebar={() => setIsSidebarOpen(false)}
@@ -147,7 +147,7 @@ const ReorderPointReportPage = () => {
                 <p>Loading...</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="min-w-[800px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t('product')}</TableHead>
