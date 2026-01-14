@@ -82,7 +82,7 @@ export default {
   analysis: 'Analysis',
   settings: 'Settings',
   monitoring_and_planning: 'Monitoring & Planning',
-  
+
   // Navigation
   replacement_voucher_nav: 'Replacement Voucher',
   on_shelf_invoicing_nav: 'On-Shelf Invoicing',
@@ -104,6 +104,9 @@ export default {
   stores_nav: 'Stores',
   transfer_inventory_nav: 'Transfer Inventory',
   import_export_nav: 'Import/Export',
+  procedure_templates_nav: 'Procedure Templates',
+  supplier_performance_nav: 'Supplier Performance',
+  returns_management_nav: 'Returns Management',
 
   // Transfers
   transfer_inventory: 'Transfer Inventory',
@@ -154,7 +157,7 @@ export default {
   store_name: 'Store Name',
   location: 'Location',
   confirm_delete_store_desc: 'Are you sure you want to delete this store?',
-  
+
   // Dashboard
   total_supplies: 'Total Supplies',
   expiring_soon: 'Expiring Soon',
@@ -164,13 +167,13 @@ export default {
   recent_activities: 'Recent Activities',
   supplies_expiring_soon: 'Supplies Expiring Soon',
   latest_supplies: 'Latest Supplies',
-  
+
   // Supply Status
   expired_status: 'Expired',
   expiring_soon_status: 'Expiring Soon',
   valid: 'Valid',
   needs_replacement_action_status: 'Replacement Action Needed',
-  
+
   // Calendar
   expiry_calendar: 'Expiry Calendar',
   today: 'Today',
@@ -181,7 +184,7 @@ export default {
   no_expiries_on_date: 'No supplies expiring on this date',
   critical: 'Critical',
   warning: 'Warning',
-  
+
   // Alerts
   replacement_action_alerts: 'Replacement Alerts',
   critical_alerts: 'Critical Alerts',
@@ -193,7 +196,7 @@ export default {
   no_expired_items: 'No Expired Items',
   all_supplies_safe: 'All supplies are safe from expiration',
   all_supplies_valid: 'All supplies are valid',
-  
+
   // Days of the week
   saturday: 'Sat',
   sunday: 'Sun',
@@ -202,11 +205,11 @@ export default {
   wednesday: 'Wed',
   thursday: 'Thu',
   friday: 'Fri',
-  
+
   // Notifications
   expiry_alert: 'Expiry Alert',
   supplies_expiring_alert: 'You have 8 supplies expiring in the next 30 days',
-  
+
   // Actions
   add_new_supply: 'Add New Supply',
   view_all: 'View All',
@@ -217,7 +220,7 @@ export default {
   clear_filters: 'Clear Filters',
   new_supplies_added: 'New supplies added',
   hours_ago: '{0} hours ago',
-  
+
   // Filters and Sorting
   filter_by_status: 'Filter by Status',
   filter_by_type: 'Filter by Type',
@@ -231,7 +234,7 @@ export default {
   latest: 'Latest',
   lowest: 'Lowest',
   highest: 'Highest',
-  
+
   // Supply Form
   add_inventory_item: 'Add New Inventory',
   add_new_inventory: 'Add New Inventory',
@@ -261,7 +264,7 @@ export default {
   cancel: 'Cancel',
   reset: 'Reset',
   select: 'Select',
-  
+
   // Reports
   reports: 'Reports',
   generate_report: 'Generate Report',
@@ -287,7 +290,7 @@ export default {
   supplies_by_type: 'Supplies by Type',
   report_data: 'Report Data',
   days: 'days',
-  
+
   // Supply Types
   add_supply_type: 'Add Supply Type',
   edit_supply_type: 'Edit Supply Type',
@@ -306,14 +309,14 @@ export default {
   add: 'Add',
   variants_count: 'Variants Count',
   confirm_delete_product_def_desc: 'Are you sure you want to delete this product definition?',
-  
+
   // Manufacturers
   add_manufacturer: 'Add Manufacturer',
   edit_manufacturer: 'Edit Manufacturer',
   delete_manufacturer: 'Delete Manufacturer',
   manufacturer_name: 'Name',
   manufacturer_alert_period: 'Default Alert Period (Days)',
-  
+
   // Suppliers
   add_supplier: 'Add Supplier',
   edit_supplier: 'Edit Supplier',
@@ -323,7 +326,7 @@ export default {
   supplier_phone: 'Phone',
   supplier_email: 'Email',
   supplier_alert_period: 'Replacement Alert Period (Days)',
-  
+
   // Admin
   admin_settings: 'Admin Settings',
   username: 'Username',
@@ -335,13 +338,13 @@ export default {
   export: 'Export',
   download_template: 'Download Template',
   upload_file: 'Upload File',
-  
+
   // Confirmation
   confirm: 'Confirm',
   confirm_delete: 'Are you sure you want to delete this item?',
   confirm_delete_desc: 'This action cannot be undone.',
   yes_delete: 'Yes, Delete',
-  
+
   // Alerts
   success: 'Success',
   error: 'Error',
@@ -349,13 +352,13 @@ export default {
   item_updated: 'Item updated successfully',
   item_deleted: 'Item deleted successfully',
   error_processing_item: 'Error processing item',
-  
+
   // Months
   month_1: 'Month',
   months_3: '3 Months',
   months_6: '6 Months',
   months_12: '12 Months',
-  
+
   // Consumption
   consumption_records: 'Consumption Records',
   consumption_records_description: 'Track and manage supply consumption records',

@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { 
-  Home, 
+import {
+  Home,
   Package,
   Calendar,
   AlertTriangle,
@@ -20,7 +20,7 @@ import {
 
 export const useNavigationItems = () => {
   const { t } = useLanguage();
-  
+
   return [
     {
       type: 'link',
@@ -63,6 +63,12 @@ export const useNavigationItems = () => {
       href: '/replacement-voucher',
     },
     {
+      type: 'link',
+      label: t('returns_management_nav'),
+      icon: <Truck className="h-5 w-5" />,
+      href: '/returns-management',
+    },
+    {
       type: 'header',
       label: t('monitoring_and_planning'),
     },
@@ -88,6 +94,7 @@ export const useNavigationItems = () => {
         { type: 'link', label: t('reorder_point_report_nav'), href: '/reorder-point-report' },
         { type: 'link', label: t('consumption_report_nav'), href: '/consumption-report' },
         { type: 'link', label: t('on_shelf_report_nav'), href: '/on-shelf-report' },
+        { type: 'link', label: t('supplier_performance_nav'), href: '/supplier-performance' },
       ]
     },
     {
@@ -101,6 +108,7 @@ export const useNavigationItems = () => {
       subItems: [
         { type: 'link', label: t('data_settings_nav'), href: '/admin' },
         { type: 'link', label: t('management_settings_nav'), href: '/management' },
+        { type: 'link', label: t('procedure_templates_nav'), href: '/procedure-templates' },
       ]
     },
   ];

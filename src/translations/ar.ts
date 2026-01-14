@@ -82,7 +82,7 @@ export default {
   analysis: 'التحليل',
   settings: 'الإعدادات',
   monitoring_and_planning: 'المراقبة والتخطيط',
-  
+
   // Navigation
   replacement_voucher_nav: 'محضر استبدال',
   on_shelf_invoicing_nav: 'فوترة الأمانات',
@@ -104,7 +104,10 @@ export default {
   stores_nav: 'المخازن',
   transfer_inventory_nav: 'نقل مخزون',
   import_export_nav: 'استيراد/تصدير',
-  
+  procedure_templates_nav: 'قوالب الإجراءات',
+  supplier_performance_nav: 'أداء الموردين',
+  returns_management_nav: 'إدارة المرتجعات',
+
   // Transfers
   transfer_inventory: 'نقل مخزون',
   transfer_details: 'تفاصيل النقل',
@@ -164,13 +167,13 @@ export default {
   recent_activities: 'الأنشطة الأخيرة',
   supplies_expiring_soon: 'مستلزمات تنتهي قريبًا',
   latest_supplies: 'أحدث المستلزمات',
-  
+
   // Supply Status
   expired_status: 'منتهية',
   expiring_soon_status: 'تنتهي قريبًا',
   valid: 'صالحة',
   needs_replacement_action_status: 'تحتاج إجراء استبدال',
-  
+
   // Calendar
   expiry_calendar: 'تقويم انتهاء الصلاحية',
   today: 'اليوم',
@@ -181,7 +184,7 @@ export default {
   no_expiries_on_date: 'لا توجد مستلزمات تنتهي صلاحيتها في هذا التاريخ',
   critical: 'حرجة',
   warning: 'تحذير',
-  
+
   // Alerts
   replacement_action_alerts: 'تنبيهات الاستبدال',
   critical_alerts: 'تنبيهات حرجة',
@@ -193,7 +196,7 @@ export default {
   no_expired_items: 'لا توجد عناصر منتهية الصلاحية',
   all_supplies_safe: 'جميع المستلزمات آمنة من انتهاء الصلاحية',
   all_supplies_valid: 'جميع المستلزمات صالحة',
-  
+
   // Days of the week
   saturday: 'سبت',
   sunday: 'أحد',
@@ -202,11 +205,11 @@ export default {
   wednesday: 'أربعاء',
   thursday: 'خميس',
   friday: 'جمعة',
-  
+
   // Notifications
   expiry_alert: 'تنبيه انتهاء الصلاحية',
   supplies_expiring_alert: 'لديك 8 مستلزمات تنتهي صلاحيتها خلال الـ 30 يومًا القادمة',
-  
+
   // Actions
   add_new_supply: 'إضافة مستلزم جديد',
   view_all: 'عرض الكل',
@@ -217,7 +220,7 @@ export default {
   clear_filters: 'مسح المرشحات',
   new_supplies_added: 'تمت إضافة مستلزمات جديدة',
   hours_ago: 'منذ {0} ساعة',
-  
+
   // Filters and Sorting
   filter_by_status: 'تصفية حسب الحالة',
   filter_by_type: 'تصفية حسب النوع',
@@ -231,7 +234,7 @@ export default {
   latest: 'الأحدث',
   lowest: 'الأقل',
   highest: 'الأعلى',
-  
+
   // Supply Form
   add_inventory_item: 'إضافة مخزون جديد',
   add_new_inventory: 'إضافة مخزون جديد',
@@ -261,7 +264,7 @@ export default {
   cancel: 'إلغاء',
   reset: 'إعادة تعيين',
   select: 'اختر',
-  
+
   // Reports
   reports: 'التقارير',
   generate_report: 'إنشاء تقرير',
@@ -287,7 +290,7 @@ export default {
   supplies_by_type: 'المستلزمات حسب النوع',
   report_data: 'بيانات التقرير',
   days: 'أيام',
-  
+
   // Supply Types
   add_supply_type: 'إضافة نوع مستلزم',
   edit_supply_type: 'تعديل نوع المستلزم',
@@ -306,14 +309,14 @@ export default {
   add: 'إضافة',
   variants_count: 'عدد المتغيرات',
   confirm_delete_product_def_desc: 'هل أنت متأكد من حذف تعريف هذا المنتج؟',
-  
+
   // Manufacturers
   add_manufacturer: 'إضافة شركة مصنعة',
   edit_manufacturer: 'تعديل شركة مصنعة',
   delete_manufacturer: 'حذف شركة مصنعة',
   manufacturer_name: 'الاسم',
   manufacturer_alert_period: 'فترة التنبيه الافتراضية (أيام)',
-  
+
   // Suppliers
   add_supplier: 'إضافة مورد',
   edit_supplier: 'تعديل مورد',
@@ -323,7 +326,7 @@ export default {
   supplier_phone: 'الهاتف',
   supplier_email: 'البريد الإلكتروني',
   supplier_alert_period: 'فترة تنبيه الاستبدال (أيام)',
-  
+
   // Admin
   admin_settings: 'إعدادات المدير',
   username: 'اسم المستخدم',
@@ -335,13 +338,13 @@ export default {
   export: 'تصدير',
   download_template: 'تحميل القالب',
   upload_file: 'رفع ملف',
-  
+
   // Confirmation
   confirm: 'تأكيد',
   confirm_delete: 'هل أنت متأكد من رغبتك في حذف هذا العنصر؟',
   confirm_delete_desc: 'لا يمكن التراجع عن هذا الإجراء.',
   yes_delete: 'نعم، احذف',
-  
+
   // Alerts
   success: 'نجاح',
   error: 'خطأ',
@@ -349,13 +352,13 @@ export default {
   item_updated: 'تم تحديث العنصر بنجاح',
   item_deleted: 'تم حذف العنصر بنجاح',
   error_processing_item: 'خطأ في معالجة العنصر',
-  
+
   // Months
   month_1: 'شهر',
   months_3: '3 أشهر',
   months_6: '6 أشهر',
   months_12: '12 شهر',
-  
+
   // Consumption
   consumption_records: 'سجلات الاستهلاك',
   consumption_records_description: 'تتبع وإدارة سجلات استهلاك المستلزمات',
