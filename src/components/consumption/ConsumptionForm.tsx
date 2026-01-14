@@ -9,6 +9,7 @@ import { ConsumptionRecord, ConsumptionItem, InventoryItem, ProductDefinition, S
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useBarcodeScanner, extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
+import { getProcedureTypes, getProcedureTemplatesByType, ProcedureType, ProcedureTemplateWithItems } from '@/data/operations/procedureTemplatesOperations';
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 import { addConsumptionRecord } from '@/data/operations/consumptionOperations';
@@ -22,6 +23,12 @@ import ConsumptionItemsTable from './ConsumptionItemsTable';
 import FormActions from './FormActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackEvent } from '@/lib/tracking';
+
+// Type definition for consumption items in the form
+type ConsumptionItemInput = Partial<ConsumptionItem> & {
+  id: string;
+  availableQuantity?: number;
+};
 
 interface ConsumptionFormProps {
   onSuccess?: () => void;
@@ -39,7 +46,11 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
 
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [notes, setNotes] = useState('');
-  const [items, setItems] = useState<(Partial<ConsumptionItem> & { id: string; availableQuantity?: number })[]>([]);
+  const [items, setItems] = useState<ConsumptionItemInput[]>([]);
+  const [procedureTypes, setProcedureTypes] = useState<ProcedureType[]>([]);
+  const [selectedProcedureType, setSelectedProcedureType] = useState<string>('');
+  const [procedureTemplates, setProcedureTemplates] = useState<ProcedureTemplateWithItems[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [manualBarcode, setManualBarcode] = useState('');
   const [isContinuousScanning, setIsContinuousScanning] = useState(false);
@@ -49,12 +60,14 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        const [defsData, storesData] = await Promise.all([
+        const [defsData, storesData, procedureTypesData] = await Promise.all([
           getProductDefinitions(),
           getStores(),
+          getProcedureTypes(),
         ]);
         setProductDefs(defsData);
         setStores(storesData);
+        setProcedureTypes(procedureTypesData);
       } catch (error) {
         console.error("Failed to fetch initial form data", error);
         toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
@@ -64,6 +77,45 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
     };
     fetchInitialData();
   }, [toast, t]);
+
+  const handleProcedureTypeChange = async (typeId: string) => {
+    setSelectedProcedureType(typeId);
+    setSelectedTemplate('');
+    if (typeId) {
+      try {
+        const templates = await getProcedureTemplatesByType(typeId);
+        setProcedureTemplates(templates);
+      } catch (error) {
+        console.error('Error loading templates:', error);
+        toast({ title: t('error'), description: t('error_loading_templates'), variant: 'destructive' });
+      }
+    } else {
+      setProcedureTemplates([]);
+    }
+  };
+
+  const handleTemplateSelect = async (templateId: string) => {
+    setSelectedTemplate(templateId);
+    if (!templateId) return;
+
+    const template = procedureTemplates.find(t => t.id === templateId);
+    if (!template) return;
+
+    // Add template items to the list
+    const newItems: ConsumptionItemInput[] = template.items.map(item => ({
+      id: `template_item_${Date.now()}_${Math.random()}`, // Unique client-side ID
+      inventory_item_id: '', // Will be selected by user or scanned
+      product_definition_id: item.product_definition_id,
+      variant: item.variant,
+      quantity: item.default_quantity,
+      lot_number: '',
+      expiry_date: null,
+      availableQuantity: 0, // Will be updated when inventory_item_id is set
+    }));
+
+    setItems(prev => [...prev, ...newItems]);
+    toast({ title: t('success'), description: `${t('added')} ${template.items.length} ${t('items_from_template')}` });
+  };
 
   useEffect(() => {
     if (selectedStoreId) {
@@ -273,6 +325,51 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
   return (
     <Card className="mb-8">
       <FormHeader title="new_consumption" description="consumption_form_description" />
+
+      {/* Procedure Template Selector */}
+      {selectedStoreId && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="procedure-type">نوع الإجراء (اختياري)</Label>
+                <Select value={selectedProcedureType} onValueChange={handleProcedureTypeChange}>
+                  <SelectTrigger id="procedure-type">
+                    <SelectValue placeholder="اختر نوع الإجراء" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">-- بدون قالب --</SelectItem>
+                    {procedureTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedProcedureType && (
+                <div>
+                  <Label htmlFor="template">القالب</Label>
+                  <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
+                    <SelectTrigger id="template">
+                      <SelectValue placeholder="اختر قالب" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">-- اختر قالب --</SelectItem>
+                      {procedureTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name} ({template.items.length} صنف)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

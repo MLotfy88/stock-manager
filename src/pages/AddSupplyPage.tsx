@@ -18,6 +18,8 @@ import { getManufacturers } from '@/data/operations/manufacturerOperations';
 import { getStores } from '@/data/operations/storesOperations';
 import { createSupplyVoucherWithItems } from '@/data/operations/voucherOperations';
 import InventoryItemForm, { PurchaseOrderItem } from '@/components/supplies/InventoryItemForm';
+import { batchSaveGTINMappings } from '@/data/operations/gtinMappingOperations';
+import { extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
 
 const AddInventoryPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -97,15 +99,35 @@ const AddInventoryPage = () => {
         initial_quantity: quantity,
         store_id: storeId,
         manufacturer_id: manufacturerId,
-      supplier_id: supplierId,
-      batch_number: item.batchNumber,
-      expiry_date: format(item.expiryDate!, 'yyyy-MM-dd'),
-      purchase_price: parseFloat(item.purchasePrice || '0'),
+        supplier_id: supplierId,
+        batch_number: item.batchNumber,
+        expiry_date: format(item.expiryDate!, 'yyyy-MM-dd'),
+        purchase_price: parseFloat(item.purchasePrice || '0'),
       };
     });
 
     try {
       await createSupplyVoucherWithItems(voucherData, newInventoryItems as any);
+
+      // ✨ Save GTIN mappings for new GTINs
+      const gtinMappings = items
+        .filter(item => item.gtin && item.productDefinitionId && item.variant)
+        .map(item => ({
+          gtin: item.gtin!,
+          product_definition_id: item.productDefinitionId,
+          variant_name: item.variant,
+          last_supplier_id: supplierId,
+          average_price: parseFloat(item.purchasePrice) || undefined,
+        }));
+
+      if (gtinMappings.length > 0) {
+        try {
+          await batchSaveGTINMappings(gtinMappings);
+        } catch (error) {
+          console.error('Error saving GTIN mappings:', error);
+        }
+      }
+
       toast({ title: t('success'), description: t('invoice_processed_successfully') });
       navigate('/supplies');
     } catch (error) {
@@ -116,16 +138,16 @@ const AddInventoryPage = () => {
   return (
     <div className="page-container bg-background" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         closeSidebar={closeSidebar}
       />
-      
+
       <main className={`${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">{t('add_new_inventory_invoice')}</h1>
-          
+
           <form onSubmit={handleSubmit}>
             <Card className="mb-8">
               <CardHeader>
@@ -143,7 +165,7 @@ const AddInventoryPage = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                 <div className="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="voucherNumber">{t('voucher_number')}</Label>
                   <Input id="voucherNumber" value={voucherNumber} onChange={(e) => setVoucherNumber(e.target.value)} />
                 </div>
@@ -164,7 +186,7 @@ const AddInventoryPage = () => {
                 <div className="space-y-2">
                   <Label htmlFor="store">{t('store')}</Label>
                   <Select value={storeId} onValueChange={setStoreId}>
-                    <SelectTrigger><SelectValue placeholder={t('select_store')}/></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t('select_store')} /></SelectTrigger>
                     <SelectContent>{stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>

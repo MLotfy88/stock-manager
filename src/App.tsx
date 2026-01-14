@@ -32,6 +32,9 @@ const ManagementPage = lazy(() => import('./pages/ManagementPage'));
 const ReplacementVoucherPage = lazy(() => import('./pages/ReplacementVoucherPage'));
 const OnShelfReportPage = lazy(() => import('./pages/OnShelfReportPage'));
 const OnShelfInvoicingPage = lazy(() => import('./pages/OnShelfInvoicingPage'));
+const ProcedureTemplatesPage = lazy(() => import('./pages/ProcedureTemplatesPage'));
+const SupplierPerformancePage = lazy(() => import('./pages/SupplierPerformancePage'));
+const ReturnsManagementPage = lazy(() => import('./pages/ReturnsManagementPage'));
 
 
 const PageTracker = () => {
@@ -79,6 +82,9 @@ const AppRoutes = () => {
 
   const userRole = user?.profile?.role || 'user';
 
+  // Debug logging (remove in production)
+  console.log('User role:', userRole, 'Session:', !!session);
+
   return (
     <Routes>
       {userRole === 'admin' ? (
@@ -101,22 +107,20 @@ const AppRoutes = () => {
           <Route path="/replacement-voucher" element={<ReplacementVoucherPage />} />
           <Route path="/on-shelf-report" element={<OnShelfReportPage />} />
           <Route path="/on-shelf-invoicing" element={<OnShelfInvoicingPage />} />
-          {/* Redirect user routes to admin dashboard if accessed directly */}
-          <Route path="/user-dashboard" element={<Navigate to="/" replace />} />
+          <Route path="/procedure-templates" element={<ProcedureTemplatesPage />} />
+          <Route path="/supplier-performance" element={<SupplierPerformancePage />} />
+          <Route path="/returns-management" element={<ReturnsManagementPage />} />
         </Route>
       ) : (
-        <>
-          <Route path="/user-dashboard" element={<UserDashboardPage />} />
-          <Route element={<UserLayout />}>
-            <Route path="/supplies" element={<SuppliesPage />} />
-            <Route path="/transfer-inventory" element={<TransferInventoryPage />} />
-            <Route path="/consumption" element={<ConsumptionPage />} />
-            <Route path="/inventory-report" element={<InventoryReportPage />} />
-          </Route>
-          {/* Redirect any other path to the user dashboard */}
-          <Route path="*" element={<Navigate to="/user-dashboard" replace />} />
-        </>
+        <Route element={<UserLayout />}>
+          <Route path="/" element={<UserDashboardPage />} />
+          <Route path="/supplies" element={<SuppliesPage />} />
+          <Route path="/transfer-inventory" element={<TransferInventoryPage />} />
+          <Route path="/consumption" element={<ConsumptionPage />} />
+          <Route path="/inventory-report" element={<InventoryReportPage />} />
+        </Route>
       )}
+      {/* 404 Page - applies to any unmatched route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
