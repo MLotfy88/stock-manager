@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import { Package, PackageItem } from '@/types';
 
 // Fetch all packages with their items

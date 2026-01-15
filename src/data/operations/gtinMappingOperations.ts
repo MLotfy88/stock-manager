@@ -44,3 +44,16 @@ export const updateLastScanned = async (gtin: string) => {
 
   if (error) throw error;
 };
+
+export const batchSaveGTINMappings = async (mappings: Omit<GTINMapping, 'created_at' | 'last_scanned_at'>[]) => {
+  const { error } = await supabase
+    .from('gtin_variant_mapping')
+    .upsert(
+      mappings.map(m => ({
+        ...m,
+        last_scanned_at: new Date().toISOString()
+      }))
+    );
+
+  if (error) throw error;
+};
