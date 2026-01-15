@@ -32,9 +32,10 @@ type ConsumptionItemInput = Partial<ConsumptionItem> & {
 
 interface ConsumptionFormProps {
   onSuccess?: () => void;
+  initialItems?: ConsumptionItemInput[];
 }
 
-const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
+const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess, initialItems = [] }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -46,7 +47,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess }) => {
 
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [notes, setNotes] = useState('');
-  const [items, setItems] = useState<ConsumptionItemInput[]>([]);
+  const [items, setItems] = useState<ConsumptionItemInput[]>(initialItems);
   const [procedureTypes, setProcedureTypes] = useState<ProcedureType[]>([]);
   const [selectedProcedureType, setSelectedProcedureType] = useState<string>('');
   const [procedureTemplates, setProcedureTemplates] = useState<ProcedureTemplateWithItems[]>([]);

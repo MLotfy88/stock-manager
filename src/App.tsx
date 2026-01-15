@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { usePageTracking } from './hooks/usePageTracking';
@@ -9,6 +10,8 @@ import LoginPage from './pages/LoginPage';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import UserLayout from './components/layout/UserLayout';
+import BottomGlassNav from './components/layout/BottomGlassNav';
+import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 
 // Lazy load pages
 const Index = lazy(() => import('./pages/Index'));
@@ -35,7 +38,7 @@ const OnShelfInvoicingPage = lazy(() => import('./pages/OnShelfInvoicingPage'));
 const ProcedureTemplatesPage = lazy(() => import('./pages/ProcedureTemplatesPage'));
 const SupplierPerformancePage = lazy(() => import('./pages/SupplierPerformancePage'));
 const ReturnsManagementPage = lazy(() => import('./pages/ReturnsManagementPage'));
-
+const PackagesPage = lazy(() => import('./pages/PackagesPage'));
 
 const PageTracker = () => {
   usePageTracking();
@@ -56,9 +59,10 @@ const AdminLayout = () => {
       />
       <div className="flex flex-col flex-1">
         <Header toggleSidebar={toggleSidebar} />
-        <main className="flex-1 p-4 overflow-auto">
+        <main className="flex-1 p-4 overflow-auto pb-24 md:pb-4">
           <Outlet />
         </main>
+        <BottomGlassNav />
       </div>
     </div>
   );
@@ -110,6 +114,7 @@ const AppRoutes = () => {
           <Route path="/procedure-templates" element={<ProcedureTemplatesPage />} />
           <Route path="/supplier-performance" element={<SupplierPerformancePage />} />
           <Route path="/returns-management" element={<ReturnsManagementPage />} />
+          <Route path="/packages" element={<PackagesPage />} />
         </Route>
       ) : (
         <Route element={<UserLayout />}>
@@ -126,7 +131,6 @@ const AppRoutes = () => {
   );
 };
 
-
 function App() {
   return (
     <LanguageProvider>
@@ -137,6 +141,7 @@ function App() {
             <AppRoutes />
           </Suspense>
           <Toaster />
+          <OfflineIndicator />
         </Router>
       </AuthProvider>
     </LanguageProvider>

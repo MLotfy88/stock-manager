@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -8,7 +9,7 @@ const __dirname = dirname(__filename);
 
 // Read Supabase credentials from .env or environment
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
     console.error('❌ Error: Missing Supabase credentials');
@@ -20,7 +21,7 @@ console.log('🔄 Connecting to Supabase...');
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Read the migration file
-const migrationPath = join(__dirname, 'migrations', 'add_gtin_product_mapping.sql');
+const migrationPath = join(__dirname, 'migrations', 'upgrade_v5_packages_barcode.sql');
 console.log(`📄 Reading migration file: ${migrationPath}`);
 
 let migrationSQL;

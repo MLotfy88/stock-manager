@@ -20,6 +20,23 @@ export interface Manufacturer {
   alert_period?: number;
 }
 
+export interface PackageItem {
+  id: string;
+  package_id: string;
+  product_definition_id: string;
+  variant: string;
+  quantity: number;
+  product_definition?: ProductDefinition;
+}
+
+export interface Package {
+  id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  items?: PackageItem[];
+}
+
 export interface Supplier {
   id: string;
   name: string;

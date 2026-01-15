@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -17,6 +18,12 @@ import { getGTINMapping } from '@/data/operations/gtinMappingOperations';
 import { saveRecentVariant, getRecentVariants } from '@/utils/variantPreferences';
 import { scanSuccessFeedback, scanErrorFeedback, playTick } from '@/utils/audioFeedback';
 import { Badge } from '@/components/ui/badge';
+import { usePermission } from '@/hooks/usePermission';
+import { CalendarIcon, Copy, PlusCircle, ScanBarcode, Trash2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 export type PurchaseOrderItem = {
   id: string;
@@ -38,6 +45,8 @@ interface InventoryItemFormProps {
 const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsChange }) => {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const { canViewPrices } = usePermission(); // Encapsulated permission check
+
   const [productDefinitions, setProductDefinitions] = useState<ProductDefinition[]>([]);
   const [activeScannerId, setActiveScannerId] = useState<string | null>(null);
   const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
@@ -59,19 +68,16 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
     onItemsChange(items.map(item => {
       if (item.id === itemId) {
         const updated = { ...item, [field]: value };
-
         // Save recent variant when variant is selected
         if (field === 'variant' && value && updated.productDefinitionId) {
           saveRecentVariant(updated.productDefinitionId, value);
         }
-
         return updated;
       }
       return item;
     }));
   }, [items, onItemsChange]);
 
-  // Highlight a row temporarily
   const highlightRow = useCallback((rowId: string) => {
     setHighlightedRowId(rowId);
     setTimeout(() => setHighlightedRowId(null), 2000);
@@ -103,7 +109,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
         const gs1Data = data;
 
         if (gs1Data && gs1Data.gtin) {
-          // ✨ SMART GROUPING: Check if item already exists
           const existingItemIndex = items.findIndex(item =>
             item.gtin === gs1Data.gtin &&
             item.batchNumber === (gs1Data.lotNumber || '') &&
@@ -111,7 +116,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
           );
 
           if (existingItemIndex !== -1 && items[existingItemIndex].id !== activeScannerId) {
-            // Item exists - increment quantity
             const existingItem = items[existingItemIndex];
             const newQuantity = parseInt(existingItem.quantity || '1') + 1;
 
@@ -121,9 +125,8 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                 : item
             ));
 
-            // Visual feedback
             highlightRow(existingItem.id);
-            scanSuccessFeedback(false); // Duplicate sound
+            scanSuccessFeedback(false);
 
             toast({
               title: "➕ تم إضافة قطعة",
@@ -137,7 +140,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
             return;
           }
 
-          // Updates for the current item
           const updates: Partial<PurchaseOrderItem> = {
             barcode: gs1Data.formattedValue,
             gtin: gs1Data.gtin,
@@ -148,30 +150,23 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
             updates.expiryDate = new Date(gs1Data.expiryDate);
           }
 
-          // Use auto-detected mapping if available from hook
           if (data.product_id) {
             updates.productDefinitionId = data.product_id;
             updates.variant = data.variant_name || '';
-
             const productName = productDefinitions.find(p => p.id === data.product_id)?.name || 'Unknown';
-
             toast({
               title: "✅ تم التعرف تلقائياً",
               description: `${productName} - ${data.variant_name || 'N/A'}\nLOT: ${gs1Data.lotNumber || 'N/A'}`,
               duration: 4000,
               className: "bg-green-50 border-green-200"
             });
-
             scanSuccessFeedback(true);
           } else {
-            // Fallback: check GTIN mapping manually just in case
             const mapping = await getGTINMapping(gs1Data.gtin);
             if (mapping) {
               updates.productDefinitionId = mapping.product_definition_id;
               updates.variant = mapping.variant_name;
-
               const productName = productDefinitions.find(p => p.id === mapping.product_definition_id)?.name || 'Unknown';
-
               toast({
                 title: "✅ تم التعرف تلقائياً",
                 description: `${productName} - ${mapping.variant_name}\nLOT: ${gs1Data.lotNumber || 'N/A'}`,
@@ -194,7 +189,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
             item.id === activeScannerId ? { ...item, ...updates } : item
           ));
         } else {
-          // Regular barcode
           handleItemChange(activeScannerId, 'barcode', data.rawValue);
           toast({
             title: t('barcode_scanned'),
@@ -280,7 +274,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                   <TableHead>{t('product')}</TableHead>
                   <TableHead className="w-[200px]">{t('variant')}</TableHead>
                   <TableHead className="w-[80px]">{t('quantity')}</TableHead>
-                  <TableHead className="w-[100px]">{t('purchase_price')}</TableHead>
+                  {canViewPrices && <TableHead className="w-[100px]">{t('purchase_price')}</TableHead>}
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -296,7 +290,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                         "transition-colors",
                         isHighlighted && "bg-blue-100 animate-pulse"
                       )}>
-                        {/* 1. Barcode */}
                         <TableCell className="p-2">
                           <div className="flex items-center gap-1">
                             <Input
@@ -316,8 +309,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             </Button>
                           </div>
                         </TableCell>
-
-                        {/* 2. GTIN */}
                         <TableCell className="p-2">
                           <Input
                             value={item.gtin || ''}
@@ -326,8 +317,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             className="font-mono text-xs h-8"
                           />
                         </TableCell>
-
-                        {/* 3. LOT */}
                         <TableCell className="p-2">
                           <Input
                             value={item.batchNumber}
@@ -336,8 +325,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             className="font-mono text-xs h-8"
                           />
                         </TableCell>
-
-                        {/* 4. Expiry */}
                         <TableCell className="p-2">
                           <Popover>
                             <PopoverTrigger asChild>
@@ -362,8 +349,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             </PopoverContent>
                           </Popover>
                         </TableCell>
-
-                        {/* 5. Product */}
                         <TableCell className="p-2">
                           <Select
                             value={item.productDefinitionId}
@@ -382,8 +367,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             </SelectContent>
                           </Select>
                         </TableCell>
-
-                        {/* 6. Variant */}
                         <TableCell className="p-2">
                           {selectedDefinition ? (
                             <VariantQuickPicker
@@ -401,8 +384,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             />
                           )}
                         </TableCell>
-
-                        {/* 7. Quantity */}
                         <TableCell className="p-2">
                           <Input
                             type="number"
@@ -412,20 +393,18 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             className="text-center font-bold h-8 text-xs"
                           />
                         </TableCell>
-
-                        {/* 8. Price */}
-                        <TableCell className="p-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.purchasePrice}
-                            onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)}
-                            className="h-8 text-xs"
-                          />
-                        </TableCell>
-
-                        {/* Actions */}
+                        {canViewPrices && (
+                          <TableCell className="p-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.purchasePrice}
+                              onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="p-2">
                           <div className="flex gap-1 justify-end">
                             <Button
@@ -472,7 +451,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                   onDuplicate={() => duplicateItem(item.id)}
                   canRemove={items.length > 1}
                 >
-                  {/* 1 & 2: Barcode & GTIN */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <Label className="text-[10px] uppercase text-muted-foreground">{t('barcode')}</Label>
@@ -494,7 +472,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                     </div>
                   </div>
 
-                  {/* 3 & 4: LOT & Expiry */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <Label className="text-[10px] uppercase text-muted-foreground">LOT</Label>
@@ -534,7 +511,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
 
                   <div className="border-t pt-2 my-2 border-dashed" />
 
-                  {/* 5: Product */}
                   <div className="space-y-1">
                     <Label className="text-[10px] uppercase text-muted-foreground">{t('product')}</Label>
                     <Select
@@ -555,7 +531,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                     </Select>
                   </div>
 
-                  {/* 6: Variant */}
                   <div className="space-y-1">
                     <Label className="text-[10px] uppercase text-muted-foreground">{t('variant')}</Label>
                     {selectedDefinition ? (
@@ -575,7 +550,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                     )}
                   </div>
 
-                  {/* 7 & 8: Quantity & Price */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <Label className="text-[10px] uppercase text-muted-foreground">{t('quantity')}</Label>
@@ -588,18 +562,20 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                         className="h-9 text-xs font-bold"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-muted-foreground">{t('purchase_price')}</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.purchasePrice}
-                        onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)}
-                        placeholder={t('purchase_price')}
-                        className="h-9 text-xs"
-                      />
-                    </div>
+                    {canViewPrices && (
+                      <div className="space-y-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground">{t('purchase_price')}</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.purchasePrice}
+                          onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)}
+                          placeholder={t('purchase_price')}
+                          className="h-9 text-xs"
+                        />
+                      </div>
+                    )}
                   </div>
                 </MobileSupplyItemCard>
               );
@@ -630,7 +606,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
         </CardContent>
       </Card>
 
-      {/* Barcode Scanner Overlay */}
       {isScannerActive && (
         <div className="fixed inset-0 z-50 bg-black">
           <video ref={videoRef} className="w-full h-full object-cover" playsInline />

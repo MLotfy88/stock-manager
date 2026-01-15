@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home } from 'lucide-react';
 import AppLogo from './AppLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
+import BottomGlassNav from './BottomGlassNav';
 
 const UserHeader = () => {
   const { t } = useLanguage();
@@ -24,11 +26,13 @@ const UserLayout = () => {
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <UserHeader />
-      <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+      <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 pb-24 md:pb-4">
         <Outlet />
       </main>
+      <BottomGlassNav />
     </div>
   );
 };
 
 export default UserLayout;
+

@@ -13,6 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { calculateDashboardStats } from '@/data/operations/statsOperations';
 import { UrgentActionsBox } from '@/components/dashboard/UrgentActionsBox';
+import { SupplierRiskWidget } from '@/components/dashboard/SupplierRiskWidget';
 import { DashboardStats as StatsType } from '@/types';
 
 const Index = () => {
@@ -46,35 +47,35 @@ const Index = () => {
     };
     fetchStats();
   }, []);
-  
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (stats.expiringSupplies && stats.expiringSupplies > 0) {
         setShowNotification(true);
       }
     }, 1500);
-    
+
     return () => clearTimeout(timer);
   }, [stats.expiringSupplies]);
-  
+
   return (
     <div className="page-container bg-background" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         closeSidebar={closeSidebar}
       />
-      
+
       {showNotification && (
-        <Notification 
+        <Notification
           title={t('expiry_alert')}
           message={t('supplies_expiring_alert')}
           type="warning"
           onClose={() => setShowNotification(false)}
         />
       )}
-      
+
       <main className={`px-4 md:px-8 ${direction === 'rtl' ? 'md:pr-72' : 'md:pl-72'} transition-all`}>
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-fade-in">
@@ -103,20 +104,23 @@ const Index = () => {
           </div>
 
           {/* Urgent Actions Box */}
-          <UrgentActionsBox 
+          <UrgentActionsBox
             expiringSoonCount={stats.expiringSupplies || 0}
             reorderPointCount={stats.reorderPointItems || 0}
           />
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Content Column */}
             <div className="lg:col-span-2 space-y-6">
               <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                <DashboardStats />
+                <SupplierRiskWidget />
+                <div className="mt-6">
+                  <DashboardStats />
+                </div>
               </div>
               <div className="animate-fade-in content-card" style={{ animationDelay: '0.3s' }}>
-                <SupplyList 
-                  title={t('latest_supplies')} 
+                <SupplyList
+                  title={t('latest_supplies')}
                   status="all"
                   limit={5}
                 />
@@ -129,8 +133,8 @@ const Index = () => {
                 <ExpiryCalendar />
               </div>
               <div className="animate-fade-in content-card" style={{ animationDelay: '0.4s' }}>
-                <SupplyList 
-                  title={t('supplies_expiring_soon')} 
+                <SupplyList
+                  title={t('supplies_expiring_soon')}
                   status="expiring_soon"
                   limit={5}
                 />
