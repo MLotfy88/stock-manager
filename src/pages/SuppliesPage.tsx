@@ -23,7 +23,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 const SuppliesPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   const { t, direction } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();

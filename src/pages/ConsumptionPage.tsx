@@ -11,7 +11,7 @@ import ConsumptionForm from '@/components/consumption/ConsumptionForm';
 import ConsumptionRecordList from '@/components/consumption/ConsumptionRecordList';
 
 const ConsumptionPage = () => {
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   const { t, direction } = useLanguage();
   const { toast } = useToast();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

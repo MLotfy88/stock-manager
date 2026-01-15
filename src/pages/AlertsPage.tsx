@@ -31,7 +31,7 @@ const getAlertSeverity = (daysRemaining: number, alertPeriod: number) => {
 
 const AlertsPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   const { t, direction } = useLanguage();
   const navigate = useNavigate();
 

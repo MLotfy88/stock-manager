@@ -18,7 +18,7 @@ import { InventoryItem, ProductDefinition, SupplyTypeItem, Store, Supplier } fro
 
 const AllSuppliesPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   const { t, direction } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);

@@ -17,7 +17,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, closeSidebar }) => {
   const location = useLocation();
   const [activePath, setActivePath] = useState(location.pathname);
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   const { direction } = useLanguage();
 
   useEffect(() => {

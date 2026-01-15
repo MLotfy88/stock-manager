@@ -22,7 +22,7 @@ export function ResponsiveTable<T>({
     loading = false,
     emptyMessage = 'لا توجد بيانات'
 }: ResponsiveTableProps<T>) {
-    const isMobile = useMediaQuery('(max-width: 768px)');
+    const isMobile = useMediaQuery('(max-width: 1024px)');
 
     if (loading) {
         return <div className="text-center py-12">جاري التحميل...</div>;

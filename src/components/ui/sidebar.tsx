@@ -25,7 +25,7 @@ export function Sidebar({
   ...props
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
-  const isMobile = useMediaQuery("(max-width: 768px)")
+  const isMobile = useMediaQuery("(max-width: 1024px)")
 
   // Handle screen size changes
   useEffect(() => {
