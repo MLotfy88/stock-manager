@@ -205,9 +205,15 @@ const SuppliesPage = () => {
                   {sortedItems.map((item) => (
                     <SwipeableItem
                       key={item.id}
-                      actions={[
-                        { label: t('view'), onClick: () => {/* view logic */ } },
-                      ]}
+                      actions={
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {/* view logic */ }}
+                        >
+                          {t('view')}
+                        </Button>
+                      }
                     >
                       <SupplyCard supply={item} onDelete={loadData} />
                     </SwipeableItem>

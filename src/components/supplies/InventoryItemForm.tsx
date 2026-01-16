@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -16,6 +15,7 @@ import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard
 import { VariantQuickPicker } from './VariantQuickPicker';
 import { StentMatrixPicker } from '@/components/supplies/StentMatrixPicker';
 import { CatheterCurvePicker } from '@/components/supplies/CatheterCurvePicker';
+import { HybridVariantPicker, PickerOption } from '@/components/supplies/HybridVariantPicker';
 import { getGTINMapping } from '@/data/operations/gtinMappingOperations';
 import { saveRecentVariant, getRecentVariants } from '@/utils/variantPreferences';
 import { scanSuccessFeedback, scanErrorFeedback, playTick } from '@/utils/audioFeedback';
@@ -39,10 +39,37 @@ export type PurchaseOrderItem = {
   purchasePrice: string;
 };
 
-interface InventoryItemFormProps {
+export interface InventoryItemFormProps {
   items: PurchaseOrderItem[];
   onItemsChange: (items: PurchaseOrderItem[]) => void;
 }
+
+// Define options for specific types
+// Ideally this should come from a DB configuration, but for speed/MVP:
+const BALLOON_DIAMETERS: PickerOption[] = [
+  { value: '1.25', label: '1.25' }, { value: '1.50', label: '1.50' }, { value: '1.75', label: '1.75' },
+  { value: '2.00', label: '2.00' }, { value: '2.25', label: '2.25' }, { value: '2.50', label: '2.50' },
+  { value: '2.75', label: '2.75' }, { value: '3.00', label: '3.00' }, { value: '3.25', label: '3.25' },
+  { value: '3.50', label: '3.50' }, { value: '4.00', label: '4.00' }, { value: '4.50', label: '4.50' },
+  { value: '5.00', label: '5.00' }
+];
+
+const BALLOON_LENGTHS: PickerOption[] = [
+  { value: '6', label: '6' }, { value: '8', label: '8' }, { value: '10', label: '10' },
+  { value: '12', label: '12' }, { value: '15', label: '15' }, { value: '20', label: '20' },
+  { value: '25', label: '25' }, { value: '30', label: '30' }
+];
+
+const GUIDING_CATHETER_CURVES: PickerOption[] = [
+  { value: 'JL3.5', label: 'JL3.5' }, { value: 'JL4.0', label: 'JL4.0' }, { value: 'JL4.5', label: 'JL4.5' }, { value: 'JL5.0', label: 'JL5.0' },
+  { value: 'JR3.5', label: 'JR3.5' }, { value: 'JR4.0', label: 'JR4.0' }, { value: 'JR4.5', label: 'JR4.5' },
+  { value: 'AL.75', label: 'AL.75' }, { value: 'AL1.0', label: 'AL1.0' }, { value: 'AL1.5', label: 'AL1.5' }, { value: 'AL2.0', label: 'AL2.0' },
+  { value: 'XB3.0', label: 'XB3.0' }, { value: 'XB3.5', label: 'XB3.5' }, { value: 'XB4.0', label: 'XB4.0' }
+];
+
+const GUIDING_CATHETER_SIZES: PickerOption[] = [
+  { value: '5F', label: '5F' }, { value: '6F', label: '6F' }, { value: '7F', label: '7F' }, { value: '8F', label: '8F' }
+];
 
 const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsChange }) => {
   const { t } = useLanguage();
@@ -79,6 +106,10 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
       return item;
     }));
   }, [items, onItemsChange]);
+
+  const handleItemChange = (itemId: string, field: keyof PurchaseOrderItem, value: any) => {
+    updateItem(itemId, { [field]: value });
+  };
 
   const highlightRow = useCallback((rowId: string) => {
     setHighlightedRowId(rowId);
@@ -251,6 +282,8 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
         id: `item_${Date.now()}`,
         barcode: '',
         gtin: undefined,
+        // Reset id to avoid duplicate keys error immediately on next render before state update?
+        // Actually onItemsChange usage above sets new ID.
       };
       onItemsChange([...items, newItem]);
       playTick();
@@ -374,15 +407,17 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             (() => {
                               const typeName = selectedDefinition.supply_type?.name_en?.toLowerCase() || selectedDefinition.supply_type?.name?.toLowerCase() || '';
                               const isStent = typeName.includes('stent') || typeName.includes('دعامة');
-                              const isCatheter = typeName.includes('catheter') || typeName.includes('قسطرة');
+                              const isBalloon = typeName.includes('balloon') || typeName.includes('بالون') || typeName.includes('ballon');
+                              const isGuidingCatheter = (typeName.includes('catheter') && (typeName.includes('guid') || typeName.includes('mojja'))) || typeName.includes('موجهة');
+                              const isDiagnosticCatheter = typeName.includes('diagnostic') || typeName.includes('تشخيص');
 
                               if (isStent) {
                                 return (
                                   <Popover>
                                     <PopoverTrigger asChild>
-                                      <Button variant="outline" className="w-full text-xs h-8 justify-between">
-                                        {item.variant || t('select_size')}
-                                        <Badge variant="secondary" className="ml-2 text-[10px]">Matrix</Badge>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
+                                        <span className="truncate">{item.variant || t('select_size')}</span>
+                                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5">Matrix</Badge>
                                       </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
@@ -398,13 +433,61 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                 );
                               }
 
-                              if (isCatheter) {
+                              if (isBalloon) {
                                 return (
                                   <Popover>
                                     <PopoverTrigger asChild>
-                                      <Button variant="outline" className="w-full text-xs h-8 justify-between">
-                                        {item.variant || t('select_curve')}
-                                        <Badge variant="secondary" className="ml-2 text-[10px]">Visual</Badge>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
+                                        <span className="truncate">{item.variant || t('select_variant')}</span>
+                                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5">Hybrid</Badge>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <HybridVariantPicker
+                                        primaryLabel="Diameter (mm)"
+                                        primaryOptions={BALLOON_DIAMETERS}
+                                        secondaryLabel="Length (mm)"
+                                        secondaryOptions={BALLOON_LENGTHS}
+                                        separator="x"
+                                        selectedVariant={item.variant}
+                                        onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                );
+                              }
+
+                              if (isGuidingCatheter) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
+                                        <span className="truncate">{item.variant || t('select_variant')}</span>
+                                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5">Guide</Badge>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <HybridVariantPicker
+                                        primaryLabel="Curve"
+                                        primaryOptions={GUIDING_CATHETER_CURVES}
+                                        secondaryLabel="Size (F)"
+                                        secondaryOptions={GUIDING_CATHETER_SIZES}
+                                        separator=" "
+                                        selectedVariant={item.variant}
+                                        onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                );
+                              }
+
+                              if (isDiagnosticCatheter) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
+                                        <span className="truncate">{item.variant || t('select_curve')}</span>
+                                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5">Visual</Badge>
                                       </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
@@ -608,7 +691,9 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             {(() => {
                               const typeName = selectedDefinition.supply_type?.name_en?.toLowerCase() || selectedDefinition.supply_type?.name?.toLowerCase() || '';
                               const isStent = typeName.includes('stent') || typeName.includes('دعامة');
-                              const isCatheter = typeName.includes('catheter') || typeName.includes('قسطرة');
+                              const isBalloon = typeName.includes('balloon') || typeName.includes('بالون') || typeName.includes('ballon');
+                              const isGuidingCatheter = (typeName.includes('catheter') && (typeName.includes('guid') || typeName.includes('mojja'))) || typeName.includes('موجهة');
+                              const isDiagnosticCatheter = typeName.includes('diagnostic') || typeName.includes('تشخيص');
 
                               return (
                                 <div className="space-y-2">
@@ -620,7 +705,27 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                       onSelect={(variant) => updateItem(item.id, { variant })}
                                       selectedVariant={item.variant}
                                     />
-                                  ) : isCatheter ? (
+                                  ) : isBalloon ? (
+                                    <HybridVariantPicker
+                                      primaryLabel="Diameter (mm)"
+                                      primaryOptions={BALLOON_DIAMETERS}
+                                      secondaryLabel="Length (mm)"
+                                      secondaryOptions={BALLOON_LENGTHS}
+                                      separator="x"
+                                      selectedVariant={item.variant}
+                                      onSelect={(variant) => updateItem(item.id, { variant })}
+                                    />
+                                  ) : isGuidingCatheter ? (
+                                    <HybridVariantPicker
+                                      primaryLabel="Curve"
+                                      primaryOptions={GUIDING_CATHETER_CURVES}
+                                      secondaryLabel="Size (F)"
+                                      secondaryOptions={GUIDING_CATHETER_SIZES}
+                                      separator=" "
+                                      selectedVariant={item.variant}
+                                      onSelect={(variant) => updateItem(item.id, { variant })}
+                                    />
+                                  ) : isDiagnosticCatheter ? (
                                     <CatheterCurvePicker
                                       onSelect={(curve) => updateItem(item.id, { variant: curve })}
                                       selectedCurve={item.variant}

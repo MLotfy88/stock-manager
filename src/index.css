@@ -125,7 +125,8 @@
   }
 
   .glass-nav {
-    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-white/20 dark:border-slate-800/50 shadow-[0_-5px_20px_rgba(0, 0, 0, 0.05)];
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-white/20 dark:border-slate-800/50;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
   }
 
   .glass-header {
