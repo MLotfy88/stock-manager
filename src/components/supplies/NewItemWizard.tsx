@@ -44,6 +44,9 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
     const [expiryDate, setExpiryDate] = useState<string>('');
     const [batchNumber, setBatchNumber] = useState('');
 
+    const [isLoadingDefs, setIsLoadingDefs] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+
     // Initial Data Load
     useEffect(() => {
         if (isOpen) {
@@ -51,6 +54,7 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
             setSearchQuery('');
             setSelectedDefinition(null);
             setSelectedVariant('');
+            setLoadError(null);
 
             // Pre-fill from scan
             if (scannedData) {
@@ -64,12 +68,21 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
     }, [isOpen, scannedData]);
 
     const loadDefinitions = async () => {
+        setIsLoadingDefs(true);
+        setLoadError(null);
         try {
             const defs = await getProductDefinitions();
+            if (!defs || defs.length === 0) {
+                // Checking if it's strictly empty or just loaded nothing
+                console.warn("No product definitions found.");
+            }
             setAllDefinitions(defs);
             setFilteredDefinitions(defs);
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to load product definitions", err);
+            setLoadError(err.message || "Failed to load products");
+        } finally {
+            setIsLoadingDefs(false);
         }
     };
 
@@ -114,6 +127,21 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
 
     const renderStep1 = () => (
         <div className="space-y-4">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-900 flex items-start gap-3">
+                <div className="bg-yellow-100 dark:bg-yellow-900/40 p-1.5 rounded-full mt-0.5">
+                    <Search className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                    <h4 className="font-semibold text-sm text-yellow-800 dark:text-yellow-200">{t('unknown_barcode') || 'Unknown Barcode'}</h4>
+                    <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                        {defaultBarcode || scannedData?.rawValue}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                        {t('link_product_help') || 'This item is not in your database. Select a product below to link it for future scans.'}
+                    </p>
+                </div>
+            </div>
+
             <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -124,22 +152,38 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
                     autoFocus
                 />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[60vh] overflow-y-auto pb-20">
-                {filteredDefinitions.map(def => (
-                    <Button
-                        key={def.id}
-                        variant="outline"
-                        className="h-auto py-4 flex flex-col items-start gap-1 whitespace-normal text-left"
-                        onClick={() => handleDefinitionSelect(def)}
-                    >
-                        <span className="font-bold text-base">{def.name}</span>
-                        <span className="text-xs text-muted-foreground">{def.variant_label || "Standard"}</span>
-                    </Button>
-                ))}
-                {filteredDefinitions.length === 0 && (
-                    <div className="col-span-full text-center py-8 text-muted-foreground">
-                        {t('no_products_found') || 'لا توجد منتجات مطابقة'} "{searchQuery}"
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto pb-20">
+                {isLoadingDefs ? (
+                    <div className="col-span-full py-8 text-center text-muted-foreground flex flex-col items-center gap-2">
+                        <span className="animate-spin text-2xl">⏳</span>
+                        <span>{t('loading_products') || 'Loading products...'}</span>
                     </div>
+                ) : loadError ? (
+                    <div className="col-span-full py-8 text-center text-destructive bg-destructive/5 rounded-lg">
+                        <p className="font-semibold">Error Loading Products</p>
+                        <p className="text-sm my-2">{loadError}</p>
+                        <Button variant="outline" size="sm" onClick={loadDefinitions}>Retry</Button>
+                    </div>
+                ) : (
+                    <>
+                        {filteredDefinitions.map(def => (
+                            <Button
+                                key={def.id}
+                                variant="outline"
+                                className="h-auto py-4 flex flex-col items-start gap-1 whitespace-normal text-left"
+                                onClick={() => handleDefinitionSelect(def)}
+                            >
+                                <span className="font-bold text-base">{def.name}</span>
+                                <span className="text-xs text-muted-foreground">{def.variant_label || "Standard"}</span>
+                            </Button>
+                        ))}
+                        {filteredDefinitions.length === 0 && (
+                            <div className="col-span-full text-center py-8 text-muted-foreground">
+                                {t('no_products_found') || 'لا توجد منتجات مطابقة'} "{searchQuery}"
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>

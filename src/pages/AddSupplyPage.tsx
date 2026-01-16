@@ -104,6 +104,14 @@ const AddInventoryPage = () => {
     setIsScannerLoading(true);
     setCurrentScannedData(data);
 
+    // Immediate Feedback
+    toast({
+      title: t('scan_successful') || "Scan Successful",
+      description: data.rawValue,
+      duration: 1000,
+      className: "bg-green-500 text-white border-none"
+    });
+
     try {
       // 1. Check if we have a product_id directly from the scanner (via GTIN mapping)
       let matchedDefId = data.product_id;
