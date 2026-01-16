@@ -208,7 +208,7 @@ const TransferInventoryPage = () => {
   };
 
   return (
-    <div className="page-container bg-background" dir={direction}>
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
       <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} closeSidebar={closeSidebar} />
 

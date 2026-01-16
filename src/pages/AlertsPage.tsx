@@ -78,39 +78,39 @@ const AlertsPage = () => {
 
   // Filter supplies by their expiration date and calculate days remaining
   const suppliesWithAlerts = inventory
-  .filter(item => item.quantity > 0) // Exclude items with zero quantity
-  .map((item) => {
-    const expiryDate = new Date(item.expiry_date);
-    const today = new Date();
-    const timeDiff = expiryDate.getTime() - today.getTime();
-    const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    const def = productDefs.find(d => d.id === item.product_definition_id);
-    const manufacturer = manufacturers.find(m => m.id === item.manufacturer_id);
-    const alertPeriod = item.alert_period || 30; // Default to 30 if not set
+    .filter(item => item.quantity > 0) // Exclude items with zero quantity
+    .map((item) => {
+      const expiryDate = new Date(item.expiry_date);
+      const today = new Date();
+      const timeDiff = expiryDate.getTime() - today.getTime();
+      const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
+      const def = productDefs.find(d => d.id === item.product_definition_id);
+      const manufacturer = manufacturers.find(m => m.id === item.manufacturer_id);
+      const alertPeriod = item.alert_period || 30; // Default to 30 if not set
 
-    return {
-      ...item,
-      name: def?.name || 'N/A',
-      manufacturerName: manufacturer?.name || 'N/A',
-      daysRemaining,
-      severity: getAlertSeverity(daysRemaining, alertPeriod)
-    };
-  });
-  
+      return {
+        ...item,
+        name: def?.name || 'N/A',
+        manufacturerName: manufacturer?.name || 'N/A',
+        daysRemaining,
+        severity: getAlertSeverity(daysRemaining, alertPeriod)
+      };
+    });
+
   // Group alerts by severity
   const replacementAlerts = suppliesWithAlerts.filter(s => s.severity === 'replacement');
   const criticalAlerts = suppliesWithAlerts.filter(s => s.severity === 'critical');
   const expiredItems = suppliesWithAlerts.filter(s => s.severity === 'expired');
-  
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         closeSidebar={closeSidebar}
       />
-      
+
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -121,59 +121,59 @@ const AlertsPage = () => {
               </p>
             </div>
           </div>
-          
+
           {/* Alert Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-full">
-                    <Bell className="h-5 w-5 text-blue-600" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
+            <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/50">
+              <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
+                    <Bell className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-blue-600">{t('replacement_action_alerts')}</p>
-                    <p className="text-2xl font-bold">{replacementAlerts.length}</p>
+                    <p className="text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400">{t('replacement_action_alerts')}</p>
+                    <p className="text-xl md:text-2xl font-bold">{replacementAlerts.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-red-50 border-red-200">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-full">
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
+            <Card className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50">
+              <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-xl">
+                    <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-red-600">{t('critical_alerts')}</p>
-                    <p className="text-2xl font-bold">{criticalAlerts.length}</p>
+                    <p className="text-xs md:text-sm font-medium text-red-600 dark:text-red-400">{t('critical_alerts')}</p>
+                    <p className="text-xl md:text-2xl font-bold">{criticalAlerts.length}</p>
                   </div>
                 </div>
-                <Badge variant="destructive" className="mr-2">
+                <Badge variant="destructive" className="mr-2 text-xs">
                   &lt; 30 {t('days')}
                 </Badge>
               </CardContent>
             </Card>
-            
-            <Card className="bg-gray-50 border-gray-200">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-200 rounded-full">
-                    <Bell className="h-5 w-5 text-gray-600" />
+
+            <Card className="bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800">
+              <CardContent className="p-3 md:p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="p-2 bg-gray-200 dark:bg-gray-800 rounded-xl">
+                    <Bell className="h-4 w-4 md:h-5 md:w-5 text-gray-600 dark:text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">{t('expired_items')}</p>
-                    <p className="text-2xl font-bold">{expiredItems.length}</p>
+                    <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">{t('expired_items')}</p>
+                    <p className="text-xl md:text-2xl font-bold">{expiredItems.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Replacement Action Alerts Section */}
-          <Card className="mb-8">
-            <CardHeader className="bg-blue-50 pb-2">
+          <Card className="mb-8 dark:bg-slate-900/50">
+            <CardHeader className="bg-blue-50 dark:bg-blue-950/30 pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Bell className="h-5 w-5 text-blue-600" />
+                <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 {t('replacement_action_alerts')}
               </CardTitle>
             </CardHeader>
@@ -229,8 +229,8 @@ const AlertsPage = () => {
                           <h3 className="font-medium flex items-center gap-2">
                             {`${supply.name} (${supply.variant})`}
                             <Badge variant="destructive" className="ml-2">
-                              {supply.daysRemaining <= 0 
-                                ? t('expired') 
+                              {supply.daysRemaining <= 0
+                                ? t('expired')
                                 : `${supply.daysRemaining} ${t('days_remaining')}`}
                             </Badge>
                           </h3>
@@ -243,8 +243,8 @@ const AlertsPage = () => {
                         </Button>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                        <div 
-                          className="bg-red-600 h-1.5 rounded-full" 
+                        <div
+                          className="bg-red-600 h-1.5 rounded-full"
                           style={{ width: `${Math.max(100 - (supply.daysRemaining / 30) * 100, 0)}%` }}
                         ></div>
                       </div>
@@ -260,7 +260,7 @@ const AlertsPage = () => {
               )}
             </CardContent>
           </Card>
-          
+
           {/* Expired Items Section */}
           <Card>
             <CardHeader className="bg-gray-100 pb-2">

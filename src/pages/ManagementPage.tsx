@@ -39,14 +39,14 @@ const ManagementPage = () => {
     username: 'admin',
     password: '1234',
   });
-  
+
   const [username, setUsername] = useState(adminSettings.username);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   const handleCredentialsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!username.trim()) {
       toast({
         title: t('error'),
@@ -55,7 +55,7 @@ const ManagementPage = () => {
       });
       return;
     }
-    
+
     if (password && password !== confirmPassword) {
       toast({
         title: t('error'),
@@ -64,26 +64,26 @@ const ManagementPage = () => {
       });
       return;
     }
-    
+
     const updatedSettings: AdminSettings = {
       ...adminSettings,
       username
     };
-    
+
     if (password) {
       updatedSettings.password = password;
     }
-    
+
     setAdminSettings(updatedSettings);
     setPassword('');
     setConfirmPassword('');
-    
+
     toast({
       title: t('success'),
       description: "Admin credentials updated successfully",
     });
   };
-    
+
   const handleTestConnection = async () => {
     if (!supabaseUrl || !supabaseKey) {
       toast({
@@ -93,7 +93,7 @@ const ManagementPage = () => {
       });
       return;
     }
-    
+
     setConnectionStatus('testing');
     setConnectionMessage('');
     setTables([]);
@@ -351,20 +351,20 @@ $$;
       description: "SQL script copied to clipboard!",
     });
   };
-  
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         closeSidebar={closeSidebar}
       />
-      
+
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">{t('management_settings_nav')}</h1>
-          
+
           <Tabs defaultValue="credentials" className="w-full" orientation={isMobile ? 'vertical' : 'horizontal'}>
             <TabsList className="grid w-full md:grid-cols-2">
               <TabsTrigger value="credentials"><UserCog className="mr-2 h-4 w-4" />{t('credentials')}</TabsTrigger>
@@ -374,141 +374,141 @@ $$;
               <TabsContent value="credentials">
                 <Card>
                   <CardHeader>
-                  <CardTitle>{t('change_credentials')}</CardTitle>
-                  <CardDescription>
-                    Update your admin username and password.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCredentialsSubmit} className="space-y-6">
+                    <CardTitle>{t('change_credentials')}</CardTitle>
+                    <CardDescription>
+                      Update your admin username and password.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleCredentialsSubmit} className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="username">{t('username')}</Label>
+                          <div className="relative">
+                            <UserCog className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="username"
+                              value={username}
+                              onChange={(e) => setUsername(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="password">{t('password')}</Label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="password"
+                              type="password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="pl-10"
+                              placeholder="Leave blank to keep current password"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="confirmPassword">Confirm {t('password')}</Label>
+                          <div className="relative">
+                            <ShieldCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="confirmPassword"
+                              type="password"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <Button type="submit">
+                          {t('save')}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="supabase">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Supabase Integration</CardTitle>
+                    <CardDescription>
+                      Connect your application to a Supabase backend for persistent data storage.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="username">{t('username')}</Label>
-                        <div className="relative">
-                          <UserCog className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            id="username" 
-                            value={username} 
-                            onChange={(e) => setUsername(e.target.value)} 
-                            className="pl-10" 
-                          />
-                        </div>
+                        <Label htmlFor="supabaseUrl">Supabase URL</Label>
+                        <Input
+                          id="supabaseUrl"
+                          placeholder="https://your-project-ref.supabase.co"
+                          value={supabaseUrl}
+                          onChange={(e) => setSupabaseUrl(e.target.value)}
+                        />
                       </div>
-                      
                       <div className="space-y-2">
-                        <Label htmlFor="password">{t('password')}</Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            id="password" 
-                            type="password" 
-                            value={password} 
-                            onChange={(e) => setPassword(e.target.value)} 
-                            className="pl-10" 
-                            placeholder="Leave blank to keep current password" 
-                          />
+                        <Label htmlFor="supabaseKey">Supabase Anon Key</Label>
+                        <Input
+                          id="supabaseKey"
+                          type="password"
+                          placeholder="your-anon-key"
+                          value={supabaseKey}
+                          onChange={(e) => setSupabaseKey(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <Button onClick={handleSaveCredentials}>
+                          Save Credentials
+                        </Button>
+                        <Button onClick={handleTestConnection} disabled={connectionStatus === 'testing'}>
+                          {connectionStatus === 'testing' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Test Connection
+                        </Button>
+                      </div>
+                      <Button variant="outline" onClick={generateSqlScript}>
+                        <FileCode className="mr-2 h-4 w-4" />
+                        Generate Table Script
+                      </Button>
+                    </div>
+
+                    {connectionStatus === 'success' && (
+                      <div className="p-4 border rounded-md bg-green-50 border-green-200 text-green-800">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="h-5 w-5" />
+                          <span className="font-semibold">Connection Successful</span>
+                        </div>
+                        <p className="text-sm mb-2">Successfully connected and found the following tables:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {tables.map(table => <Badge key={table} variant="outline" className="bg-white">{table}</Badge>)}
                         </div>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Confirm {t('password')}</Label>
-                        <div className="relative">
-                          <ShieldCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            id="confirmPassword" 
-                            type="password" 
-                            value={confirmPassword} 
-                            onChange={(e) => setConfirmPassword(e.target.value)} 
-                            className="pl-10" 
-                          />
+                    )}
+                    {connectionStatus === 'error' && (
+                      <div className="p-4 border rounded-md bg-red-50 border-red-200 text-red-800">
+                        <div className="flex items-center gap-2 mb-2">
+                          <XCircle className="h-5 w-5" />
+                          <span className="font-semibold">Connection Failed</span>
                         </div>
+                        <p className="text-sm">{connectionMessage}</p>
                       </div>
-                    </div>
-                    
-                    <div className="flex justify-end">
-                      <Button type="submit">
-                        {t('save')}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="supabase">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Supabase Integration</CardTitle>
-                  <CardDescription>
-                    Connect your application to a Supabase backend for persistent data storage.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="supabaseUrl">Supabase URL</Label>
-                      <Input 
-                        id="supabaseUrl" 
-                        placeholder="https://your-project-ref.supabase.co"
-                        value={supabaseUrl}
-                        onChange={(e) => setSupabaseUrl(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="supabaseKey">Supabase Anon Key</Label>
-                      <Input 
-                        id="supabaseKey" 
-                        type="password"
-                        placeholder="your-anon-key"
-                        value={supabaseKey}
-                        onChange={(e) => setSupabaseKey(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                      <Button onClick={handleSaveCredentials}>
-                        Save Credentials
-                      </Button>
-                      <Button onClick={handleTestConnection} disabled={connectionStatus === 'testing'}>
-                        {connectionStatus === 'testing' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Test Connection
-                      </Button>
-                    </div>
-                    <Button variant="outline" onClick={generateSqlScript}>
-                      <FileCode className="mr-2 h-4 w-4" />
-                      Generate Table Script
-                    </Button>
-                  </div>
+                    )}
 
-                  {connectionStatus === 'success' && (
-                    <div className="p-4 border rounded-md bg-green-50 border-green-200 text-green-800">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle className="h-5 w-5" />
-                        <span className="font-semibold">Connection Successful</span>
-                      </div>
-                      <p className="text-sm mb-2">Successfully connected and found the following tables:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {tables.map(table => <Badge key={table} variant="outline" className="bg-white">{table}</Badge>)}
-                      </div>
-                    </div>
-                  )}
-                  {connectionStatus === 'error' && (
-                    <div className="p-4 border rounded-md bg-red-50 border-red-200 text-red-800">
-                      <div className="flex items-center gap-2 mb-2">
-                        <XCircle className="h-5 w-5" />
-                        <span className="font-semibold">Connection Failed</span>
-                      </div>
-                      <p className="text-sm">{connectionMessage}</p>
-                    </div>
-                  )}
-
-                  <p className="text-sm text-muted-foreground">
-                    After testing the connection, click "Generate Table Script" and run the copied SQL in your Supabase SQL Editor to set up your database.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    <p className="text-sm text-muted-foreground">
+                      After testing the connection, click "Generate Table Script" and run the copied SQL in your Supabase SQL Editor to set up your database.
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </div>
           </Tabs>
         </div>

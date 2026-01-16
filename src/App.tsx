@@ -1,11 +1,13 @@
 
 import React, { lazy, Suspense, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { usePageTracking } from './hooks/usePageTracking';
 import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+
 import LoginPage from './pages/LoginPage';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
@@ -70,6 +72,7 @@ const AdminLayout = () => {
 
 const AppRoutes = () => {
   const { user, session, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
@@ -79,7 +82,7 @@ const AppRoutes = () => {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" state={{ from: location }} replace />} />
       </Routes>
     );
   }
@@ -133,18 +136,20 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <Router>
-          <PageTracker />
-          <Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Loading...</div>}>
-            <AppRoutes />
-          </Suspense>
-          <Toaster />
-          <OfflineIndicator />
-        </Router>
-      </AuthProvider>
-    </LanguageProvider>
+    <ThemeProvider defaultTheme="system" storageKey="cath-lab-theme">
+      <LanguageProvider>
+        <AuthProvider>
+          <Router>
+            <PageTracker />
+            <Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Loading...</div>}>
+              <AppRoutes />
+            </Suspense>
+            <Toaster />
+            <OfflineIndicator />
+          </Router>
+        </AuthProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

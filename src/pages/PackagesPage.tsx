@@ -16,6 +16,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { usePermission } from '@/hooks/usePermission';
 import PackageBuilder from '@/components/packages/PackageBuilder';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PackageConsumeDialog } from '@/components/packages/PackageConsumeDialog';
+import { motion } from 'framer-motion';
+import { hoverScale, staggerContainer, staggerItem } from '@/utils/animations';
+
 
 const PackagesPage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -28,6 +32,9 @@ const PackagesPage = () => {
     const [packages, setPackages] = useState<Package[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'list' | 'create'>('list');
+    const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+    const [isConsumeDialogOpen, setIsConsumeDialogOpen] = useState(false);
+
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
     const closeSidebar = () => setIsSidebarOpen(false);
@@ -60,25 +67,17 @@ const PackagesPage = () => {
 
     const handleConsume = (pkg: Package, e: React.MouseEvent) => {
         e.stopPropagation();
-        // Transform package items to ConsumptionItemInput format
-        const initialItems = pkg.items?.map(item => ({
-            id: `pkg_item_${Date.now()}_${Math.random()}`,
-            inventory_item_id: '',
-            product_definition_id: item.product_definition_id,
-            variant: item.variant,
-            quantity: item.quantity,
-            availableQuantity: 0
-        }));
-
-        navigate('/consumption', { state: { initialItems } });
+        setSelectedPackage(pkg);
+        setIsConsumeDialogOpen(true);
     };
+
 
     const filteredPackages = packages.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
-        <div className="page-container" dir={direction}>
+        <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
             <Header toggleSidebar={toggleSidebar} />
             <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} closeSidebar={closeSidebar} />
 
@@ -125,65 +124,78 @@ const PackagesPage = () => {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <motion.div
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                variants={staggerContainer}
+                                initial="initial"
+                                animate="animate"
+                            >
                                 {filteredPackages.map((pkg) => (
-                                    <Card key={pkg.id} className="glass-card hover-lift cursor-pointer group">
-                                        <CardHeader className="pb-2">
-                                            <div className="flex justify-between items-start">
-                                                <CardTitle className="text-lg text-primary">{pkg.name}</CardTitle>
-                                                <div className="flex gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                                                        title={t('consume_package') || 'استهلاك الباقة'}
-                                                        onClick={(e) => handleConsume(pkg, e)}
-                                                    >
-                                                        <Play className="h-4 w-4" />
-                                                    </Button>
-                                                    {canManagePackages && (
+                                    <motion.div key={pkg.id} variants={staggerItem}>
+                                        <Card className="glass-card hover-lift cursor-pointer group">
+                                            <CardHeader className="pb-2">
+                                                <div className="flex justify-between items-start">
+                                                    <CardTitle className="text-lg text-primary">{pkg.name}</CardTitle>
+                                                    <div className="flex gap-1">
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            onClick={(e) => handleDelete(pkg.id, e)}
+                                                            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                                            title={t('consume_package') || 'استهلاك الباقة'}
+                                                            onClick={(e) => handleConsume(pkg, e)}
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
+                                                            <Play className="h-4 w-4" />
                                                         </Button>
+                                                        {canManagePackages && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                onClick={(e) => handleDelete(pkg.id, e)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground">{pkg.description}</p>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                    <Badge variant="secondary" className="gap-1">
+                                                        <Box className="h-3 w-3" />
+                                                        {pkg.items?.length || 0} {t('items') || 'أصناف'}
+                                                    </Badge>
+                                                </div>
+                                                <div className="mt-4 space-y-1">
+                                                    {pkg.items?.slice(0, 3).map((item, idx) => (
+                                                        <div key={idx} className="text-xs text-muted-foreground flex justify-between">
+                                                            <span>{item.product_definition?.name}</span>
+                                                            <span className="font-mono">x{item.quantity}</span>
+                                                        </div>
+                                                    ))}
+                                                    {(pkg.items?.length || 0) > 3 && (
+                                                        <div className="text-xs text-primary pt-1">
+                                                            + {(pkg.items?.length || 0) - 3} {t('more') || 'المزيد'}
+                                                        </div>
                                                     )}
                                                 </div>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">{pkg.description}</p>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="flex flex-wrap gap-2 mt-2">
-                                                <Badge variant="secondary" className="gap-1">
-                                                    <Box className="h-3 w-3" />
-                                                    {pkg.items?.length || 0} {t('items') || 'أصناف'}
-                                                </Badge>
-                                            </div>
-                                            <div className="mt-4 space-y-1">
-                                                {pkg.items?.slice(0, 3).map((item, idx) => (
-                                                    <div key={idx} className="text-xs text-muted-foreground flex justify-between">
-                                                        <span>{item.product_definition?.name}</span>
-                                                        <span className="font-mono">x{item.quantity}</span>
-                                                    </div>
-                                                ))}
-                                                {(pkg.items?.length || 0) > 3 && (
-                                                    <div className="text-xs text-primary pt-1">
-                                                        + {(pkg.items?.length || 0) - 3} {t('more') || 'المزيد'}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                            </CardContent>
+                                        </Card>
+                                    </motion.div>
                                 ))}
-                            </div>
+                            </motion.div>
                         </div>
                     )}
 
                 </div>
             </main>
+
+            <PackageConsumeDialog
+                package={selectedPackage}
+                open={isConsumeDialogOpen}
+                onOpenChange={setIsConsumeDialogOpen}
+            />
         </div>
     );
 };

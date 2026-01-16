@@ -10,7 +10,13 @@ export const getProductDefinitions = async (): Promise<ProductDefinition[]> => {
 
   const { data, error } = await supabase
     .from('product_definitions')
-    .select('*')
+    .select(`
+      *,
+      supply_type:supply_types (
+        name,
+        name_en
+      )
+    `)
     .order('name', { ascending: true });
 
   if (error) {

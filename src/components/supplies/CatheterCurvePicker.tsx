@@ -21,6 +21,8 @@ const COMMON_CURVES: CurveType[] = [
     { id: 'jr4', code: 'JR 4.0', name: 'Judkins Right 4.0', color: '#b91c1c' },
     { id: 'al1', code: 'AL 1.0', name: 'Amplatz Left 1', color: '#10b981' },
     { id: 'al2', code: 'AL 2.0', name: 'Amplatz Left 2', color: '#059669' },
+    { id: 'ar1', code: 'AR 1.0', name: 'Amplatz Right 1', color: '#f97316' },
+    { id: 'ar2', code: 'AR 2.0', name: 'Amplatz Right 2', color: '#ea580c' },
     { id: 'pig', code: 'PIG', name: 'Pigtail', color: '#f59e0b' },
     { id: 'mp', code: 'MP', name: 'Multipurpose', color: '#8b5cf6' },
 ];

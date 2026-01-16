@@ -14,12 +14,14 @@ import { useBarcodeScanner, extractGS1DataForSupply, ParsedGS1Data } from '@/hoo
 import { BarcodeScannerViewfinder } from '@/components/ui/BarcodeScannerViewfinder';
 import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard';
 import { VariantQuickPicker } from './VariantQuickPicker';
+import { StentMatrixPicker } from '@/components/supplies/StentMatrixPicker';
+import { CatheterCurvePicker } from '@/components/supplies/CatheterCurvePicker';
 import { getGTINMapping } from '@/data/operations/gtinMappingOperations';
 import { saveRecentVariant, getRecentVariants } from '@/utils/variantPreferences';
 import { scanSuccessFeedback, scanErrorFeedback, playTick } from '@/utils/audioFeedback';
 import { Badge } from '@/components/ui/badge';
 import { usePermission } from '@/hooks/usePermission';
-import { CalendarIcon, Copy, PlusCircle, ScanBarcode, Trash2 } from 'lucide-react';
+import { CalendarIcon, Copy, PlusCircle, ScanBarcode, Trash2, LayoutGrid } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -64,13 +66,13 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
     loadProducts();
   }, [toast, t]);
 
-  const handleItemChange = useCallback((itemId: string, field: keyof PurchaseOrderItem, value: any) => {
+  const updateItem = useCallback((itemId: string, updates: Partial<PurchaseOrderItem>) => {
     onItemsChange(items.map(item => {
       if (item.id === itemId) {
-        const updated = { ...item, [field]: value };
+        const updated = { ...item, ...updates };
         // Save recent variant when variant is selected
-        if (field === 'variant' && value && updated.productDefinitionId) {
-          saveRecentVariant(updated.productDefinitionId, value);
+        if (updates.variant && updated.productDefinitionId) {
+          saveRecentVariant(updated.productDefinitionId, updates.variant);
         }
         return updated;
       }
@@ -189,7 +191,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
             item.id === activeScannerId ? { ...item, ...updates } : item
           ));
         } else {
-          handleItemChange(activeScannerId, 'barcode', data.rawValue);
+          updateItem(activeScannerId, { barcode: data.rawValue });
           toast({
             title: t('barcode_scanned'),
             description: `${t('barcode')}: ${data.rawValue}`,
@@ -369,12 +371,61 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                         </TableCell>
                         <TableCell className="p-2">
                           {selectedDefinition ? (
-                            <VariantQuickPicker
-                              variants={selectedDefinition.variants}
-                              selectedVariant={item.variant}
-                              onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
-                              recentVariants={recentVariants}
-                            />
+                            (() => {
+                              const typeName = selectedDefinition.supply_type?.name_en?.toLowerCase() || selectedDefinition.supply_type?.name?.toLowerCase() || '';
+                              const isStent = typeName.includes('stent') || typeName.includes('دعامة');
+                              const isCatheter = typeName.includes('catheter') || typeName.includes('قسطرة');
+
+                              if (isStent) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between">
+                                        {item.variant || t('select_size')}
+                                        <Badge variant="secondary" className="ml-2 text-[10px]">Matrix</Badge>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <StentMatrixPicker
+                                        onSelect={(variant) => {
+                                          handleItemChange(item.id, 'variant', variant);
+                                          // Close popover logic if needed, or user clicks away
+                                        }}
+                                        selectedVariant={item.variant}
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                );
+                              }
+
+                              if (isCatheter) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between">
+                                        {item.variant || t('select_curve')}
+                                        <Badge variant="secondary" className="ml-2 text-[10px]">Visual</Badge>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <CatheterCurvePicker
+                                        onSelect={(curve) => handleItemChange(item.id, 'variant', curve)}
+                                        selectedCurve={item.variant}
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                );
+                              }
+
+                              return (
+                                <VariantQuickPicker
+                                  variants={selectedDefinition.variants}
+                                  selectedVariant={item.variant}
+                                  onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                                  recentVariants={recentVariants}
+                                />
+                              );
+                            })()
                           ) : (
                             <Input
                               value={item.variant}
@@ -456,7 +507,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                       <Label className="text-[10px] uppercase text-muted-foreground">{t('barcode')}</Label>
                       <Input
                         value={item.barcode}
-                        onChange={(e) => handleItemChange(item.id, 'barcode', e.target.value)}
+                        onChange={(e) => updateItem(item.id, { barcode: e.target.value })}
                         placeholder={t('barcode')}
                         className="font-mono h-9 text-xs"
                       />
@@ -465,7 +516,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                       <Label className="text-[10px] uppercase text-muted-foreground">GTIN</Label>
                       <Input
                         value={item.gtin || ''}
-                        onChange={(e) => handleItemChange(item.id, 'gtin', e.target.value)}
+                        onChange={(e) => updateItem(item.id, { gtin: e.target.value })}
                         placeholder="GTIN"
                         className="font-mono h-9 text-xs"
                       />
@@ -477,7 +528,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                       <Label className="text-[10px] uppercase text-muted-foreground">LOT</Label>
                       <Input
                         value={item.batchNumber}
-                        onChange={(e) => handleItemChange(item.id, 'batchNumber', e.target.value)}
+                        onChange={(e) => updateItem(item.id, { batchNumber: e.target.value })}
                         placeholder="LOT"
                         className="font-mono h-9 text-xs"
                       />
@@ -501,7 +552,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                           <Calendar
                             mode="single"
                             selected={item.expiryDate}
-                            onSelect={(date) => handleItemChange(item.id, 'expiryDate', date)}
+                            onSelect={(date) => updateItem(item.id, { expiryDate: date })}
                             initialFocus
                           />
                         </PopoverContent>
@@ -516,8 +567,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                     <Select
                       value={item.productDefinitionId}
                       onValueChange={(val) => {
-                        handleItemChange(item.id, 'productDefinitionId', val);
-                        handleItemChange(item.id, 'variant', '');
+                        updateItem(item.id, { productDefinitionId: val, variant: '' });
                       }}
                     >
                       <SelectTrigger className="h-9 text-xs">
@@ -534,16 +584,65 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                   <div className="space-y-1">
                     <Label className="text-[10px] uppercase text-muted-foreground">{t('variant')}</Label>
                     {selectedDefinition ? (
-                      <VariantQuickPicker
-                        variants={selectedDefinition.variants}
-                        selectedVariant={item.variant}
-                        onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
-                        recentVariants={recentVariants}
-                      />
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Input
+                            value={item.variant}
+                            onChange={(e) => updateItem(item.id, { variant: e.target.value })}
+                            placeholder={t('variant') || "Variant"}
+                            className="h-9 text-xs"
+                          />
+                        </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 bg-muted/50"
+                              title={t('select_variant') || "Select Variant"}
+                            >
+                              <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-2" align="end">
+                            {(() => {
+                              const typeName = selectedDefinition.supply_type?.name_en?.toLowerCase() || selectedDefinition.supply_type?.name?.toLowerCase() || '';
+                              const isStent = typeName.includes('stent') || typeName.includes('دعامة');
+                              const isCatheter = typeName.includes('catheter') || typeName.includes('قسطرة');
+
+                              return (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between border-b pb-2">
+                                    <h4 className="font-medium text-sm text-muted-foreground">{t('select_variant') || "Select Variant"}</h4>
+                                  </div>
+                                  {isStent ? (
+                                    <StentMatrixPicker
+                                      onSelect={(variant) => updateItem(item.id, { variant })}
+                                      selectedVariant={item.variant}
+                                    />
+                                  ) : isCatheter ? (
+                                    <CatheterCurvePicker
+                                      onSelect={(curve) => updateItem(item.id, { variant: curve })}
+                                      selectedCurve={item.variant}
+                                    />
+                                  ) : (
+                                    <VariantQuickPicker
+                                      variants={selectedDefinition.variants}
+                                      selectedVariant={item.variant}
+                                      onSelect={(variant) => updateItem(item.id, { variant })}
+                                      recentVariants={recentVariants}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     ) : (
                       <Input
                         value={item.variant}
-                        onChange={(e) => handleItemChange(item.id, 'variant', e.target.value)}
+                        onChange={(e) => updateItem(item.id, { variant: e.target.value })}
                         placeholder={t('variant')}
                         className="h-9 text-xs"
                       />
@@ -557,7 +656,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                         type="number"
                         min="1"
                         value={item.quantity}
-                        onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
+                        onChange={(e) => updateItem(item.id, { quantity: e.target.value })}
                         placeholder={t('quantity')}
                         className="h-9 text-xs font-bold"
                       />
@@ -570,7 +669,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                           min="0"
                           step="0.01"
                           value={item.purchasePrice}
-                          onChange={(e) => handleItemChange(item.id, 'purchasePrice', e.target.value)}
+                          onChange={(e) => updateItem(item.id, { purchasePrice: e.target.value })}
                           placeholder={t('purchase_price')}
                           className="h-9 text-xs"
                         />

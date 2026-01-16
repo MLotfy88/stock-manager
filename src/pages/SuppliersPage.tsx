@@ -10,23 +10,23 @@ import { Plus, Edit, Trash2, Truck, Phone, Mail, User } from 'lucide-react';
 import { Supplier } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  getSuppliers, 
-  addSupplier, 
-  updateSupplier, 
-  deleteSupplier 
+import {
+  getSuppliers,
+  addSupplier,
+  updateSupplier,
+  deleteSupplier
 } from '@/data/operations/supplierOperations';
 
 export const SuppliersPageContent = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  
+
   const [suppliersList, setSuppliersList] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentSupplier, setCurrentSupplier] = useState<Supplier | null>(null);
-  
+
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
   const [phone, setPhone] = useState('');
@@ -44,7 +44,7 @@ export const SuppliersPageContent = () => {
       setIsLoading(false);
     }
   };
-  
+
   useEffect(() => {
     loadSuppliers();
   }, []);
@@ -71,15 +71,15 @@ export const SuppliersPageContent = () => {
     }
     setIsDialogOpen(true);
   };
-  
+
   const handleSubmit = async () => {
     if (!name.trim()) return;
-    
+
     try {
-      const supplierData = { 
-        name, 
-        contact, 
-        phone, 
+      const supplierData = {
+        name,
+        contact,
+        phone,
         email,
         alert_period: parseInt(alertPeriod) || 30
       };
@@ -97,7 +97,7 @@ export const SuppliersPageContent = () => {
       toast({ title: t('error'), description: t('error_processing_item'), variant: 'destructive' });
     }
   };
-  
+
   const openDeleteDialog = (supplier: Supplier) => {
     setCurrentSupplier(supplier);
     setIsDeleteDialogOpen(true);
@@ -119,7 +119,7 @@ export const SuppliersPageContent = () => {
       setIsDeleteDialogOpen(false);
     }
   };
-  
+
   return (
     <div>
       <div className="flex justify-end items-center mb-6">
@@ -148,12 +148,36 @@ export const SuppliersPageContent = () => {
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">{t('supplier_email')}</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Label htmlFor="email">
+                  <Mail className="h-4 w-4 inline mr-2" />
+                  {t('email') || 'البريد الإلكتروني'}
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="example@email.com"
+                />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="alertPeriod">{t('supplier_alert_period')}</Label>
-                <Input id="alertPeriod" type="number" min="1" max="365" value={alertPeriod} onChange={(e) => setAlertPeriod(e.target.value)} />
+                <Label htmlFor="alertPeriod" className="flex items-center gap-2">
+                  <span>{t('return_period_days') || 'مدة الاستبدال (بالأيام)'}</span>
+                  <span className="text-xs text-muted-foreground">({t('before_expiry') || 'قبل انتهاء الصلاحية'})</span>
+                </Label>
+                <Input
+                  id="alertPeriod"
+                  type="number"
+                  min="0"
+                  value={alertPeriod}
+                  onChange={(e) => setAlertPeriod(e.target.value)}
+                  placeholder="30"
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('return_period_help') || 'عدد الأيام قبل انتهاء الصلاحية التي يمكن خلالها إرجاع المنتج للمورد'}
+                </p>
               </div>
             </div>
             <DialogFooter>
@@ -163,7 +187,7 @@ export const SuppliersPageContent = () => {
           </DialogContent>
         </Dialog>
       </div>
-      
+
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -209,7 +233,7 @@ export const SuppliersPageContent = () => {
           </div>
         </CardContent>
       </Card>
-      
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

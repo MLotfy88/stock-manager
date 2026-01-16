@@ -7,7 +7,7 @@ import SupplyList from '@/components/supplies/SupplyList';
 import Notification from '@/components/ui/Notification';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ChevronRight, PlusCircle, MinusCircle } from 'lucide-react';
+import { Plus, ChevronRight, PlusCircle, MinusCircle, Search, ScanBarcode } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -15,6 +15,7 @@ import { calculateDashboardStats } from '@/data/operations/statsOperations';
 import { UrgentActionsBox } from '@/components/dashboard/UrgentActionsBox';
 import { SupplierRiskWidget } from '@/components/dashboard/SupplierRiskWidget';
 import { DashboardStats as StatsType } from '@/types';
+import { motion } from 'framer-motion';
 
 const Index = () => {
   const [stats, setStats] = useState<Partial<StatsType>>({ expiringSupplies: 0, reorderPointItems: 0 });
@@ -59,7 +60,7 @@ const Index = () => {
   }, [stats.expiringSupplies]);
 
   return (
-    <div className="page-container bg-background" dir={direction}>
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
       <Sidebar
         isSidebarOpen={isSidebarOpen}

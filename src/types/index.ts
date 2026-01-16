@@ -73,6 +73,11 @@ export interface ProductDefinition {
   reorder_point: number;
   created_at: string;
   updated_at: string;
+  supply_type?: {
+    name: string;
+    name_en?: string;
+  };
+  visual_picker_preference?: 'matrix' | 'curve' | 'list' | 'auto';
 }
 
 export type StockType = 'purchased' | 'on_shelf';

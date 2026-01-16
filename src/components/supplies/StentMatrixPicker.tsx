@@ -5,19 +5,24 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface StentMatrixPickerProps {
-    selectedDiameter?: string;
-    selectedLength?: string;
-    onSelect: (diameter: string, length: string) => void;
+    selectedVariant?: string;
+    onSelect: (variant: string) => void;
 }
 
 const DIAMETERS = ['2.25', '2.50', '2.75', '3.00', '3.50', '4.00', '4.50'];
-const LENGTHS = ['8', '12', '15', '18', '20', '23', '26', '28', '30', '33', '38', '48'];
+const LENGTHS = ['18', '22', '26', '30', '34', '38', '48'];
 
 export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
-    selectedDiameter,
-    selectedLength,
+    selectedVariant,
     onSelect
 }) => {
+    // Parse selected variant (format: "2.50x18")
+    const [selectedDiameter, selectedLength] = selectedVariant?.split('x') || ['', ''];
+
+    const handleSelect = (diameter: string, length: string) => {
+        onSelect(`${diameter}x${length}`);
+    };
+
     return (
         <div className="space-y-4 select-none">
             {/* Legend */}
@@ -54,7 +59,7 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
                                 return (
                                     <button
                                         key={`${diam}x${len}`}
-                                        onClick={() => onSelect(diam, len)}
+                                        onClick={() => handleSelect(diam, len)}
                                         className={cn(
                                             "w-10 h-8 rounded text-xs transition-all border hover:border-primary/50",
                                             isSelected

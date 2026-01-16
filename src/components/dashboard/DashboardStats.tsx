@@ -4,17 +4,20 @@ import { AlertTriangle, Package, Clock, CheckCircle2, PlusCircle, MinusCircle } 
 import { calculateDashboardStats } from '@/data/operations/statsOperations';
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from '@/contexts/LanguageContext';
-import { timeSince } from '@/utils/dateUtils'; 
+import { timeSince } from '@/utils/dateUtils';
 import { DashboardStats as DashboardStatsType } from '@/types';
+import { GlassStatCard } from '@/components/ui/glass-stat-card';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '@/utils/animations';
 
 const DashboardStats = () => {
-  const [stats, setStats] = useState<Partial<DashboardStatsType>>({ 
-    totalSupplies: 0, 
-    expiringSupplies: 0, 
-    expiredSupplies: 0, 
-    validSupplies: 0, 
+  const [stats, setStats] = useState<Partial<DashboardStatsType>>({
+    totalSupplies: 0,
+    expiringSupplies: 0,
+    expiredSupplies: 0,
+    validSupplies: 0,
     typeCounts: {},
-    recentActivities: [] 
+    recentActivities: []
   });
   const { t, getLocalizedName, language } = useLanguage();
 
@@ -29,53 +32,50 @@ const DashboardStats = () => {
     };
     fetchStats();
   }, []);
-  
-  const statCards = [
-    {
-      title: t('total_supplies'),
-      value: stats.totalSupplies,
-      icon: <Package className="w-5 h-5 text-primary" />,
-      color: 'bg-primary/10 text-primary'
-    },
-    {
-      title: t('expiring_soon'),
-      value: stats.expiringSupplies,
-      icon: <Clock className="w-5 h-5 text-amber-500" />,
-      color: 'bg-amber-100 text-amber-500'
-    },
-    {
-      title: t('expired'),
-      value: stats.expiredSupplies,
-      icon: <AlertTriangle className="w-5 h-5 text-destructive" />,
-      color: 'bg-destructive/10 text-destructive'
-    },
-    {
-      title: t('valid_supplies'),
-      value: stats.validSupplies,
-      icon: <CheckCircle2 className="w-5 h-5 text-green-500" />,
-      color: 'bg-green-100 text-green-500'
-    }
-  ];
 
   return (
     <div className="space-y-6">
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {statCards.map((card, index) => (
-          <Card key={index} className="hover-lift overflow-hidden">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className={`p-3 rounded-lg ${card.color}`}>
-                {card.icon}
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs font-medium">{card.title}</p>
-                <h3 className="text-2xl font-bold">{card.value}</h3>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      
+      {/* Stat Cards with GlassStatCard */}
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4"
+      >
+        <motion.div variants={staggerItem}>
+          <GlassStatCard
+            title={t('total_supplies')}
+            value={stats.totalSupplies || 0}
+            icon={Package}
+            color="blue"
+          />
+        </motion.div>
+        <motion.div variants={staggerItem}>
+          <GlassStatCard
+            title={t('expiring_soon')}
+            value={stats.expiringSupplies || 0}
+            icon={Clock}
+            color="orange"
+          />
+        </motion.div>
+        <motion.div variants={staggerItem}>
+          <GlassStatCard
+            title={t('expired')}
+            value={stats.expiredSupplies || 0}
+            icon={AlertTriangle}
+            color="red"
+          />
+        </motion.div>
+        <motion.div variants={staggerItem}>
+          <GlassStatCard
+            title={t('valid_supplies')}
+            value={stats.validSupplies || 0}
+            icon={CheckCircle2}
+            color="green"
+          />
+        </motion.div>
+      </motion.div>
+
       {/* Type Distribution and Recent Activities */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Card className="hover-lift">
@@ -91,7 +91,7 @@ const DashboardStats = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="hover-lift">
           <CardContent className="p-6">
             <h3 className="text-base font-semibold mb-4">{t('recent_activities')}</h3>

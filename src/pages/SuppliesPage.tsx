@@ -20,6 +20,7 @@ import { getProductDefinitions } from '@/data/operations/productDefinitionOperat
 import { getSupplyTypes } from '@/data/operations/supplyTypeOperations';
 import { getStores } from '@/data/operations/storesOperations';
 import { useToast } from '@/components/ui/use-toast';
+import { SwipeableList, SwipeableItem } from '@/components/layout/SwipeableList';
 
 const SuppliesPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -132,7 +133,7 @@ const SuppliesPage = () => {
   }, [inventoryItems]);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
       <Sidebar
         isSidebarOpen={isSidebarOpen}
@@ -190,11 +191,30 @@ const SuppliesPage = () => {
           {isLoading ? (
             <p className="text-center">{t('loading')}</p>
           ) : sortedItems.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedItems.map((item) => (
-                <SupplyCard key={item.id} supply={item} onDelete={loadData} />
-              ))}
-            </div>
+            <>
+              {/* Desktop Grid */}
+              <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sortedItems.map((item) => (
+                  <SupplyCard key={item.id} supply={item} onDelete={loadData} />
+                ))}
+              </div>
+
+              {/* Mobile SwipeableList */}
+              <div className="md:hidden">
+                <SwipeableList>
+                  {sortedItems.map((item) => (
+                    <SwipeableItem
+                      key={item.id}
+                      actions={[
+                        { label: t('view'), onClick: () => {/* view logic */ } },
+                      ]}
+                    >
+                      <SupplyCard supply={item} onDelete={loadData} />
+                    </SwipeableItem>
+                  ))}
+                </SwipeableList>
+              </div>
+            </>
           ) : (
             <Card className="p-8 text-center"><Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><h3 className="font-medium text-lg mb-1">{t('no_supplies_found')}</h3><p className="text-muted-foreground mb-4">{t('try_different_filters')}</p><Button size="sm" variant="outline" onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all'); setStoreFilter('all'); }}>{t('clear_filters')}</Button></Card>
           )}

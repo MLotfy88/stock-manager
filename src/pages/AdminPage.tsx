@@ -29,20 +29,20 @@ const AdminPage = () => {
       setIsSidebarOpen(false);
     }
   };
-  
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-10" dir={direction}>
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         closeSidebar={closeSidebar}
       />
-      
+
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">{t('data_settings_nav')}</h1>
-          
+
           <Tabs defaultValue="definitions" className="w-full flex flex-col md:flex-row gap-6">
             <TabsList className="flex flex-col h-auto">
               <TabsTrigger value="definitions" className="w-full justify-start"><Tag className="mr-2 h-4 w-4" />{t('product_definitions_nav')}</TabsTrigger>

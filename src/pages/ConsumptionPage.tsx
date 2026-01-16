@@ -25,8 +25,9 @@ const ConsumptionPage = () => {
 
   const initialItems = location.state?.initialItems;
 
+
   return (
-    <div className="page-container bg-background" dir={direction}>
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
       <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
       <Sidebar
         isSidebarOpen={isSidebarOpen}
@@ -61,7 +62,7 @@ const ConsumptionPage = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden p-1 md:p-6 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-border/50 overflow-hidden p-1 md:p-6 animate-fade-in">
             {activeTab === 'new' ? (
               <ConsumptionForm onSuccess={() => setActiveTab('list')} initialItems={initialItems} />
             ) : (
