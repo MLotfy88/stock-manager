@@ -208,6 +208,7 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
 
                 {isMatrix && (
                     <StentMatrixPicker
+                        availableVariants={selectedDefinition.variants || []}
                         selectedVariant={selectedVariant}
                         onSelect={handleVariantSelect}
                     />
@@ -215,6 +216,7 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
 
                 {isCurve && (
                     <CatheterCurvePicker
+                        availableVariants={selectedDefinition.variants || []}
                         selectedCurve={selectedVariant}
                         onSelect={handleVariantSelect}
                     />

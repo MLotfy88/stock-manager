@@ -44,82 +44,142 @@ const convertGS1DateToISO = (gs1Date: string): string | null => {
 
 // دالة لاستخراج بيانات المستلزمات الطبية من باركود GS1-128
 export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null => {
-  // التحقق من أنه باركود GS1-128
-  if (!rawValue.startsWith(']C1')) {
-    return null;
-  }
-
-  let data = rawValue.substring(3); // إزالة البادئة GS1
+  const cleanValue = rawValue.trim();
   const result: ParsedGS1Data = {
     rawValue,
     formattedValue: ''
   };
 
-  // قواعد Application Identifiers
+  // Case 1: HRI Format with parentheses, e.g. (01)069...(17)220101
+  if (cleanValue.includes('(') && cleanValue.includes(')')) {
+    const parts = cleanValue.split('(');
+    let formatted = '';
+
+    parts.forEach(part => {
+      if (!part) return;
+      const closingParenIndex = part.indexOf(')');
+      if (closingParenIndex > 0) {
+        const ai = part.substring(0, closingParenIndex);
+        const value = part.substring(closingParenIndex + 1);
+
+        if (ai === '01') result.gtin = value;
+        else if (ai === '17') {
+          const iso = convertGS1DateToISO(value);
+          if (iso) result.expiryDate = iso;
+        }
+        else if (ai === '10') result.lotNumber = value;
+        else if (ai === '30') result.quantity = value;
+
+        formatted += `(${ai})${value} `;
+      }
+    });
+    result.formattedValue = formatted.trim();
+    if (result.gtin) return result;
+    // Fallback if parsing failed but brackets existed (unlikely)
+  }
+
+  // Case 2: Raw GS1 Stream (with or without ]C1)
+  let data = cleanValue;
+  if (data.startsWith(']C1')) {
+    data = data.substring(3);
+  } else if (!data.startsWith('01') && data.length < 16) {
+    // If it doesn't look like GS1 (no 01, short), return null (unless it was handled above)
+    // Actually, if it's just a plain GTIN-14, we might want to allow it.
+    // For now, strict check:
+    return null;
+  }
+
+  // Rules for parsing raw stream
   const aiRules: { [key: string]: number } = {
     '01': 14, // GTIN
-    '17': 6,  // تاريخ الصلاحية (YYMMDD)
-    '10': -1, // رقم الباتش (متغير)
-    '30': -1, // الكمية (متغير)
+    '17': 6,  // Expiry (YYMMDD)
+    '10': -1, // Batch (Variable)
+    '30': -1, // Quantity (Variable)
+    '21': -1, // Serial (Variable)
   };
 
   let formatted = '';
-
   while (data.length > 0) {
-    const ai = data.substring(0, 2);
-    data = data.substring(2);
-
-    if (aiRules[ai] !== undefined) {
+    const ai2 = data.substring(0, 2);
+    // Check 2-digit AIs
+    if (aiRules[ai2] !== undefined) {
+      const length = aiRules[ai2];
       let value = '';
-      const length = aiRules[ai];
 
       if (length > 0) {
-        // AI بطول ثابت
-        value = data.substring(0, length);
-        data = data.substring(length);
+        // Fixed length
+        value = data.substring(2, 2 + length);
+        data = data.substring(2 + length);
       } else {
-        // AI بطول متغير - البحث عن AI التالي
-        let nextAiIndex = -1;
-        for (let i = 1; i < data.length - 1; i++) {
-          const nextPotentialAi = data.substring(i, i + 2);
-          if (aiRules[nextPotentialAi] !== undefined) {
-            nextAiIndex = i;
-            break;
+        // Variable length
+        // Find next AI to stop. 
+        // We look for common next AIs (17, 10, 30, 21)
+        // Or special separator char (GS = \x1d)
+        let stopIndex = data.length;
+        data = data.substring(2);
+
+        // Check for Group Separator first
+        const gsIndex = data.indexOf('\x1d');
+        if (gsIndex !== -1) {
+          value = data.substring(0, gsIndex);
+          data = data.substring(gsIndex + 1); // Skip GS
+        } else {
+          // Heuristic: Look for next known AI
+          // This is tricky. For '30' (count), it's usually short (1-8 digits).
+          // For '10' (lot), it's up to 20 alphanum.
+
+          // Try to find the earliest occurrence of another known AI 
+          // BUT verify it satisfies context (e.g. 17 must be followed by 6 digits)
+
+          // For valid image case: ...30110... -> 30 val=1, next AI=10?
+          // "110..." -> AI 11 is 'Prod Date' (6 digits). 
+          // "10..." -> AI 10 is Batch. 
+          // "01" -> GTIN. 
+          // "17" -> Exp.
+
+          // Simple heuristic loop:
+          let foundNext = false;
+          for (let i = 1; i < Math.min(data.length, 20); i++) {
+            const potentialAI = data.substring(i, i + 2);
+            // logic: if potentialAI is a known start of a field
+            if (['01', '17', '10', '30', '21'].includes(potentialAI)) {
+              // Refine: 17 must have enough chars after? 
+              // Let's assume valid GS1 is well formed.
+              value = data.substring(0, i);
+              data = data.substring(i);
+              foundNext = true;
+              break;
+            }
+          }
+          if (!foundNext) {
+            value = data;
+            data = '';
           }
         }
-
-        if (nextAiIndex !== -1) {
-          value = data.substring(0, nextAiIndex);
-          data = data.substring(nextAiIndex);
-        } else {
-          value = data;
-          data = '';
-        }
       }
 
-      // حفظ البيانات حسب نوع AI
-      if (ai === '01') {
-        result.gtin = value;
-      } else if (ai === '17') {
-        const isoDate = convertGS1DateToISO(value);
-        if (isoDate) {
-          result.expiryDate = isoDate;
-        }
-      } else if (ai === '10') {
-        result.lotNumber = value;
-      } else if (ai === '30') {
-        result.quantity = value;
+      if (ai2 === '01') result.gtin = value;
+      else if (ai2 === '17') {
+        const iso = convertGS1DateToISO(value);
+        if (iso) result.expiryDate = iso;
       }
+      else if (ai2 === '10') result.lotNumber = value;
+      else if (ai2 === '30') result.quantity = value;
 
-      formatted += `(${ai})${value} `;
+      formatted += `(${ai2})${value} `;
+
     } else {
-      // إيقاف التحليل عند AI غير معروف
+      // Unknown AI or garbage at end
       break;
     }
   }
 
-  result.formattedValue = formatted.trim();
-  return result;
+  if (result.gtin) {
+    result.formattedValue = formatted.trim();
+    return result;
+  }
+
+  return null;
 };
 
 // دالة قديمة للتوافق - تُرجع النص المنسق
