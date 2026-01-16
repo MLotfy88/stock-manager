@@ -128,6 +128,7 @@ const AppRoutes = () => {
           <Route path="/inventory-report" element={<InventoryReportPage />} />
         </Route>
       )}
+      <Route path="/login" element={<Navigate to="/" replace />} />
       {/* 404 Page - applies to any unmatched route */}
       <Route path="*" element={<NotFound />} />
     </Routes>

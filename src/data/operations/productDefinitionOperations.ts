@@ -13,8 +13,7 @@ export const getProductDefinitions = async (): Promise<ProductDefinition[]> => {
     .select(`
       *,
       supply_type:supply_types (
-        name,
-        name_en
+        name
       )
     `)
     .order('name', { ascending: true });
