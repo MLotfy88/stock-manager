@@ -77,7 +77,7 @@ export interface ProductDefinition {
     name: string;
     name_en?: string;
   };
-  visual_picker_preference?: 'matrix' | 'curve' | 'list' | 'auto';
+  visual_picker_preference?: 'matrix' | 'curve' | 'list' | 'auto' | 'none';
 }
 
 export type StockType = 'purchased' | 'on_shelf';

@@ -61,7 +61,7 @@ const AdminLayout = () => {
       />
       <div className="flex flex-col flex-1">
         <Header toggleSidebar={toggleSidebar} />
-        <main className="flex-1 p-4 overflow-auto pb-24 md:pb-4">
+        <main className="flex-1 p-4 overflow-auto pb-24 md:pb-4 pt-16">
           <Outlet />
         </main>
         <BottomGlassNav />

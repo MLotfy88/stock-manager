@@ -36,7 +36,9 @@ export const ProductDefinitionsPageContent = () => {
   const [name, setName] = useState('');
   const [typeId, setTypeId] = useState('');
   const [variantLabel, setVariantLabel] = useState('');
+  const [visualPickerPreference, setVisualPickerPreference] = useState<'matrix' | 'curve' | 'list' | 'auto' | 'none'>('auto');
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+
   const [variantNameInput, setVariantNameInput] = useState('');
   const [variantReorderPointInput, setVariantReorderPointInput] = useState('5');
 
@@ -87,6 +89,7 @@ export const ProductDefinitionsPageContent = () => {
     setName('');
     setTypeId('');
     setVariantLabel('');
+    setVisualPickerPreference('auto');
     setVariants([]);
     setVariantNameInput('');
     setVariantReorderPointInput('5');
@@ -99,6 +102,7 @@ export const ProductDefinitionsPageContent = () => {
       setName(definition.name);
       setTypeId(definition.type_id);
       setVariantLabel(definition.variant_label);
+      setVisualPickerPreference(definition.visual_picker_preference || 'auto');
       setVariants(definition.variants);
     } else {
       resetForm();
@@ -107,17 +111,30 @@ export const ProductDefinitionsPageContent = () => {
   };
 
   const handleSubmit = async () => {
-    if (!name || !typeId || !variantLabel || variants.length === 0) {
+    if (!name || !typeId || !variantLabel) { // variants check removed to allow 'none' preference if logical
       toast({ title: t('error'), description: "Please fill all fields and add at least one variant.", variant: 'destructive' });
       return;
     }
 
     try {
       if (currentDefinition) {
-        await updateProductDefinition(currentDefinition.id, { name, type_id: typeId, variant_label: variantLabel, variants });
+        await updateProductDefinition(currentDefinition.id, {
+          name,
+          type_id: typeId,
+          variant_label: variantLabel,
+          visual_picker_preference: visualPickerPreference,
+          variants
+        });
         toast({ title: t('success'), description: "Product definition updated." });
       } else {
-        await addProductDefinition({ name, type_id: typeId, variant_label: variantLabel, variants, reorder_point: 5 });
+        await addProductDefinition({
+          name,
+          type_id: typeId,
+          variant_label: variantLabel,
+          visual_picker_preference: visualPickerPreference,
+          variants,
+          reorder_point: 5
+        });
         toast({ title: t('success'), description: "Product definition added." });
       }
 
@@ -305,6 +322,19 @@ export const ProductDefinitionsPageContent = () => {
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="variantLabel" className="text-right">{t('variant_label')}</Label>
               <Input id="variantLabel" value={variantLabel} onChange={(e) => setVariantLabel(e.target.value)} className="col-span-3" placeholder="e.g., Size, Curve" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="visualPicker" className="text-right">Visual Picker</Label>
+              <Select value={visualPickerPreference} onValueChange={(v: any) => setVisualPickerPreference(v)}>
+                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select UI Type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Auto (Default)</SelectItem>
+                  <SelectItem value="matrix">Matrix (Stents)</SelectItem>
+                  <SelectItem value="curve">Curve (Catheters)</SelectItem>
+                  <SelectItem value="list">List (Simple)</SelectItem>
+                  <SelectItem value="none">None (No Variants)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
               <Label className="text-right pt-2">{t('variants')}</Label>
