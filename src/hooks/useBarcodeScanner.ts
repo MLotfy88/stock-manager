@@ -247,6 +247,19 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     };
   }, [isScannerActive]);
 
+  // Scanning Loop for Web
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    if (isScannerActive && !Capacitor.isNativePlatform()) {
+      intervalId = setInterval(() => {
+        captureAndDecode();
+      }, 500); // Scan every 500ms
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isScannerActive, captureAndDecode]);
+
   const startScanner = useCallback(async () => {
     if (!isSupported) {
       alert("Barcode scanning is not supported on this browser.");

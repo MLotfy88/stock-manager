@@ -71,6 +71,10 @@ const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoadi
                         playsInline
                         muted
                     />
+                    <div className="absolute top-4 left-4 bg-black/60 text-white px-3 py-1 rounded-full text-xs font-mono animate-pulse flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+                        {t('scanning') || 'Scanning...'}
+                    </div>
                     <div className="absolute inset-0 border-2 border-white/30 rounded-lg m-8 pointer-events-none">
                         <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary -mt-1 -ml-1"></div>
                         <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary -mt-1 -mr-1"></div>
