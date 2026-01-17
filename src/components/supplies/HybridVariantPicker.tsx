@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface PickerOption {
     value: string;
@@ -67,6 +69,30 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
         }
     };
 
+    // Refs for scroll containers
+    const primaryScrollRef = useRef<HTMLDivElement>(null);
+    const secondaryScrollRef = useRef<HTMLDivElement>(null);
+
+    const scrollPrimary = (direction: 'left' | 'right') => {
+        if (primaryScrollRef.current) {
+            const scrollAmount = 200;
+            primaryScrollRef.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
+
+    const scrollSecondary = (direction: 'left' | 'right') => {
+        if (secondaryScrollRef.current) {
+            const scrollAmount = 200;
+            secondaryScrollRef.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
+
     return (
         <div className="space-y-4 p-2 w-[340px] md:w-[400px]">
             {/* Primary Dimension (e.g. Diameter / Curve) */}
@@ -75,25 +101,45 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                     {primaryLabel}
                     {activePrimary && <span className="text-primary">{activePrimary}</span>}
                 </Label>
-                <ScrollArea className="w-full whitespace-nowrap border rounded-lg bg-muted/20 p-1">
-                    <div className="flex gap-2 p-1">
-                        {primaryOptions.map((opt) => (
-                            <button
-                                key={opt.value}
-                                onClick={() => handlePrimarySelect(opt.value)}
-                                className={cn(
-                                    "h-10 px-4 min-w-[3rem] rounded-md text-sm font-medium transition-all border",
-                                    activePrimary === opt.value
-                                        ? "bg-primary text-primary-foreground border-primary shadow-sm scale-105"
-                                        : "bg-background hover:bg-muted text-foreground border-border/50 hover:border-primary/50"
-                                )}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                    </div>
-                    <ScrollBar orientation="horizontal" />
-                </ScrollArea>
+                <div className="relative flex items-center gap-1">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 shrink-0"
+                        onClick={() => scrollPrimary('left')}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <ScrollArea className="w-full whitespace-nowrap border rounded-lg bg-muted/20 p-1">
+                        <div className="flex gap-2 p-1" ref={primaryScrollRef}>
+                            {primaryOptions.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => handlePrimarySelect(opt.value)}
+                                    className={cn(
+                                        "h-10 px-4 min-w-[3rem] rounded-md text-sm font-medium transition-all border",
+                                        activePrimary === opt.value
+                                            ? "bg-primary text-primary-foreground border-primary shadow-sm scale-105"
+                                            : "bg-background hover:bg-muted text-foreground border-border/50 hover:border-primary/50"
+                                    )}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                        <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 shrink-0"
+                        onClick={() => scrollPrimary('right')}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
 
             {/* Secondary Dimension (e.g. Length / Size) */}
@@ -115,25 +161,45 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                         </SelectContent>
                     </Select>
                 ) : (
-                    <ScrollArea className="w-full whitespace-nowrap border rounded-lg bg-muted/20 p-1">
-                        <div className="flex gap-2 p-1">
-                            {secondaryOptions.map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    onClick={() => handleSecondarySelect(opt.value)}
-                                    className={cn(
-                                        "h-10 px-4 min-w-[3rem] rounded-md text-sm font-medium transition-all border",
-                                        activeSecondary === opt.value
-                                            ? "bg-secondary text-secondary-foreground border-secondary shadow-sm scale-105"
-                                            : "bg-background hover:bg-muted text-foreground border-border/50 hover:border-secondary/50"
-                                    )}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                        <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
+                    <div className="relative flex items-center gap-1">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 shrink-0"
+                            onClick={() => scrollSecondary('left')}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <ScrollArea className="w-full whitespace-nowrap border rounded-lg bg-muted/20 p-1">
+                            <div className="flex gap-2 p-1" ref={secondaryScrollRef}>
+                                {secondaryOptions.map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => handleSecondarySelect(opt.value)}
+                                        className={cn(
+                                            "h-10 px-4 min-w-[3rem] rounded-md text-sm font-medium transition-all border",
+                                            activeSecondary === opt.value
+                                                ? "bg-secondary text-secondary-foreground border-secondary shadow-sm scale-105"
+                                                : "bg-background hover:bg-muted text-foreground border-border/50 hover:border-secondary/50"
+                                        )}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 shrink-0"
+                            onClick={() => scrollSecondary('right')}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
                 )}
             </div>
 

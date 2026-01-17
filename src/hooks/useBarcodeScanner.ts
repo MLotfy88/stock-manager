@@ -134,7 +134,6 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
       } else {
         // Variable length logic
         // Find next AI to stop. 
-        let stopIndex = data.length;
         data = data.substring(2);
 
         const gsIndex = data.indexOf('\x1d');
@@ -142,11 +141,13 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
           value = data.substring(0, gsIndex);
           data = data.substring(gsIndex + 1); // Skip GS
         } else {
-          // Heuristic lookahead
+          // Heuristic lookahead - search for next AI
           let foundNext = false;
-          for (let i = 1; i < Math.min(data.length, 20); i++) {
+          // Start from position 1 (minimum variable length is 1 char)
+          for (let i = 1; i < Math.min(data.length - 1, 30); i++) {
             const potentialAI = data.substring(i, i + 2);
-            if (['01', '17', '10', '30', '21', '11'].includes(potentialAI)) {
+            // Check if this looks like a valid AI
+            if (['01', '17', '10', '30', '21', '11', '15', '37'].includes(potentialAI)) {
               value = data.substring(0, i);
               data = data.substring(i);
               foundNext = true;
