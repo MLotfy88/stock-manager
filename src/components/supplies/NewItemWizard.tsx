@@ -245,7 +245,28 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
             <div className="bg-muted/50 p-4 rounded-lg">
                 <div className="font-bold">{selectedDefinition?.name}</div>
                 <div className="text-sm text-muted-foreground">{selectedVariant !== "Standard" ? selectedVariant : ""}</div>
-                <div className="text-xs font-mono mt-1 text-primary">{defaultBarcode || scannedData?.rawValue}</div>
+                <div className="text-xs font-mono mt-1 text-primary">
+                    {scannedData?.formattedValue || defaultBarcode || scannedData?.rawValue}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>GTIN</Label>
+                    <Input
+                        value={scannedData?.gtin || ''}
+                        readOnly
+                        className="h-12 font-mono bg-muted/30"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>{t('batch_number')}</Label>
+                    <Input
+                        value={batchNumber}
+                        onChange={(e) => setBatchNumber(e.target.value)}
+                        className="h-12 font-mono"
+                    />
+                </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -275,15 +296,6 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
                     type="date"
                     value={expiryDate ? expiryDate.substring(0, 10) : ''}
                     onChange={(e) => setExpiryDate(e.target.value)}
-                    className="h-12"
-                />
-            </div>
-
-            <div className="space-y-2">
-                <Label>{t('batch_number')}</Label>
-                <Input
-                    value={batchNumber}
-                    onChange={(e) => setBatchNumber(e.target.value)}
                     className="h-12"
                 />
             </div>
