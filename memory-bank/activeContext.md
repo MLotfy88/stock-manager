@@ -69,6 +69,32 @@ A complete overhaul of the invoice entry workflow with intelligent features:
 
 ---
 
+### ✅ Completed: Scanner & Picker Optimization (2026-01-17)
+
+Addressed critical usability issues in barcode scanning and variant selection logic.
+
+**Key Improvements Implemented:**
+
+1.  **Hardware Scanner Integration**
+    *   Intercepts raw keyboard wedge input (e.g., `]C1...`) directly in the UI.
+    *   Eliminates "garbage" characters appearing in text fields.
+    *   Automatic triggering of GS1 parser without manual formatting.
+    *   **Enforced Output Order**: Standardized `(01) -> (17) -> (30) -> (10)` format regardless of scan order.
+
+2.  **Dynamic "Smart" Pickers**
+    *   **Context**: Medical devices (Balloons, Catheters) have varying "Size Profiles" (Diameter x Length, Curve + Size).
+    *   **Solution**: Created `SmartHybridPicker` which dynamically generates buttons based on the *actual* variants stored in the database for the selected product.
+    *   **Fallbacks**: Robust fallback to standard full lists for NEW items (empty DB definition).
+    *   **Supports**:
+        *   Balloons: `Diameter` x `Length` (e.g., 2.50 x 20)
+        *   Guide Catheters: `Curve` + `Size` (e.g., XB 3.5 6F)
+
+3.  **Supabase & CORS Fixes**
+    *   Deployed `slack-notifier` edge function with correct CORS headers.
+    *   Resolved 400/500 errors masquerading as network blocks.
+
+---
+
 ## Technical Implementation
 
 ### New Files Created:
@@ -99,16 +125,23 @@ A complete overhaul of the invoice entry workflow with intelligent features:
    - Haptic feedback integration
    - Multiple sound patterns
 
+6. **`src/components/supplies/SmartHybridPicker.tsx`** (2026-01-17)
+   - Dynamic variant generation factory
+   - Parsing logic for Balloons/Guides
+   - Fallback management
+
 ### Modified Files:
 
-6. **`src/components/supplies/InventoryItemForm.tsx`** (Complete Rewrite)
-   - Integrated GTIN auto-detection
-   - Smart grouping logic
-   - VariantQuickPicker integration
-   - Visual highlighting for updated rows
-   - Enhanced barcode scanning workflow
+7. **`src/components/supplies/InventoryItemForm.tsx`** (Scanner Logic Update)
+   - Added `handleBarcodeInputChange` interceptor
+   - Integrated `SmartHybridPicker`
+   - Cleaned variant display text logic
 
-7. **`src/pages/AddSupplyPage.tsx`**
+8. **`src/hooks/useBarcodeScanner.ts`**
+   - Added heuristics for missing FNC1
+   - Enforced GS1 output order
+
+9. **`src/pages/AddSupplyPage.tsx`**
    - Auto-save GTIN mappings on invoice save
    - Batch mapping creation for new GTINs
 

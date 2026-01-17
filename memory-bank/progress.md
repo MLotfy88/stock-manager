@@ -13,6 +13,8 @@
 - **GS1-128 parsing** with GTIN, LOT, and Expiry extraction
 - **GTIN auto-detection** for products and variants
 - **Smart quantity grouping** to prevent duplicate entries
+- **Dynamic Smart Picker** for varying Size Profiles (Balloons/Guides)
+- **Hardware Integration** (Keyboard Wedge support & raw data cleaning)
 - **Variant quick picker** with color-coded categories
 - **Audio/haptic feedback** for scan confirmation
 - **Recent variants tracking** for faster selection

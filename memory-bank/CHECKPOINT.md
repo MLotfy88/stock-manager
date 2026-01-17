@@ -1,3 +1,33 @@
+# Checkpoint: Scanner Perfection & Dynamic UI
+
+## تاريخ: 2026-01-17
+
+## ملخص التغييرات (Summary of Changes)
+
+تم حل جميع المشاكل المتعلقة بماسح الباركود (Hardware Scanners) وتطوير نظام **Dynamic Smart Pickers** ليتكيف تلقائياً مع ملفات مقاسات الأصناف المختلفة (Balloons vs Catheters). كما تم تأمين الاتصال بـ Slack عبر إصلاح CORS.
+
+## التحسينات الرئيسية (Key Improvements)
+
+### 1. الماسح الضوئي (Hardware Scanner Integrity)
+**مشكلة:** الماسحات تقوم بكتابة بادئات (Prefixes) مثل `]C1` وتدخل البيانات بسرعة كلوحة مفاتيح، مما يسبب تشوه النص.
+**حل:**
+- تطوير `handleBarcodeInputChange` لاعتراض النص الخام لحظياً.
+- تنظيف تلقائي للبادئات.
+- توحيد ترتيب المخرجات: `(01) -> (17) -> (30) -> (10)` ليتطابق مع الملصقات الفيزيائية.
+
+### 2. القوائم الذكية (Dynamic Smart Pickers)
+**ملف:** `src/components/supplies/SmartHybridPicker.tsx`
+**الذكاء:**
+- بدلاً من القوائم الثابتة، النظام يقرأ `availableVariants` من تعريف المنتج.
+- يقوم بتحليل النص لفصل `Diameter x Length` أو `Curve Size`.
+- **النتيجة:** واجهة مستخدم تتغير ديناميكياً لتناسب المنتج المحدد (بالون، دعامة، قسطرة).
+
+### 3. استقرار النظام (Stability)
+- **Supabase Functions:** نشر دالة `slack-notifier` مع إصلاحات CORS Headers.
+- **عرض المتغيرات:** تنظيف الرموز الخاصة (`×` vs `x`) لضمان التوافق.
+
+---
+
 # Checkpoint: Advanced Invoice Entry System - GTIN Intelligence
 
 ## تاريخ: 2026-01-16
