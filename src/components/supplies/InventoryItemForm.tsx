@@ -427,6 +427,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                           // Close popover logic if needed, or user clicks away
                                         }}
                                         selectedVariant={item.variant}
+                                        availableVariants={selectedDefinition.variants || []}
                                       />
                                     </PopoverContent>
                                   </Popover>
@@ -494,6 +495,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                       <CatheterCurvePicker
                                         onSelect={(curve) => handleItemChange(item.id, 'variant', curve)}
                                         selectedCurve={item.variant}
+                                        availableVariants={selectedDefinition.variants || []}
                                       />
                                     </PopoverContent>
                                   </Popover>
@@ -704,6 +706,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                     <StentMatrixPicker
                                       onSelect={(variant) => updateItem(item.id, { variant })}
                                       selectedVariant={item.variant}
+                                      availableVariants={selectedDefinition.variants || []}
                                     />
                                   ) : isBalloon ? (
                                     <HybridVariantPicker
@@ -729,6 +732,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                     <CatheterCurvePicker
                                       onSelect={(curve) => updateItem(item.id, { variant: curve })}
                                       selectedCurve={item.variant}
+                                      availableVariants={selectedDefinition.variants || []}
                                     />
                                   ) : (
                                     <VariantQuickPicker
