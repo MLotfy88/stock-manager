@@ -16,13 +16,13 @@ import { Textarea } from '@/components/ui/textarea';
 export const SupplyTypesManagementPageContent = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  
+
   const [supplyTypes, setSupplyTypes] = useState<SupplyTypeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState<SupplyTypeItem | null>(null);
-  
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
@@ -37,7 +37,7 @@ export const SupplyTypesManagementPageContent = () => {
       setIsLoading(false);
     }
   };
-  
+
   useEffect(() => {
     loadData();
   }, []);
@@ -58,13 +58,13 @@ export const SupplyTypesManagementPageContent = () => {
     }
     setIsDialogOpen(true);
   };
-  
+
   const handleSubmit = async () => {
     if (!name.trim()) {
       toast({ title: t('error'), description: "Name is required.", variant: 'destructive' });
       return;
     }
-    
+
     try {
       const data = { name, description };
       if (currentItem) {
@@ -81,7 +81,7 @@ export const SupplyTypesManagementPageContent = () => {
       toast({ title: t('error'), description: t('error_processing_item'), variant: 'destructive' });
     }
   };
-  
+
   const openDeleteDialog = (item: SupplyTypeItem) => {
     setCurrentItem(item);
     setIsDeleteDialogOpen(true);
@@ -103,7 +103,7 @@ export const SupplyTypesManagementPageContent = () => {
       setIsDeleteDialogOpen(false);
     }
   };
-  
+
   return (
     <div>
       <div className="flex justify-end items-center mb-6">
@@ -112,10 +112,11 @@ export const SupplyTypesManagementPageContent = () => {
           {t('add_supply_type')}
         </Button>
       </div>
-      
+
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="overflow-x-auto hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -128,26 +129,54 @@ export const SupplyTypesManagementPageContent = () => {
                 {isLoading ? (
                   <TableRow><TableCell colSpan={3} className="text-center h-24">{t('loading')}</TableCell></TableRow>
                 ) : supplyTypes.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => openDialog(item)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(item)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.description}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openDialog(item)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(item)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
                 }
               </TableBody>
             </Table>
           </div>
+
+          {/* Mobile Card List */}
+          <div className="md:hidden space-y-4 p-4">
+            {isLoading ? (
+              <div className="text-center py-8">{t('loading')}</div>
+            ) : supplyTypes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">{t('no_data')}</div>
+            ) : (
+              supplyTypes.map((item) => (
+                <div key={item.id} className="bg-card border rounded-lg shadow-sm p-4 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-semibold">{item.name}</h3>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openDialog(item)} className="h-8 w-8">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(item)} className="h-8 w-8 text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  {item.description && (
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
-      
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -169,7 +198,7 @@ export const SupplyTypesManagementPageContent = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

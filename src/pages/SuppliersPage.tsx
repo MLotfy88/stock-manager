@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -190,7 +191,8 @@ export const SuppliersPageContent = () => {
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="overflow-x-auto hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -230,6 +232,54 @@ export const SuppliersPageContent = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile Card List View */}
+          <div className="md:hidden space-y-4 p-4">
+            {isLoading ? (
+              <div className="text-center py-8">{t('loading')}</div>
+            ) : suppliersList.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">{t('no_data')}</div>
+            ) : (
+              suppliersList.map((supplier) => (
+                <div key={supplier.id} className="bg-card border rounded-lg shadow-sm p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-semibold text-lg">{supplier.name}</h3>
+                    <Badge variant="outline">{supplier.alert_period} {t('days')}</Badge>
+                  </div>
+
+                  <div className="space-y-1 text-sm">
+                    {supplier.contact && (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span>{supplier.contact}</span>
+                      </div>
+                    )}
+                    {supplier.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <a href={`tel:${supplier.phone}`} className="text-primary hover:underline">{supplier.phone}</a>
+                      </div>
+                    )}
+                    {supplier.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <a href={`mailto:${supplier.email}`} className="text-primary hover:underline truncate">{supplier.email}</a>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="outline" size="sm" onClick={() => openDialog(supplier)} className="flex-1">
+                      <Edit className="h-4 w-4 mr-2" /> {t('edit')}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(supplier)} className="text-destructive hover:bg-destructive/10">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

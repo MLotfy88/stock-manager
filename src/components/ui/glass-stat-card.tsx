@@ -72,6 +72,7 @@ export const GlassStatCard: React.FC<GlassStatCardProps> = ({
                 'border border-white/20 dark:border-white/10',
                 'transition-all duration-300 ease-out',
                 'hover:scale-[1.02] hover:shadow-xl',
+                'h-full min-h-[120px]',
                 colors.bg,
                 colors.glow,
                 onClick && 'cursor-pointer',

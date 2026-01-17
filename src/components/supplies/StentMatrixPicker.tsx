@@ -66,14 +66,17 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
 
     return (
         <div className="space-y-4 select-none">
-            {/* Legend */}
+            {/* Legend with scroll hint */}
             <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                 <span>Diameter (mm) ↓</span>
-                <span>Length (mm) →</span>
+                <span className="flex items-center gap-1">
+                    Length (mm) →
+                    <span className="text-primary text-[10px]">(scroll →)</span>
+                </span>
             </div>
 
-            <ScrollArea className="w-full whitespace-nowrap border rounded-lg bg-card/50 p-2">
-                <div className="flex flex-col gap-2">
+            <ScrollArea className="w-full border rounded-lg bg-card/50 p-2">
+                <div className="min-w-max flex flex-col gap-2">
                     {/* Header Row (Lengths) */}
                     <div className="flex gap-2 mb-2 ml-14">
                         {lengths.map(len => (

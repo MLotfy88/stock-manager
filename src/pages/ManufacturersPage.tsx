@@ -10,23 +10,23 @@ import { Plus, Edit, Trash2, Building2 } from 'lucide-react';
 import { Manufacturer } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  getManufacturers, 
-  addManufacturer, 
-  updateManufacturer, 
-  deleteManufacturer 
+import {
+  getManufacturers,
+  addManufacturer,
+  updateManufacturer,
+  deleteManufacturer
 } from '@/data/operations/manufacturerOperations';
 
 export const ManufacturersPageContent = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  
+
   const [manufacturersList, setManufacturersList] = useState<Manufacturer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentManufacturer, setCurrentManufacturer] = useState<Manufacturer | null>(null);
-  
+
   const [name, setName] = useState('');
 
   const loadManufacturers = async () => {
@@ -40,7 +40,7 @@ export const ManufacturersPageContent = () => {
       setIsLoading(false);
     }
   };
-  
+
   useEffect(() => {
     loadManufacturers();
   }, []);
@@ -59,10 +59,10 @@ export const ManufacturersPageContent = () => {
     }
     setIsDialogOpen(true);
   };
-  
+
   const handleSubmit = async () => {
     if (!name.trim()) return;
-    
+
     try {
       const manufacturerData = {
         name,
@@ -75,7 +75,7 @@ export const ManufacturersPageContent = () => {
         await addManufacturer(manufacturerData as any);
         toast({ title: t('success'), description: t('item_added') });
       }
-      
+
       loadManufacturers();
       setIsDialogOpen(false);
       resetForm();
@@ -83,7 +83,7 @@ export const ManufacturersPageContent = () => {
       toast({ title: t('error'), description: t('error_processing_item'), variant: 'destructive' });
     }
   };
-  
+
   const openDeleteDialog = (manufacturer: Manufacturer) => {
     setCurrentManufacturer(manufacturer);
     setIsDeleteDialogOpen(true);
@@ -91,7 +91,7 @@ export const ManufacturersPageContent = () => {
 
   const handleDelete = async () => {
     if (!currentManufacturer) return;
-    
+
     try {
       const result = await deleteManufacturer(currentManufacturer.id);
       if (result.success) {
@@ -106,7 +106,7 @@ export const ManufacturersPageContent = () => {
       setIsDeleteDialogOpen(false);
     }
   };
-  
+
   return (
     <div>
       <div className="flex justify-end items-center mb-6">
@@ -134,10 +134,11 @@ export const ManufacturersPageContent = () => {
           </DialogContent>
         </Dialog>
       </div>
-      
+
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="overflow-x-auto hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -168,9 +169,32 @@ export const ManufacturersPageContent = () => {
               </TableBody>
             </Table>
           </div>
+
+          {/* Mobile Card List */}
+          <div className="md:hidden space-y-4 p-4">
+            {isLoading ? (
+              <div className="text-center py-8">{t('loading')}</div>
+            ) : manufacturersList.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">{t('no_data')}</div>
+            ) : (
+              manufacturersList.map((manufacturer) => (
+                <div key={manufacturer.id} className="bg-card border rounded-lg shadow-sm p-4 flex justify-between items-center">
+                  <div className="font-medium">{manufacturer.name}</div>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => openDialog(manufacturer)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(manufacturer)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
-      
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

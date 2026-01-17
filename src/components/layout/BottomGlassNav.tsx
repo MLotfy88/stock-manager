@@ -1,18 +1,21 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Package, ScanBarcode, Box, MoreHorizontal } from 'lucide-react';
+import { Home, Package, ScanBarcode, Box, Menu } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const BottomGlassNav = () => {
+interface BottomGlassNavProps {
+    onMenuClick?: () => void;
+}
+
+const BottomGlassNav: React.FC<BottomGlassNavProps> = ({ onMenuClick }) => {
     const { t } = useLanguage();
 
     const navItems = [
         { icon: Home, label: t('dashboard'), path: '/' },
         { icon: Box, label: t('inventory'), path: '/supplies' },
-        { icon: ScanBarcode, label: t('scan'), path: '/consumption', isPrimary: true }, // Central action
-        { icon: Package, label: t('packages'), path: '/packages' }, // New Packages route
-        { icon: MoreHorizontal, label: t('more'), path: '/menu' }, // Placeholder for detailed menu/drawer trigger
+        { icon: ScanBarcode, label: t('scan'), path: '/consumption', isPrimary: true },
+        { icon: Package, label: t('packages'), path: '/packages' },
     ];
 
     return (
@@ -48,6 +51,19 @@ const BottomGlassNav = () => {
                         )}
                     </NavLink>
                 ))}
+
+                {/* Menu Button - Opens Sidebar */}
+                <button
+                    onClick={onMenuClick}
+                    className="flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-300 text-muted-foreground hover:text-foreground"
+                >
+                    <div className="p-2 rounded-xl transition-all duration-300 bg-transparent">
+                        <Menu className="h-5 w-5" />
+                    </div>
+                    <span className="text-[10px] font-medium opacity-70">
+                        {t('more')}
+                    </span>
+                </button>
             </div>
         </nav>
     );

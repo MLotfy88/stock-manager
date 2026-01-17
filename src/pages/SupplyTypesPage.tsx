@@ -272,7 +272,8 @@ export const ProductDefinitionsPageContent = () => {
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="overflow-x-auto hidden md:block">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
@@ -285,7 +286,7 @@ export const ProductDefinitionsPageContent = () => {
               </thead>
               <tbody>
                 {definitions.map((def) => (
-                  <tr key={def.id} className="border-b">
+                  <tr key={def.id} className="border-b last:border-0 hover:bg-muted/10 transition-colors">
                     <td className="p-4 font-medium">{def.name}</td>
                     <td className="p-4">{supplyTypes.find(st => st.id === def.type_id)?.name || def.type_id}</td>
                     <td className="p-4">{def.variant_label}</td>
@@ -300,6 +301,37 @@ export const ProductDefinitionsPageContent = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card List */}
+          <div className="md:hidden space-y-4 p-4">
+            {definitions.map((def) => (
+              <div key={def.id} className="bg-card border rounded-lg shadow-sm p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold">{def.name}</h3>
+                    <p className="text-sm text-muted-foreground">{supplyTypes.find(st => st.id === def.type_id)?.name || def.type_id}</p>
+                  </div>
+                  <Badge variant="outline">{def.variants.length} {t('variants')}</Badge>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/20 p-2 rounded">
+                  <span className="font-medium">{t('variant_label')}:</span> {def.variant_label}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                  <Button variant="outline" size="sm" onClick={() => openDialog(def)} className="flex-1">
+                    <Edit className="h-4 w-4 mr-2" /> {t('edit')}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(def)} className="text-destructive hover:bg-destructive/10">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {definitions.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">{t('no_products_found')}</div>
+            )}
           </div>
         </CardContent>
       </Card>

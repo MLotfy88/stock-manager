@@ -1,35 +1,41 @@
-
-import React from 'react';
-import { Outlet, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Home } from 'lucide-react';
-import AppLogo from './AppLogo';
-import { useLanguage } from '@/contexts/LanguageContext';
+import React, { useState, useEffect } from 'react';
+import { Outlet } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import Header from './Header';
 import BottomGlassNav from './BottomGlassNav';
-
-const UserHeader = () => {
-  const { t } = useLanguage();
-  return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-      <AppLogo />
-      <Button asChild variant="outline" size="sm">
-        <Link to="/user-dashboard">
-          <Home className="h-4 w-4 mr-2" />
-          {t('user_dashboard')}
-        </Link>
-      </Button>
-    </header>
-  );
-};
+import { useMediaQuery } from '@/hooks/use-mobile';
 
 const UserLayout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 1024px)');
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
+  // Close sidebar on route change for mobile
+  useEffect(() => {
+    if (isMobile) {
+      closeSidebar();
+    }
+  }, [isMobile]);
+
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <UserHeader />
-      <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 pb-24 md:pb-4">
-        <Outlet />
-      </main>
-      <BottomGlassNav />
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        closeSidebar={closeSidebar}
+      />
+      <div className="flex flex-col flex-1">
+        <Header toggleSidebar={toggleSidebar} />
+        <main className="flex-1 p-4 overflow-auto pb-24 md:pb-4 pt-16">
+          <Outlet />
+        </main>
+        <BottomGlassNav onMenuClick={toggleSidebar} />
+      </div>
     </div>
   );
 };
