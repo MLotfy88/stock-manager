@@ -93,6 +93,11 @@ Addressed critical usability issues in barcode scanning and variant selection lo
     *   Deployed `slack-notifier` edge function with correct CORS headers.
     *   Resolved 400/500 errors masquerading as network blocks.
 
+4.  **Scanner Race Condition & GTIN UI (2026-01-17 - Final Fix)**
+    *   **Race Condition**: Fixed `handleBarcodeInputChange` to consolidate state updates, preventing raw data from overwriting parsed GS1 results.
+    *   **Hardware Event Support**: Added `onKeyDown` capture for the `Enter` key (common suffix for physical scanners).
+    *   **GTIN Prominence**: Added Arabic translation (`رقم GTIN العالمي`) and visual highlighting (blue background) to the GTIN field to address user visibility concerns.
+
 ---
 
 ## Technical Implementation
@@ -140,6 +145,10 @@ Addressed critical usability issues in barcode scanning and variant selection lo
 8. **`src/hooks/useBarcodeScanner.ts`**
    - Added heuristics for missing FNC1
    - Enforced GS1 output order
+   - Enhanced variable-length AI lookahead to correctly handle AI (30) Quantity.
+
+9. **`src/translations/ar.ts` & `en.ts`**
+   - Added `gtin` translations for consistent UI labeling.
 
 9. **`src/pages/AddSupplyPage.tsx`**
    - Auto-save GTIN mappings on invoice save

@@ -14,7 +14,9 @@
 - **GTIN auto-detection** for products and variants
 - **Smart quantity grouping** to prevent duplicate entries
 - **Dynamic Smart Picker** for varying Size Profiles (Balloons/Guides)
-- **Hardware Integration** (Keyboard Wedge support & raw data cleaning)
+- **Hardware Integration** (Fixed race conditions, keyboard wedge support, Enter key handling)
+- **GTIN UI Enhancement** (Translated and highlighted for better visibility)
+- **Variant quick picker** with color-coded categories
 - **Variant quick picker** with color-coded categories
 - **Audio/haptic feedback** for scan confirmation
 - **Recent variants tracking** for faster selection
