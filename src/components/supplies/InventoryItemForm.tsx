@@ -403,129 +403,127 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                           </Select>
                         </TableCell>
                         <TableCell className="p-2">
-                          if (selectedDefinition) {
-                                const pref = selectedDefinition.visual_picker_preference;
-                          const typeName = selectedDefinition.supply_type?.name_en?.toLowerCase() || selectedDefinition.supply_type?.name?.toLowerCase() || '';
+                          {(() => {
+                            if (selectedDefinition) {
+                              const pref = selectedDefinition.visual_picker_preference;
+                              const typeName = selectedDefinition.supply_type?.name_en?.toLowerCase() || selectedDefinition.supply_type?.name?.toLowerCase() || '';
 
-                          const isStent = pref === 'matrix' || (!pref && (typeName.includes('stent') || typeName.includes('دعامة')));
-                          const isCurve = pref === 'curve' || (!pref && typeName.includes('diagnostic'));
-                          // Balloon/Guide logic remains checking names/pref if we added those options, 
-                          // but for now we stick to the requested "separation" logic for strings.
+                              const isStent = pref === 'matrix' || (!pref && (typeName.includes('stent') || typeName.includes('دعامة')));
+                              const isCurve = pref === 'curve' || (!pref && typeName.includes('diagnostic'));
+                              const isBalloon = typeName.includes('balloon') || typeName.includes('بالون') || typeName.includes('ballon');
+                              const isGuidingCatheter = (typeName.includes('catheter') && (typeName.includes('guid') || typeName.includes('mojja'))) || typeName.includes('موجهة');
 
-                          // Quick fixes for other types if needed, but primarily User asked for Stents/Catheters.
-                          const isBalloon = typeName.includes('balloon') || typeName.includes('بالون') || typeName.includes('ballon');
-                          const isGuidingCatheter = (typeName.includes('catheter') && (typeName.includes('guid') || typeName.includes('mojja'))) || typeName.includes('موجهة');
-
-                          if (isStent) {
-                                  return (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
-                                <span className="truncate">{item.variant ? item.variant.replace(/\uFFFD/g, 'x').replace('×', 'x') : t('select_size')}</span>
-                                <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5">Matrix</Badge>
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <StentMatrixPicker
-                                onSelect={(variant) => {
-                                  handleItemChange(item.id, 'variant', variant);
-                                }}
-                                selectedVariant={item.variant}
-                                availableVariants={selectedDefinition.variants || []}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          );
-                                }
-
-                          if (isCurve) {
-                                  // As 'CatheterCurvePicker' covers diagnostic curves.
-                                  return (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
-                                <span className="truncate">{item.variant || t('select_curve')}</span>
-                                <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5">Visual</Badge>
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <CatheterCurvePicker
-                                onSelect={(curve) => handleItemChange(item.id, 'variant', curve)}
-                                selectedCurve={item.variant}
-                                availableVariants={selectedDefinition.variants || []}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          );
-                                }
-
-                          // ... Existing Balloon/Guide logic ...
-                          if (isBalloon) {
-                                  return (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
-                                <span className="truncate">{item.variant ? item.variant.replace(/\uFFFD/g, 'x') : t('select_variant')}</span>
-                                <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5">Hybrid</Badge>
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <HybridVariantPicker
-                                primaryLabel="Diameter (mm)"
-                                primaryOptions={BALLOON_DIAMETERS}
-                                secondaryLabel="Length (mm)"
-                                secondaryOptions={BALLOON_LENGTHS}
-                                separator="x"
-                                selectedVariant={item.variant}
-                                onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          );
-                                }
-
-                          if (isGuidingCatheter) {
-                                     return (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
-                                <span className="truncate">{item.variant || t('select_variant')}</span>
-                                <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5">Guide</Badge>
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <HybridVariantPicker
-                                primaryLabel="Curve"
-                                primaryOptions={GUIDING_CATHETER_CURVES}
-                                secondaryLabel="Size (F)"
-                                secondaryOptions={GUIDING_CATHETER_SIZES}
-                                separator=" "
-                                selectedVariant={item.variant}
-                                onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          );
-                                }
+                              if (isStent) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
+                                        <span className="truncate">{item.variant ? item.variant.replace(/\uFFFD/g, 'x').replace('×', 'x') : t('select_size')}</span>
+                                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5 text-nowrap">Matrix</Badge>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <StentMatrixPicker
+                                        onSelect={(variant) => {
+                                          handleItemChange(item.id, 'variant', variant);
+                                          // Close popover logic if needed, or user clicks away
+                                        }}
+                                        selectedVariant={item.variant}
+                                        availableVariants={selectedDefinition.variants || []}
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                );
                               }
 
-                          return (
-                          <VariantQuickPicker
-                            variants={selectedDefinition.variants}
-                            selectedVariant={item.variant}
-                            onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
-                            recentVariants={recentVariants}
-                          />
-                          );
-                            })()
-                          ) : (
-                          <Input
-                            value={item.variant}
-                            onChange={(e) => handleItemChange(item.id, 'variant', e.target.value)}
-                            placeholder={t('variant')}
-                            className="text-xs h-8"
-                          />
-                          )}
+                              if (isCurve) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
+                                        <span className="truncate">{item.variant || t('select_curve')}</span>
+                                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5 text-nowrap">Visual</Badge>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <CatheterCurvePicker
+                                        onSelect={(curve) => handleItemChange(item.id, 'variant', curve)}
+                                        selectedCurve={item.variant}
+                                        availableVariants={selectedDefinition.variants || []}
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                );
+                              }
+
+                              if (isBalloon) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
+                                        <span className="truncate">{item.variant ? item.variant.replace(/\uFFFD/g, 'x') : t('select_variant')}</span>
+                                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5 text-nowrap">Hybrid</Badge>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <HybridVariantPicker
+                                        primaryLabel="Diameter (mm)"
+                                        primaryOptions={BALLOON_DIAMETERS}
+                                        secondaryLabel="Length (mm)"
+                                        secondaryOptions={BALLOON_LENGTHS}
+                                        separator="x"
+                                        selectedVariant={item.variant}
+                                        onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                );
+                              }
+
+                              if (isGuidingCatheter) {
+                                return (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
+                                        <span className="truncate">{item.variant || t('select_variant')}</span>
+                                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5 text-nowrap">Guide</Badge>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                      <HybridVariantPicker
+                                        primaryLabel="Curve"
+                                        primaryOptions={GUIDING_CATHETER_CURVES}
+                                        secondaryLabel="Size (F)"
+                                        secondaryOptions={GUIDING_CATHETER_SIZES}
+                                        separator=" "
+                                        selectedVariant={item.variant}
+                                        onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                );
+                              }
+
+                              return (
+                                <VariantQuickPicker
+                                  variants={selectedDefinition.variants}
+                                  selectedVariant={item.variant}
+                                  onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                                  recentVariants={recentVariants}
+                                />
+                              );
+                            }
+
+                            // Fallback if no definition selected
+                            return (
+                              <Input
+                                value={item.variant}
+                                onChange={(e) => handleItemChange(item.id, 'variant', e.target.value)}
+                                placeholder={t('variant')}
+                                className="text-xs h-8"
+                              />
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="p-2">
                           <Input
