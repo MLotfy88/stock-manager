@@ -19,6 +19,7 @@ export default {
   select_item: 'اختر صنف',
   barcode_scanned: 'تم مسح الباركود',
   barcode: 'الباركود',
+  gtin: 'رقم GTIN العالمي',
   scan_error: 'خطأ في المسح',
   review_and_confirm: 'مراجعة وتأكيد',
   back: 'رجوع',
