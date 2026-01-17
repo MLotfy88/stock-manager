@@ -44,16 +44,46 @@ const convertGS1DateToISO = (gs1Date: string): string | null => {
 
 // دالة لاستخراج بيانات المستلزمات الطبية من باركود GS1-128
 export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null => {
-  const cleanValue = rawValue.trim();
+  let cleanValue = rawValue.trim();
+
+  // 1. Aggressive Prefix Cleaning (Fix for "Writes C")
+  // Remove common AIM identifiers and partial fragments often sent by keyboard wedges
+  // ]C1, ]C, C1, or just C followed by digits/brackets
+  if (cleanValue.startsWith(']C1')) cleanValue = cleanValue.substring(3);
+  else if (cleanValue.startsWith(']C')) cleanValue = cleanValue.substring(2);
+  else if (cleanValue.startsWith('C1')) cleanValue = cleanValue.substring(2);
+  else if (cleanValue.startsWith(']')) cleanValue = cleanValue.substring(1);
+  // If it starts with 'C' followed by a number or '(', remove 'C'
+  else if (cleanValue.startsWith('C') && /^[0-9\(]/.test(cleanValue.substring(1))) cleanValue = cleanValue.substring(1);
+
   const result: ParsedGS1Data = {
     rawValue,
     formattedValue: ''
   };
 
-  // Case 1: HRI Format with parentheses, e.g. (01)069...(17)220101
+  // Helper to build formatted string in standard order: (01), (17), (10), (30)
+  const buildFormatted = () => {
+    let f = '';
+    if (result.gtin) f += `(01)${result.gtin} `;
+    if (result.expiryDate) {
+      try {
+        const d = new Date(result.expiryDate);
+        if (!isNaN(d.getTime())) {
+          const yy = d.getFullYear().toString().substr(2);
+          const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+          const dd = d.getDate().toString().padStart(2, '0');
+          f += `(17)${yy}${mm}${dd} `;
+        }
+      } catch (e) { /* ignore */ }
+    }
+    if (result.lotNumber) f += `(10)${result.lotNumber} `;
+    if (result.quantity) f += `(30)${result.quantity} `;
+    return f.trim();
+  };
+
+  // Case 1: HRI Format with parentheses
   if (cleanValue.includes('(') && cleanValue.includes(')')) {
     const parts = cleanValue.split('(');
-    let formatted = '';
 
     parts.forEach(part => {
       if (!part) return;
@@ -69,25 +99,17 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
         }
         else if (ai === '10') result.lotNumber = value;
         else if (ai === '30') result.quantity = value;
-
-        formatted += `(${ai})${value} `;
       }
     });
-    result.formattedValue = formatted.trim();
-    if (result.gtin) return result;
-    // Fallback if parsing failed but brackets existed (unlikely)
+
+    if (result.gtin) {
+      result.formattedValue = buildFormatted();
+      return result;
+    }
   }
 
-  // Case 2: Raw GS1 Stream (with or without ]C1)
+  // Case 2: Raw GS1 Stream
   let data = cleanValue;
-  if (data.startsWith(']C1')) {
-    data = data.substring(3);
-  } else if (!data.startsWith('01') && data.length < 16) {
-    // If it doesn't look like GS1 (no 01, short), return null (unless it was handled above)
-    // Actually, if it's just a plain GTIN-14, we might want to allow it.
-    // For now, strict check:
-    return null;
-  }
 
   // Rules for parsing raw stream
   const aiRules: { [key: string]: number } = {
@@ -98,7 +120,6 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
     '21': -1, // Serial (Variable)
   };
 
-  let formatted = '';
   while (data.length > 0) {
     const ai2 = data.substring(0, 2);
     // Check 2-digit AIs
@@ -111,40 +132,21 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
         value = data.substring(2, 2 + length);
         data = data.substring(2 + length);
       } else {
-        // Variable length
+        // Variable length logic
         // Find next AI to stop. 
-        // We look for common next AIs (17, 10, 30, 21)
-        // Or special separator char (GS = \x1d)
         let stopIndex = data.length;
         data = data.substring(2);
 
-        // Check for Group Separator first
         const gsIndex = data.indexOf('\x1d');
         if (gsIndex !== -1) {
           value = data.substring(0, gsIndex);
           data = data.substring(gsIndex + 1); // Skip GS
         } else {
-          // Heuristic: Look for next known AI
-          // This is tricky. For '30' (count), it's usually short (1-8 digits).
-          // For '10' (lot), it's up to 20 alphanum.
-
-          // Try to find the earliest occurrence of another known AI 
-          // BUT verify it satisfies context (e.g. 17 must be followed by 6 digits)
-
-          // For valid image case: ...30110... -> 30 val=1, next AI=10?
-          // "110..." -> AI 11 is 'Prod Date' (6 digits). 
-          // "10..." -> AI 10 is Batch. 
-          // "01" -> GTIN. 
-          // "17" -> Exp.
-
-          // Simple heuristic loop:
+          // Heuristic lookahead
           let foundNext = false;
           for (let i = 1; i < Math.min(data.length, 20); i++) {
             const potentialAI = data.substring(i, i + 2);
-            // logic: if potentialAI is a known start of a field
             if (['01', '17', '10', '30', '21'].includes(potentialAI)) {
-              // Refine: 17 must have enough chars after? 
-              // Let's assume valid GS1 is well formed.
               value = data.substring(0, i);
               data = data.substring(i);
               foundNext = true;
@@ -166,8 +168,6 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
       else if (ai2 === '10') result.lotNumber = value;
       else if (ai2 === '30') result.quantity = value;
 
-      formatted += `(${ai2})${value} `;
-
     } else {
       // Unknown AI or garbage at end
       break;
@@ -175,7 +175,7 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
   }
 
   if (result.gtin) {
-    result.formattedValue = formatted.trim();
+    result.formattedValue = buildFormatted();
     return result;
   }
 
