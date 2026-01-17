@@ -96,21 +96,18 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
     const handleDefinitionSelect = (def: ProductDefinition) => {
         setSelectedDefinition(def);
 
-        // Logic to determine next step
+        // Set default variant if no picker needed
         if (def.visual_picker_preference === 'none' || (!def.visual_picker_preference && def.variants.length === 0)) {
-            // No variants, skip to details
             setSelectedVariant('Standard');
-            setStep(3);
         } else {
-            // Go to variant picker
-            setStep(2);
+            setSelectedVariant('');
         }
+        // MANUAL NAVIGATION: User must click Next
     };
 
     const handleVariantSelect = (variant: string) => {
         setSelectedVariant(variant);
-        // Auto-advance to details after selection
-        setStep(3);
+        // MANUAL NAVIGATION: User must click Next
     };
 
     const handleFinalSave = () => {
@@ -325,13 +322,34 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
                 <SheetFooter className="mt-6 flex-row gap-3 sm:space-x-0">
                     {step > 1 && (
                         <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                            <ArrowLeft className="mr-2 h-4 w-4" /> {t('back') || 'Back'}
                         </Button>
                     )}
 
-                    {step < 3 && step !== 1 && (
-                        // Step 1 buttons are inside the list; Step 2 auto-advances generally but can have manual next if needed
-                        <div className="flex-1"></div>
+                    {step === 1 && (
+                        <Button
+                            onClick={() => {
+                                if (selectedDefinition?.visual_picker_preference === 'none' || (!selectedDefinition?.visual_picker_preference && selectedDefinition?.variants.length === 0)) {
+                                    setStep(3); // Skip to details if no variants
+                                } else {
+                                    setStep(2); // Go to variant picker
+                                }
+                            }}
+                            disabled={!selectedDefinition}
+                            className="flex-1"
+                        >
+                            {t('next') || 'Next'} <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    )}
+
+                    {step === 2 && (
+                        <Button
+                            onClick={() => setStep(3)}
+                            disabled={!selectedVariant}
+                            className="flex-1"
+                        >
+                            {t('next') || 'Next'} <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
                     )}
 
                     {step === 3 && (
