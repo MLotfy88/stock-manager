@@ -34,8 +34,8 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
     // Parse current selection
     // Warning: This simplistic parsing assumes the separator doesn't appear in values.
     // Ideally, we'd store separate state, but we need to respect the controlled `selectedVariant` prop.
-    const [currentPrimary, currentSecondary] = selectedVariant?.includes(separator)
-        ? selectedVariant.split(separator).reduce((acc, val, idx, arr) => {
+    const [currentPrimary, currentSecondary] = selectedVariant
+        ? selectedVariant.split(/[\sxX×*]+/).reduce((acc, val, idx, arr) => {
             // Handle cases where separator might be " " and values are complex? 
             // For standard "3.5x15", split('x') -> ['3.5', '15']
             // For "JR4 6F", split(' ') -> ['JR4', '6F']

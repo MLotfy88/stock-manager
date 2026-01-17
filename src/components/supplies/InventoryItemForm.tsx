@@ -15,7 +15,7 @@ import { MobileSupplyItemCard } from '@/components/supplies/MobileSupplyItemCard
 import { VariantQuickPicker } from './VariantQuickPicker';
 import { StentMatrixPicker } from '@/components/supplies/StentMatrixPicker';
 import { CatheterCurvePicker } from '@/components/supplies/CatheterCurvePicker';
-import { HybridVariantPicker, PickerOption } from '@/components/supplies/HybridVariantPicker';
+import { SmartHybridPicker } from '@/components/supplies/SmartHybridPicker';
 import { getGTINMapping } from '@/data/operations/gtinMappingOperations';
 import { saveRecentVariant, getRecentVariants } from '@/utils/variantPreferences';
 import { scanSuccessFeedback, scanErrorFeedback, playTick } from '@/utils/audioFeedback';
@@ -43,33 +43,6 @@ export interface InventoryItemFormProps {
   items: PurchaseOrderItem[];
   onItemsChange: (items: PurchaseOrderItem[]) => void;
 }
-
-// Define options for specific types
-// Ideally this should come from a DB configuration, but for speed/MVP:
-const BALLOON_DIAMETERS: PickerOption[] = [
-  { value: '1.25', label: '1.25' }, { value: '1.50', label: '1.50' }, { value: '1.75', label: '1.75' },
-  { value: '2.00', label: '2.00' }, { value: '2.25', label: '2.25' }, { value: '2.50', label: '2.50' },
-  { value: '2.75', label: '2.75' }, { value: '3.00', label: '3.00' }, { value: '3.25', label: '3.25' },
-  { value: '3.50', label: '3.50' }, { value: '4.00', label: '4.00' }, { value: '4.50', label: '4.50' },
-  { value: '5.00', label: '5.00' }
-];
-
-const BALLOON_LENGTHS: PickerOption[] = [
-  { value: '6', label: '6' }, { value: '8', label: '8' }, { value: '10', label: '10' },
-  { value: '12', label: '12' }, { value: '15', label: '15' }, { value: '20', label: '20' },
-  { value: '25', label: '25' }, { value: '30', label: '30' }
-];
-
-const GUIDING_CATHETER_CURVES: PickerOption[] = [
-  { value: 'JL3.5', label: 'JL3.5' }, { value: 'JL4.0', label: 'JL4.0' }, { value: 'JL4.5', label: 'JL4.5' }, { value: 'JL5.0', label: 'JL5.0' },
-  { value: 'JR3.5', label: 'JR3.5' }, { value: 'JR4.0', label: 'JR4.0' }, { value: 'JR4.5', label: 'JR4.5' },
-  { value: 'AL.75', label: 'AL.75' }, { value: 'AL1.0', label: 'AL1.0' }, { value: 'AL1.5', label: 'AL1.5' }, { value: 'AL2.0', label: 'AL2.0' },
-  { value: 'XB3.0', label: 'XB3.0' }, { value: 'XB3.5', label: 'XB3.5' }, { value: 'XB4.0', label: 'XB4.0' }
-];
-
-const GUIDING_CATHETER_SIZES: PickerOption[] = [
-  { value: '5F', label: '5F' }, { value: '6F', label: '6F' }, { value: '7F', label: '7F' }, { value: '8F', label: '8F' }
-];
 
 const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsChange }) => {
   const { t } = useLanguage();
@@ -290,6 +263,67 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
     }
   };
 
+  // Handle input from hardware scanner (keyboard simulation)
+  const handleBarcodeInputChange = async (itemId: string, value: string) => {
+    // Always update the raw value so the user sees what they are typing
+    handleItemChange(itemId, 'barcode', value);
+
+    // Try to parse as GS1 if it looks like a scan (starts with ]C1 or has length > 16)
+    // We do this to capture the "keyboard wedge" input style
+    if (value.length > 16 || value.startsWith(']C1') || value.startsWith(']C')) {
+      const parsed = extractGS1DataForSupply(value);
+      if (parsed && parsed.gtin) {
+        // We have a valid scan!
+        const updates: Partial<PurchaseOrderItem> = {
+          barcode: parsed.formattedValue,
+          gtin: parsed.gtin,
+          batchNumber: parsed.lotNumber || '',
+        };
+
+        if (parsed.expiryDate) {
+          updates.expiryDate = new Date(parsed.expiryDate);
+        }
+
+        // Product lookup logic
+        let foundProduct = false;
+        if (parsed.product_id) {
+          updates.productDefinitionId = parsed.product_id;
+          updates.variant = parsed.variant_name || '';
+          foundProduct = true;
+        } else {
+          // Check GTIN mapping
+          const mapping = await getGTINMapping(parsed.gtin);
+          if (mapping) {
+            updates.productDefinitionId = mapping.product_definition_id;
+            updates.variant = mapping.variant_name;
+            foundProduct = true;
+          }
+        }
+
+        // Only trigger feedback if we haven't just triggered it (optimization?)
+        // For now, just apply updates
+        updateItem(itemId, updates);
+
+        if (foundProduct) {
+          const productName = productDefinitions.find(p => p.id === updates.productDefinitionId)?.name || 'Unknown';
+          toast({
+            title: "✅ تم التعرف تلقائياً",
+            description: `${productName} - ${updates.variant}\nLOT: ${updates.batchNumber}`,
+            duration: 3000,
+            className: "bg-green-50 border-green-200"
+          });
+          playTick();
+        } else {
+          toast({
+            title: "⚠️ منتج غير معروف",
+            description: `GTIN: ${parsed.gtin}`,
+            duration: 3000,
+          });
+        }
+      }
+    }
+  };
+
   return (
     <>
       <Card>
@@ -329,7 +363,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                           <div className="flex items-center gap-1">
                             <Input
                               value={item.barcode}
-                              onChange={(e) => handleItemChange(item.id, 'barcode', e.target.value)}
+                              onChange={(e) => handleBarcodeInputChange(item.id, e.target.value)}
                               placeholder={t('barcode')}
                               className="font-mono text-xs h-8"
                             />
@@ -418,7 +452,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
-                                        <span className="truncate">{item.variant ? item.variant.replace(/\uFFFD/g, 'x').replace('×', 'x') : t('select_size')}</span>
+                                        <span className="truncate">{item.variant ? item.variant.replace(/[\uFFFD\u00D7\*]/g, 'x') : t('select_size')}</span>
                                         <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5 text-nowrap">Matrix</Badge>
                                       </Button>
                                     </PopoverTrigger>
@@ -461,19 +495,19 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <Button variant="outline" className="w-full text-xs h-8 justify-between px-2">
-                                        <span className="truncate">{item.variant ? item.variant.replace(/\uFFFD/g, 'x') : t('select_variant')}</span>
+                                        <span className="truncate">{item.variant ? item.variant.replace(/[\uFFFD\u00D7\*]/g, 'x') : t('select_variant')}</span>
                                         <Badge variant="secondary" className="ml-1 text-[10px] px-1 h-5 text-nowrap">Hybrid</Badge>
                                       </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
-                                      <HybridVariantPicker
+                                      <SmartHybridPicker
+                                        mode="balloon"
                                         primaryLabel="Diameter (mm)"
-                                        primaryOptions={BALLOON_DIAMETERS}
                                         secondaryLabel="Length (mm)"
-                                        secondaryOptions={BALLOON_LENGTHS}
                                         separator="x"
                                         selectedVariant={item.variant}
                                         onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                                        availableVariants={selectedDefinition.variants || []}
                                       />
                                     </PopoverContent>
                                   </Popover>
@@ -490,14 +524,14 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                       </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
-                                      <HybridVariantPicker
+                                      <SmartHybridPicker
+                                        mode="guide"
                                         primaryLabel="Curve"
-                                        primaryOptions={GUIDING_CATHETER_CURVES}
                                         secondaryLabel="Size (F)"
-                                        secondaryOptions={GUIDING_CATHETER_SIZES}
                                         separator=" "
                                         selectedVariant={item.variant}
                                         onSelect={(variant) => handleItemChange(item.id, 'variant', variant)}
+                                        availableVariants={selectedDefinition.variants || []}
                                       />
                                     </PopoverContent>
                                   </Popover>
@@ -597,7 +631,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                       <Label className="text-[10px] uppercase text-muted-foreground">{t('barcode')}</Label>
                       <Input
                         value={item.barcode}
-                        onChange={(e) => updateItem(item.id, { barcode: e.target.value })}
+                        onChange={(e) => handleBarcodeInputChange(item.id, e.target.value)}
                         placeholder={t('barcode')}
                         className="font-mono h-9 text-xs"
                       />
@@ -714,24 +748,24 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                                       availableVariants={selectedDefinition.variants || []}
                                     />
                                   ) : isBalloon ? (
-                                    <HybridVariantPicker
+                                    <SmartHybridPicker
+                                      mode="balloon"
                                       primaryLabel="Diameter (mm)"
-                                      primaryOptions={BALLOON_DIAMETERS}
                                       secondaryLabel="Length (mm)"
-                                      secondaryOptions={BALLOON_LENGTHS}
                                       separator="x"
                                       selectedVariant={item.variant}
                                       onSelect={(variant) => updateItem(item.id, { variant })}
+                                      availableVariants={selectedDefinition.variants || []}
                                     />
                                   ) : isGuidingCatheter ? (
-                                    <HybridVariantPicker
+                                    <SmartHybridPicker
+                                      mode="guide"
                                       primaryLabel="Curve"
-                                      primaryOptions={GUIDING_CATHETER_CURVES}
                                       secondaryLabel="Size (F)"
-                                      secondaryOptions={GUIDING_CATHETER_SIZES}
                                       separator=" "
                                       selectedVariant={item.variant}
                                       onSelect={(variant) => updateItem(item.id, { variant })}
+                                      availableVariants={selectedDefinition.variants || []}
                                     />
                                   ) : isDiagnosticCatheter ? (
                                     <CatheterCurvePicker

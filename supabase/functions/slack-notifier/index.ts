@@ -25,52 +25,13 @@ serve(async (req) => {
     const { event, user, details } = await req.json();
 
     if (!event || !user) {
-      return new Response('Bad Request: Missing event or user data.', { status: 400 });
+      return new Response('Bad Request: Missing event or user data.', { status: 400, headers: corsHeaders });
     }
-
-    const message = {
-      text: `*New User Action:* ${event}`,
-      blocks: [
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*:bell: New User Action: *${event}*`,
-          },
-        },
-        {
-          type: 'divider',
-        },
-        {
-          type: 'section',
-          fields: [
-            { type: 'mrkdwn', text: `*User:* ${user.email}` },
-            { type: 'mrkdwn', text: `*Role:* ${user.role || 'N/A'}` },
-            { type: 'mrkdwn', text: `*Time:* ${new Date().toLocaleString('en-US', { timeZone: 'Africa/Cairo' })}` },
-          ],
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*Details:*\n\`\`\`${JSON.stringify(details, null, 2)}\`\`\``,
-          },
-        },
-      ],
-    };
-
-    const slackResponse = await fetch(SLACK_WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(message),
-    });
-
+    // ...
     if (!slackResponse.ok) {
       const errorBody = await slackResponse.text();
       console.error('Error sending message to Slack:', slackResponse.status, errorBody);
-      return new Response('Failed to send message to Slack.', { status: 500 });
+      return new Response('Failed to send message to Slack.', { status: 500, headers: corsHeaders });
     }
 
     return new Response(JSON.stringify({ success: true }), {

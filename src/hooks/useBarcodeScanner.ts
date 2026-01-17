@@ -76,8 +76,8 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
         }
       } catch (e) { /* ignore */ }
     }
-    if (result.lotNumber) f += `(10)${result.lotNumber} `;
     if (result.quantity) f += `(30)${result.quantity} `;
+    if (result.lotNumber) f += `(10)${result.lotNumber} `;
     return f.trim();
   };
 
@@ -146,7 +146,7 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
           let foundNext = false;
           for (let i = 1; i < Math.min(data.length, 20); i++) {
             const potentialAI = data.substring(i, i + 2);
-            if (['01', '17', '10', '30', '21'].includes(potentialAI)) {
+            if (['01', '17', '10', '30', '21', '11'].includes(potentialAI)) {
               value = data.substring(0, i);
               data = data.substring(i);
               foundNext = true;
