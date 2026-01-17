@@ -265,30 +265,33 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
 
   // Handle input from hardware scanner (keyboard simulation)
   const handleBarcodeInputChange = async (itemId: string, value: string) => {
-    // Basic update for raw field
-    const updates: Partial<PurchaseOrderItem> = {
-      barcode: value
-    };
+    // Always update the raw value so the user sees what they are typing
+    handleItemChange(itemId, 'barcode', value);
 
-    // Try to parse as GS1 if it looks like a complete scan
-    // Scanners usually send data very fast or with ]C1 prefix
+    // Try to parse as GS1 if it looks like a scan (starts with ]C1 or has length > 16)
+    // We do this to capture the "keyboard wedge" input style
     if (value.length > 16 || value.startsWith(']C1') || value.startsWith(']C')) {
       const parsed = extractGS1DataForSupply(value);
       if (parsed && parsed.gtin) {
-        updates.barcode = parsed.formattedValue;
-        updates.gtin = parsed.gtin;
-        updates.batchNumber = parsed.lotNumber || '';
+        // We have a valid scan!
+        const updates: Partial<PurchaseOrderItem> = {
+          barcode: parsed.formattedValue,
+          gtin: parsed.gtin,
+          batchNumber: parsed.lotNumber || '',
+        };
+
         if (parsed.expiryDate) {
           updates.expiryDate = new Date(parsed.expiryDate);
         }
 
-        // Product lookup
+        // Product lookup logic
         let foundProduct = false;
         if (parsed.product_id) {
           updates.productDefinitionId = parsed.product_id;
           updates.variant = parsed.variant_name || '';
           foundProduct = true;
         } else {
+          // Check GTIN mapping
           const mapping = await getGTINMapping(parsed.gtin);
           if (mapping) {
             updates.productDefinitionId = mapping.product_definition_id;
@@ -297,28 +300,26 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
           }
         }
 
+        // Only trigger feedback if we haven't just triggered it (optimization?)
+        // For now, just apply updates
+        updateItem(itemId, updates);
+
         if (foundProduct) {
           const productName = productDefinitions.find(p => p.id === updates.productDefinitionId)?.name || 'Unknown';
           toast({
-            title: "✅ " + t('product_found'),
+            title: "✅ تم التعرف تلقائياً",
             description: `${productName} - ${updates.variant}\nLOT: ${updates.batchNumber}`,
             duration: 3000,
             className: "bg-green-50 border-green-200"
           });
           playTick();
+        } else {
+          toast({
+            title: "⚠️ منتج غير معروف",
+            description: `GTIN: ${parsed.gtin}`,
+            duration: 3000,
+          });
         }
-      }
-    }
-
-    // Single consolidated update
-    updateItem(itemId, updates);
-  };
-
-  const handleBarcodeKeyDown = (itemId: string, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      const value = (e.target as HTMLInputElement).value;
-      if (value) {
-        handleBarcodeInputChange(itemId, value);
       }
     }
   };
@@ -336,7 +337,7 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[150px]">{t('barcode')}</TableHead>
-                  <TableHead className="w-[150px]">{t('gtin')}</TableHead>
+                  <TableHead className="w-[150px]">GTIN</TableHead>
                   <TableHead className="w-[120px]">{t('batch_number')}</TableHead>
                   <TableHead className="w-[150px]">{t('expiry_date')}</TableHead>
                   <TableHead>{t('product')}</TableHead>
@@ -363,7 +364,6 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                             <Input
                               value={item.barcode}
                               onChange={(e) => handleBarcodeInputChange(item.id, e.target.value)}
-                              onKeyDown={(e) => handleBarcodeKeyDown(item.id, e)}
                               placeholder={t('barcode')}
                               className="font-mono text-xs h-8"
                             />
@@ -382,8 +382,8 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                           <Input
                             value={item.gtin || ''}
                             onChange={(e) => handleItemChange(item.id, 'gtin', e.target.value)}
-                            placeholder={t('gtin')}
-                            className="font-mono text-xs h-8 bg-blue-50/30 border-blue-200/50"
+                            placeholder="GTIN"
+                            className="font-mono text-xs h-8"
                           />
                         </TableCell>
                         <TableCell className="p-2">
@@ -632,18 +632,17 @@ const InventoryItemForm: React.FC<InventoryItemFormProps> = ({ items, onItemsCha
                       <Input
                         value={item.barcode}
                         onChange={(e) => handleBarcodeInputChange(item.id, e.target.value)}
-                        onKeyDown={(e) => handleBarcodeKeyDown(item.id, e)}
                         placeholder={t('barcode')}
                         className="font-mono h-9 text-xs"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px] uppercase text-muted-foreground font-bold text-blue-600">{t('gtin')}</Label>
+                      <Label className="text-[10px] uppercase text-muted-foreground">GTIN</Label>
                       <Input
                         value={item.gtin || ''}
                         onChange={(e) => updateItem(item.id, { gtin: e.target.value })}
-                        placeholder={t('gtin')}
-                        className="font-mono h-9 text-xs bg-blue-50/50 border-blue-200"
+                        placeholder="GTIN"
+                        className="font-mono h-9 text-xs"
                       />
                     </div>
                   </div>

@@ -19,7 +19,6 @@ export default {
   select_item: 'Select an item',
   barcode_scanned: 'Barcode Scanned',
   barcode: 'Barcode',
-  gtin: 'GTIN',
   scan_error: 'Scan Error',
   review_and_confirm: 'Review and Confirm',
   back: 'Back',
