@@ -30,11 +30,30 @@ export const SmartHybridPicker: React.FC<SmartHybridPickerProps> = ({
 
             if (mode === 'balloon') {
                 // Expect "Diam x Len" e.g. "2.00x20", "2.50 x 15"
-                // Split by any 'x' like char
                 const parts = name.split(/[\sxX×*]+/);
                 if (parts.length >= 2) {
-                    p = parts[0];
-                    s = parts[1];
+                    let pVal = parts[0];
+                    let sVal = parts[1];
+
+                    // Heuristic Auto-Swap:
+                    // Balloons diameters are 1.25-5.0. Lengths are 6-30.
+                    // If pVal > sVal and pVal > 5, it's likely Length x Diameter.
+                    const n1 = parseFloat(pVal.replace(/[^0-9.]/g, ''));
+                    const n2 = parseFloat(sVal.replace(/[^0-9.]/g, ''));
+
+                    if (!isNaN(n1) && !isNaN(n2)) {
+                        if (n1 > 5 && n2 <= 5) {
+                            // Swap them
+                            p = sVal;
+                            s = pVal;
+                        } else {
+                            p = pVal;
+                            s = sVal;
+                        }
+                    } else {
+                        p = pVal;
+                        s = sVal;
+                    }
                 } else {
                     p = name; s = '?';
                 }

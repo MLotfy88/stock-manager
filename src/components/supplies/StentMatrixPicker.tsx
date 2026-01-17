@@ -22,15 +22,28 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
 
         availableVariants.forEach(v => {
             // Robust cleaning: Replace various 'x' symbols with standard 'x'
-            // Handle: x, X, × (multiplication sign), *
             const cleanName = v.name.replace(/\s/g, '').replace(/[X×*]/g, 'x').toLowerCase();
 
             const parts = cleanName.split('x');
             if (parts.length === 2) {
-                const d = parts[0];
-                const l = parts[1];
+                let d = parts[0];
+                let l = parts[1];
+
+                // Auto-Swap heuristic: Stent diameters are 2.0-5.0. Lengths are 8-40.
+                const nd = parseFloat(d);
+                const nl = parseFloat(l);
+                if (!isNaN(nd) && !isNaN(nl)) {
+                    if (nd > 5 && nl <= 5) {
+                        // Swapped! nd is likely length, nl is likely diameter
+                        const temp = d;
+                        d = l;
+                        l = temp;
+                    }
+                }
+
                 uniqueDiameters.add(d);
                 uniqueLengths.add(l);
+                // Important: we store it as `${d}x${l}` but link to original v.name
                 variantMap.set(`${d}x${l}`, v.name);
             }
         });

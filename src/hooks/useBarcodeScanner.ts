@@ -120,8 +120,11 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
     '21': -1, // Serial (Variable)
   };
 
+  const seenAIs = new Set<string>();
+
   while (data.length > 0) {
     const ai2 = data.substring(0, 2);
+    seenAIs.add(ai2);
     // Check 2-digit AIs
     if (aiRules[ai2] !== undefined) {
       const length = aiRules[ai2];
@@ -133,7 +136,7 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
         data = data.substring(2 + length);
       } else {
         // Variable length logic
-        // Find next AI to stop. 
+        // Find next AI to stop.
         data = data.substring(2);
 
         const gsIndex = data.indexOf('\x1d');
@@ -143,17 +146,31 @@ export const extractGS1DataForSupply = (rawValue: string): ParsedGS1Data | null 
         } else {
           // Heuristic lookahead - search for next AI
           let foundNext = false;
-          // Start from position 1 (minimum variable length is 1 char)
-          for (let i = 1; i < Math.min(data.length - 1, 30); i++) {
-            const potentialAI = data.substring(i, i + 2);
-            // Check if this looks like a valid AI
-            if (['01', '17', '10', '30', '21', '11', '15', '37'].includes(potentialAI)) {
-              value = data.substring(0, i);
-              data = data.substring(i);
-              foundNext = true;
-              break;
+
+          // CRITICAL FIX: If we just parsed 10 (LOT) or 21 (Serial),
+          // they are very often the LAST elements in a barcode.
+          // Don't look ahead for other AIs inside them unless we see a GS separator.
+          const terminalAIs = ['10', '21'];
+
+          if (!terminalAIs.includes(ai2)) {
+            // Start from position 1 (minimum variable length is 1 char)
+            for (let i = 1; i < Math.min(data.length - 1, 30); i++) {
+              const potentialAI = data.substring(i, i + 2);
+              // Only look for AIs that haven't been seen yet.
+              // Medical barcodes usually follow: 01 (GTIN) -> 17 (Expiry) -> 30 (Qty) -> 10 (Lot)
+              const validNextAIs = ['17', '10', '30', '21', '01'];
+              if (validNextAIs.includes(potentialAI) && !seenAIs.has(potentialAI)) {
+                // Stricter check: Is the potential AI NOT the same as currently parsing?
+                if (potentialAI !== ai2) {
+                  value = data.substring(0, i);
+                  data = data.substring(i);
+                  foundNext = true;
+                  break;
+                }
+              }
             }
           }
+
           if (!foundNext) {
             value = data;
             data = '';
