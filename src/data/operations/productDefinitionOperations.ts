@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { ProductDefinition } from '@/types';
+import { sanitizeProductDefinition } from '@/utils/sanitizeVariants';
 
 /**
  * Get all product definitions
@@ -22,7 +23,11 @@ export const getProductDefinitions = async (): Promise<ProductDefinition[]> => {
     console.error('Error fetching product definitions:', error);
     throw error;
   }
-  return data || [];
+
+  // Sanitize variant names to fix encoding issues
+  const sanitized = (data || []).map(sanitizeProductDefinition);
+
+  return sanitized;
 };
 
 /**
