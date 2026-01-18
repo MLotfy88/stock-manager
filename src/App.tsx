@@ -34,6 +34,7 @@ const ReorderPointReportPage = lazy(() => import('./pages/ReorderPointReportPage
 const ConsumptionReportPage = lazy(() => import('./pages/ConsumptionReportPage'));
 const ImportExportPage = lazy(() => import('./pages/ImportExportPage'));
 const ManagementPage = lazy(() => import('./pages/ManagementPage'));
+const ReorderPointManagerPage = lazy(() => import('./pages/ReorderPointManagerPage'));
 const ReplacementVoucherPage = lazy(() => import('./pages/ReplacementVoucherPage'));
 const OnShelfReportPage = lazy(() => import('./pages/OnShelfReportPage'));
 const OnShelfInvoicingPage = lazy(() => import('./pages/OnShelfInvoicingPage'));
@@ -111,6 +112,7 @@ const AppRoutes = () => {
           <Route path="/consumption-report" element={<ConsumptionReportPage />} />
           <Route path="/import-export" element={<ImportExportPage />} />
           <Route path="/management" element={<ManagementPage />} />
+          <Route path="/reorder-point-manager" element={<ReorderPointManagerPage />} />
           <Route path="/replacement-voucher" element={<ReplacementVoucherPage />} />
           <Route path="/on-shelf-report" element={<OnShelfReportPage />} />
           <Route path="/on-shelf-invoicing" element={<OnShelfInvoicingPage />} />

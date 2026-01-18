@@ -438,4 +438,14 @@ export default {
   partially_invoiced: 'Partially Invoiced',
   fully_invoiced: 'Fully Invoiced',
   no_variants_added: 'No variants added yet',
+
+  // Reorder Point Manager
+  reorder_point_manager_nav: 'Reorder Point Manager',
+  reorder_point_manager_desc: 'Manage minimum stock levels for all supplies',
+  saved_successfully: 'Saved Successfully',
+  update_failed: 'Update Failed',
+  base_item: 'Base Item',
+  class: 'Class',
+  no_results_found: 'No results found',
+  refresh: 'Refresh',
 };

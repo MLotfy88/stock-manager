@@ -108,6 +108,7 @@ export const useNavigationItems = () => {
       subItems: [
         { type: 'link', label: t('data_settings_nav'), href: '/admin' },
         { type: 'link', label: t('management_settings_nav'), href: '/management' },
+        { type: 'link', label: t('reorder_point_manager_nav'), href: '/reorder-point-manager' },
         { type: 'link', label: t('procedure_templates_nav'), href: '/procedure-templates' },
       ]
     },

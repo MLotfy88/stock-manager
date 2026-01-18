@@ -438,4 +438,14 @@ export default {
   partially_invoiced: 'تمت فوترة جزء',
   fully_invoiced: 'تمت الفوترة بالكامل',
   no_variants_added: 'لم يتم إضافة متغيرات بعد',
+
+  // Reorder Point Manager
+  reorder_point_manager_nav: 'إدارة نقاط إعادة الطلب',
+  reorder_point_manager_desc: 'إدارة الحدود الدنيا للمخزون لجميع المستلزمات',
+  saved_successfully: 'تم الحفظ بنجاح',
+  update_failed: 'فشل التحديث',
+  base_item: 'عنصر أساسي',
+  class: 'التصنيف',
+  no_results_found: 'لا توجد نتائج',
+  refresh: 'تحديث',
 };
