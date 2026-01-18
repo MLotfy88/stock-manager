@@ -110,41 +110,43 @@ export const CatheterCurvePicker: React.FC<CatheterCurvePickerProps> = ({
             </ScrollArea>
 
             {/* Variants Grid for Active Shape */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {groups[activeTab]?.map((variant) => {
-                    const isSelected = selectedCurve === variant.name;
-                    // Extract display label (suffix) if possible
-                    const match = variant.name.match(/^([A-Za-z]+)\s*([0-9\.]+|.*)$/);
-                    const label = match ? match[2] : variant.name;
+            <ScrollArea className="h-72 w-full rounded-md border p-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {groups[activeTab]?.map((variant) => {
+                        const isSelected = selectedCurve === variant.name;
+                        // Extract display label (suffix) if possible
+                        const match = variant.name.match(/^([A-Za-z]+)\s*([0-9\.]+|.*)$/);
+                        const label = match ? match[2] : variant.name;
 
-                    return (
-                        <Card
-                            key={variant.name}
-                            onClick={() => onSelect(variant.name)}
-                            className={cn(
-                                "cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 border-2 flex flex-col items-center justify-center p-3 h-20 text-center relative overflow-hidden",
-                                isSelected
-                                    ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 ring-offset-2"
-                                    : "border-transparent bg-muted/30 hover:bg-muted hover:border-muted-foreground/20"
-                            )}
-                        >
-                            {/* Color Accent */}
-                            <div
-                                className="absolute top-0 right-0 w-6 h-6 -mr-3 -mt-3 transform rotate-45 opacity-50"
-                                style={{ backgroundColor: getShapeColor(activeTab) }}
-                            />
+                        return (
+                            <Card
+                                key={variant.name}
+                                onClick={() => onSelect(variant.name)}
+                                className={cn(
+                                    "cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 border-2 flex flex-col items-center justify-center p-3 h-20 text-center relative overflow-hidden",
+                                    isSelected
+                                        ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 ring-offset-2"
+                                        : "border-transparent bg-muted/30 hover:bg-muted hover:border-muted-foreground/20"
+                                )}
+                            >
+                                {/* Color Accent */}
+                                <div
+                                    className="absolute top-0 right-0 w-6 h-6 -mr-3 -mt-3 transform rotate-45 opacity-50"
+                                    style={{ backgroundColor: getShapeColor(activeTab) }}
+                                />
 
-                            <span className="font-bold text-xl leading-tight">{label}</span>
+                                <span className="font-bold text-xl leading-tight">{label}</span>
 
-                            {isSelected && (
-                                <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                                    <Check className="h-3 w-3" />
-                                </div>
-                            )}
-                        </Card>
-                    );
-                })}
-            </div>
+                                {isSelected && (
+                                    <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                                        <Check className="h-3 w-3" />
+                                    </div>
+                                )}
+                            </Card>
+                        );
+                    })}
+                </div>
+            </ScrollArea>
 
             <div className="h-4"></div>
         </div>
