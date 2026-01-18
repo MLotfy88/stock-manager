@@ -209,7 +209,7 @@ const SuppliesPage = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {/* view logic */ }}
+                          onClick={() => navigate(`/supplies/${item.id}`)}
                         >
                           {t('view')}
                         </Button>

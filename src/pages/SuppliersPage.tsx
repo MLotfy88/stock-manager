@@ -134,6 +134,9 @@ export const SuppliersPageContent = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{currentSupplier ? t('edit_supplier') : t('add_supplier')}</DialogTitle>
+              <DialogDescription className="sr-only">
+                {currentSupplier ? t('edit_supplier_desc') : t('add_supplier_desc') || t('fill_supplier_details')}
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">

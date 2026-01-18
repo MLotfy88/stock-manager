@@ -151,7 +151,7 @@ const ReorderPointReportPage = () => {
                 <div className="space-y-4">
                   {reorderItems.length > 0 ? (
                     reorderItems.map((item, index) => (
-                      <Card key={index} className={`p-4 border shadow-sm ${item.currentStock === 0 ? 'bg-red-50/50 border-red-200' : ''}`}>
+                      <Card key={index} className={`p-4 border shadow-sm ${item.currentStock === 0 ? 'bg-red-50/50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : ''}`}>
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
                             <h3 className="font-bold text-lg leading-tight">{item.productName}</h3>
@@ -165,15 +165,15 @@ const ReorderPointReportPage = () => {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div className="bg-gray-50 p-3 rounded-lg border">
+                          <div className="bg-gray-50 p-3 rounded-lg border dark:bg-muted/50 dark:border-border">
                             <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">{t('current_stock')}</p>
                             <p className={`text-xl font-black ${item.currentStock <= item.reorderPoint ? 'text-destructive' : 'text-primary'}`}>
                               {item.currentStock}
                             </p>
                           </div>
-                          <div className="bg-gray-50 p-3 rounded-lg border">
+                          <div className="bg-gray-50 p-3 rounded-lg border dark:bg-muted/50 dark:border-border">
                             <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">{t('reorder_point')}</p>
-                            <p className="text-xl font-black text-gray-700">
+                            <p className="text-xl font-black text-gray-700 dark:text-gray-300">
                               {item.reorderPoint}
                             </p>
                           </div>

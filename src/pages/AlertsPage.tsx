@@ -124,10 +124,10 @@ const AlertsPage = () => {
 
           {/* Alert Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
-            <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/50">
+            <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
               <CardContent className="p-3 md:p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 md:gap-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-800/40 rounded-xl">
                     <Bell className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
@@ -137,10 +137,10 @@ const AlertsPage = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50">
+            <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
               <CardContent className="p-3 md:p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 md:gap-3">
-                  <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-xl">
+                  <div className="p-2 bg-red-100 dark:bg-red-800/40 rounded-xl">
                     <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
@@ -154,10 +154,10 @@ const AlertsPage = () => {
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800">
+            <Card className="bg-gray-50 dark:bg-muted/50 border-gray-200 dark:border-border">
               <CardContent className="p-3 md:p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 md:gap-3">
-                  <div className="p-2 bg-gray-200 dark:bg-gray-800 rounded-xl">
+                  <div className="p-2 bg-gray-200 dark:bg-muted rounded-xl">
                     <Bell className="h-4 w-4 md:h-5 md:w-5 text-gray-600 dark:text-gray-400" />
                   </div>
                   <div>
@@ -170,8 +170,8 @@ const AlertsPage = () => {
           </div>
 
           {/* Replacement Action Alerts Section */}
-          <Card className="mb-8 dark:bg-slate-900/50">
-            <CardHeader className="bg-blue-50 dark:bg-blue-950/30 pb-2">
+          <Card className="mb-8 dark:bg-card">
+            <CardHeader className="bg-blue-50 dark:bg-blue-900/20 pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 {t('replacement_action_alerts')}
@@ -179,14 +179,14 @@ const AlertsPage = () => {
             </CardHeader>
             <CardContent className="p-0">
               {replacementAlerts.length > 0 ? (
-                <div className="divide-y">
+                <div className="divide-y dark:divide-border">
                   {replacementAlerts.map((supply) => (
-                    <div key={supply.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div key={supply.id} className="p-4 hover:bg-gray-50 dark:hover:bg-muted/50 transition-colors">
                       <div className="flex justify-between items-center">
                         <div>
                           <h3 className="font-medium flex items-center gap-2">
                             {`${supply.name} (${supply.variant})`}
-                            <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-800 border-blue-200">
+                            <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800">
                               {supply.daysRemaining} {t('days_remaining')}
                             </Badge>
                           </h3>
@@ -212,18 +212,18 @@ const AlertsPage = () => {
           </Card>
 
           {/* Critical Alerts Section */}
-          <Card className="mb-8">
-            <CardHeader className="bg-red-50 pb-2">
+          <Card className="mb-8 dark:bg-card">
+            <CardHeader className="bg-red-50 dark:bg-red-900/20 pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
                 {t('critical_alerts')}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {criticalAlerts.length > 0 ? (
-                <div className="divide-y">
+                <div className="divide-y dark:divide-border">
                   {criticalAlerts.map((supply) => (
-                    <div key={supply.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div key={supply.id} className="p-4 hover:bg-gray-50 dark:hover:bg-muted/50 transition-colors">
                       <div className="flex justify-between items-center mb-2">
                         <div>
                           <h3 className="font-medium flex items-center gap-2">
@@ -242,7 +242,7 @@ const AlertsPage = () => {
                           {t('view_details')}
                         </Button>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                      <div className="w-full bg-gray-200 dark:bg-muted rounded-full h-1.5 mt-2">
                         <div
                           className="bg-red-600 h-1.5 rounded-full"
                           style={{ width: `${Math.max(100 - (supply.daysRemaining / 30) * 100, 0)}%` }}
@@ -263,7 +263,7 @@ const AlertsPage = () => {
 
           {/* Expired Items Section */}
           <Card>
-            <CardHeader className="bg-gray-100 pb-2">
+            <CardHeader className="bg-gray-100 dark:bg-muted pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Bell className="h-5 w-5 text-gray-600" />
                 {t('expired_items')}

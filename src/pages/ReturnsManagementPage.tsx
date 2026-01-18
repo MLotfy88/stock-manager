@@ -231,19 +231,19 @@ const ReturnsManagementPage = () => {
                                 ) : (
                                     <div className="space-y-3">
                                         {filterReturns().map(returnItem => (
-                                            <div key={returnItem.id} className="p-4 border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+                                            <div key={returnItem.id} className="p-4 border rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow">
                                                 <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                                                     <div className="flex-1 w-full">
                                                         <div className="flex flex-wrap items-center gap-2 mb-3">
                                                             <span className="font-bold text-lg">{returnItem.product_name}</span>
-                                                            <Badge variant="outline" className="bg-blue-50">{returnItem.variant}</Badge>
+                                                            <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20">{returnItem.variant}</Badge>
                                                             <Badge variant="secondary">{returnTypeLabels[returnItem.return_type]}</Badge>
                                                             <Badge variant={
                                                                 returnItem.status === 'pending' ? 'outline' :
                                                                     returnItem.status === 'approved' ? 'default' :
                                                                         returnItem.status === 'replaced' || returnItem.status === 'refunded' ? 'default' :
                                                                             'destructive'
-                                                            } className={returnItem.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : ''}>
+                                                            } className={returnItem.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800' : ''}>
                                                                 {statusLabels[returnItem.status]}
                                                             </Badge>
                                                         </div>
@@ -254,7 +254,7 @@ const ReturnsManagementPage = () => {
                                                             {returnItem.supplier_name && (
                                                                 <p className="sm:col-span-2"><strong>المورد:</strong> {returnItem.supplier_name}</p>
                                                             )}
-                                                            <p className="sm:col-span-2 bg-gray-50 p-2 rounded mt-1">
+                                                            <p className="sm:col-span-2 bg-muted p-2 rounded mt-1">
                                                                 <strong>السبب:</strong> {returnItem.reason}
                                                             </p>
                                                         </div>

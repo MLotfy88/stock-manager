@@ -407,7 +407,7 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess, initialIte
             <DateSelector date={date} setDate={setDate} />
             <div className="space-y-2">
               <Label htmlFor="store">{t('store')}</Label>
-              <Select value={selectedStoreId} onValueChange={setSelectedStoreId}>
+              <Select value={selectedStoreId || undefined} onValueChange={setSelectedStoreId}>
                 <SelectTrigger><SelectValue placeholder={t('select_store')} /></SelectTrigger>
                 <SelectContent>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
               </Select>

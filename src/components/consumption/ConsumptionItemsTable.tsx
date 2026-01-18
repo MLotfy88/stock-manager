@@ -103,7 +103,7 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
                   {/* 5. Product (Choice) */}
                   <TableCell className="p-2">
                     <Select
-                      value={item.inventory_item_id}
+                      value={item.inventory_item_id || undefined}
                       onValueChange={(value) => handleItemChange(item.id, 'inventory_item_id', value)}
                     >
                       <SelectTrigger className="h-8 text-xs">
@@ -198,7 +198,7 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
                 <div className="space-y-1">
                   <p className="text-[10px] uppercase text-muted-foreground">{t('product')}</p>
                   <Select
-                    value={item.inventory_item_id}
+                    value={item.inventory_item_id || undefined}
                     onValueChange={(value) => handleItemChange(item.id, 'inventory_item_id', value)}
                   >
                     <SelectTrigger className="h-9 text-xs">

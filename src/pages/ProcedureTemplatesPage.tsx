@@ -281,7 +281,7 @@ const ProcedureTemplatesPage = () => {
 
                             <div className="space-y-3">
                                 {formItems.map((item, index) => (
-                                    <div key={index} className="flex flex-col md:flex-row gap-4 md:items-end p-4 border rounded-lg bg-gray-50/50">
+                                    <div key={index} className="flex flex-col md:flex-row gap-4 md:items-end p-4 border rounded-lg bg-gray-50/50 dark:bg-muted/50">
                                         <div className="flex-1 space-y-2">
                                             <Label className="text-xs font-semibold">المنتج</Label>
                                             <Select
@@ -291,7 +291,7 @@ const ProcedureTemplatesPage = () => {
                                                     handleItemChange(index, 'variant', '');
                                                 }}
                                             >
-                                                <SelectTrigger className="bg-white">
+                                                <SelectTrigger className="bg-white dark:bg-background">
                                                     <SelectValue placeholder="اختر المنتج" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -309,7 +309,7 @@ const ProcedureTemplatesPage = () => {
                                                 onValueChange={(val) => handleItemChange(index, 'variant', val)}
                                                 disabled={!item.product_definition_id}
                                             >
-                                                <SelectTrigger className="bg-white">
+                                                <SelectTrigger className="bg-white dark:bg-background">
                                                     <SelectValue placeholder="اختر المتغير" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -328,7 +328,7 @@ const ProcedureTemplatesPage = () => {
                                                     min="1"
                                                     value={item.default_quantity}
                                                     onChange={(e) => handleItemChange(index, 'default_quantity', parseInt(e.target.value))}
-                                                    className="bg-white"
+                                                    className="bg-white dark:bg-background"
                                                 />
                                             </div>
 

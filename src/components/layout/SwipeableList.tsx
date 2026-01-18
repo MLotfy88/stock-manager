@@ -24,7 +24,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
 }) => {
     return (
         <div className={cn("group relative overflow-hidden bg-background border rounded-xl shadow-sm transition-all hover:shadow-md", className)}>
-            <div className="p-4 flex justify-between items-center gap-4">
+            <div className="p-3 sm:p-4 flex justify-between items-center gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
                     {children}
                 </div>

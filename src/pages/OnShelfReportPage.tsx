@@ -154,15 +154,15 @@ const OnShelfReportPage = () => {
                             <p className="font-medium truncate">{item.supplier_name}</p>
                           </div>
 
-                          <div className="bg-gray-50 p-2 rounded border text-center">
+                          <div className="bg-gray-50 p-2 rounded border text-center dark:bg-muted/50 dark:border-border">
                             <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">{t('initial_quantity')}</p>
                             <p className="font-bold">{item.initial_quantity}</p>
                           </div>
-                          <div className="bg-gray-50 p-2 rounded border text-center">
+                          <div className="bg-gray-50 p-2 rounded border text-center dark:bg-muted/50 dark:border-border">
                             <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">{t('consumed_quantity')}</p>
-                            <p className="font-bold text-blue-600">{item.consumed_quantity}</p>
+                            <p className="font-bold text-blue-600 dark:text-blue-400">{item.consumed_quantity}</p>
                           </div>
-                          <div className="col-span-2 bg-primary/5 p-2 rounded border text-center">
+                          <div className="col-span-2 bg-primary/5 p-2 rounded border text-center dark:bg-primary/10 dark:border-primary/20">
                             <p className="text-primary text-[10px] uppercase tracking-wider mb-0.5">{t('remaining_quantity')}</p>
                             <p className="font-black text-lg">{item.remaining_quantity}</p>
                           </div>

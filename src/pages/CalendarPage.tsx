@@ -183,15 +183,16 @@ const CalendarPage = () => {
     }
 
     const cellClasses = cn({
-      "p-2 border border-gray-200 transition-colors cursor-pointer": true,
+      "p-2 border transition-colors cursor-pointer": true,
       "h-16": isMobile,
       "h-24": !isMobile,
-      "bg-primary/10 border-primary": isToday && !isSelected,
-      "bg-secondary/10 border-secondary font-bold": isSelected,
-      "bg-red-50 border-red-200": !isSelected && !isToday && mostCriticalStatus === 'expired',
-      "bg-amber-50 border-amber-200": !isSelected && !isToday && mostCriticalStatus === 'critical',
-      "bg-yellow-50 border-yellow-200": !isSelected && !isToday && mostCriticalStatus === 'warning',
-      "hover:bg-gray-50": !isSelected && !isToday && mostCriticalStatus === 'ok'
+      "bg-primary/10 border-primary dark:bg-primary/20": isToday && !isSelected,
+      "bg-secondary/10 border-secondary font-bold dark:bg-secondary/20": isSelected,
+      "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800": !isSelected && !isToday && mostCriticalStatus === 'expired',
+      "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800": !isSelected && !isToday && mostCriticalStatus === 'critical',
+      "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800": !isSelected && !isToday && mostCriticalStatus === 'warning',
+      "hover:bg-muted dark:hover:bg-muted/50": !isSelected && !isToday && mostCriticalStatus === 'ok',
+      "bg-card/50 dark:bg-card/50": !isSelected && !isToday && mostCriticalStatus === 'ok'
     });
 
     calendarCells.push(
@@ -205,14 +206,12 @@ const CalendarPage = () => {
           {hasExpiries && (
             <Badge
               variant={
-                mostCriticalStatus === 'expired' ? 'destructive' :
-                  mostCriticalStatus === 'critical' ? 'outline' :
-                    mostCriticalStatus === 'warning' ? 'outline' : 'outline'
+                mostCriticalStatus === 'expired' ? 'destructive' : 'outline'
               }
               className={cn(
                 "px-1 min-w-[1.2rem] h-4.5 text-[9px] flex items-center justify-center",
-                mostCriticalStatus === 'critical' ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                  mostCriticalStatus === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''
+                mostCriticalStatus === 'critical' ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800' :
+                  mostCriticalStatus === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-800' : ''
               )}
             >
               {suppliesForDay.length}
@@ -226,7 +225,7 @@ const CalendarPage = () => {
           return (
             <div
               key={item.id}
-              className="text-[10px] truncate mt-1 p-1 rounded bg-white/80 border border-gray-100"
+              className="text-[10px] truncate mt-1 p-1 rounded bg-background/80 border border-border"
               title={def?.name || ''}
             >
               {def?.name || 'N/A'}
