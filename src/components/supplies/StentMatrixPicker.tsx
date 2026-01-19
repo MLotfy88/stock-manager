@@ -77,7 +77,7 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
 
             <div
                 dir="ltr"
-                className="w-full overflow-x-auto border rounded-lg bg-card/50 p-2"
+                className="w-full overflow-x-auto border rounded-lg bg-card/50 p-2 scrollbar-touch-friendly"
                 style={{
                     WebkitOverflowScrolling: 'touch'
                 }}
