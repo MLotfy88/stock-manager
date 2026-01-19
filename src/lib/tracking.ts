@@ -36,9 +36,9 @@ export const trackEvent = async (
     });
 
     if (error) {
-      console.error('Error tracking event:', error);
+      // console.warn('Tracking event failed (silent):', error.message);
     }
   } catch (error) {
-    console.error('Failed to invoke tracking function:', error);
+    // console.warn('Failed to invoke tracking function (silent).');
   }
 };
