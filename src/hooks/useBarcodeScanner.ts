@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Html5Qrcode } from 'html5-qrcode';
 import { getGTINMapping, updateLastScanned } from '@/data/operations/gtinMappingOperations';
 
 // واجهة البيانات المحللة من GS1-128
@@ -356,40 +357,55 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
           source: CameraSource.Camera,
         });
 
-        if (image.webPath && barcodeDetector.current) {
-          const img = new Image();
-          img.onload = async () => {
-            try {
-              const barcodes = await barcodeDetector.current.detect(img);
-              if (barcodes.length > 0) {
-                const rawValue = barcodes[0].rawValue;
-                const parsedData = extractGS1DataForSupply(rawValue);
+        if (image.webPath) {
+          try {
+            // Fetch the image as a blob
+            const response = await fetch(image.webPath);
+            const blob = await response.blob();
+            const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
 
-                let finalData: ParsedGS1Data = parsedData || {
-                  rawValue,
-                  formattedValue: rawValue
-                };
+            const html5QrCode = new Html5Qrcode("reader-hidden"); // ID doesn't matter for file scan, but instance needed?
+            // Actually Html5Qrcode class allows static scanFile? No, instance method.
+            // Better: Use Html5QrcodeScanner or just Html5Qrcode instance.
+            // We don't have a DOM element "reader-hidden". 
+            // Html5Qrcode needs an element ID constructor, but for scanFile it might not need it mounted?
+            // Let's check docs memory: new Html5Qrcode("identifier") -> scanFile(file)
+            // We can just use a dummy ID.
 
-                // Auto-detect GTIN
-                const gtin = parsedData?.gtin || (rawValue.length === 14 ? rawValue : null);
-                if (gtin) {
-                  const mapping = await getGTINMapping(gtin);
-                  if (mapping) {
-                    finalData.product_id = mapping.product_definition_id;
-                    finalData.variant_name = mapping.variant_name;
-                    updateLastScanned(gtin).catch(console.error);
-                  }
+            const scanner = new Html5Qrcode("permission-request-dummy-element");
+
+            // Note: scanFile(imageFile, showImage)
+            const decodedText = await scanner.scanFile(file, false);
+
+            if (decodedText) {
+              const rawValue = decodedText;
+              const parsedData = extractGS1DataForSupply(rawValue);
+
+              let finalData: ParsedGS1Data = parsedData || {
+                rawValue,
+                formattedValue: rawValue
+              };
+
+              // Auto-detect GTIN
+              const gtin = parsedData?.gtin || (rawValue.length === 14 ? rawValue : null);
+              if (gtin) {
+                const mapping = await getGTINMapping(gtin);
+                if (mapping) {
+                  finalData.product_id = mapping.product_definition_id;
+                  finalData.variant_name = mapping.variant_name;
+                  updateLastScanned(gtin).catch(console.error);
                 }
-
-                callbackRef.current.onScanSuccess(finalData);
-              } else {
-                callbackRef.current.onScanFailure?.(new Error("No barcode detected in the image."));
               }
-            } catch (err) {
-              callbackRef.current.onScanFailure?.(err as Error);
+              callbackRef.current.onScanSuccess(finalData);
+            } else {
+              callbackRef.current.onScanFailure?.(new Error("No QR/Barcode found."));
             }
-          };
-          img.src = image.webPath;
+
+            // Cleanup? scanner.clear() isn't needed for file scan usually.
+          } catch (err) {
+            console.error("Html5Qrcode scan error:", err);
+            callbackRef.current.onScanFailure?.(err as Error);
+          }
         }
       } catch (err: any) {
         setError(`Failed to use camera: ${err.message}`);

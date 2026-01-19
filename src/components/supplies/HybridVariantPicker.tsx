@@ -101,18 +101,9 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                     {primaryLabel}
                     {activePrimary && <span className="text-primary">{activePrimary}</span>}
                 </Label>
-                <div className="relative flex items-center gap-1">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 shrink-0"
-                        onClick={() => scrollPrimary('left')}
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <ScrollArea className="w-full whitespace-nowrap border rounded-lg bg-muted/20 p-1">
-                        <div className="flex gap-2 p-1" ref={primaryScrollRef}>
+                <div className="relative">
+                    <ScrollArea className="w-full max-h-40 border rounded-lg bg-muted/20 p-2">
+                        <div className="flex flex-wrap gap-2">
                             {primaryOptions.map((opt) => (
                                 <button
                                     key={opt.value}
@@ -128,17 +119,7 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                                 </button>
                             ))}
                         </div>
-                        <ScrollBar orientation="horizontal" />
                     </ScrollArea>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 shrink-0"
-                        onClick={() => scrollPrimary('right')}
-                    >
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
                 </div>
             </div>
 
@@ -161,18 +142,9 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                         </SelectContent>
                     </Select>
                 ) : (
-                    <div className="relative flex items-center gap-1">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-10 w-10 shrink-0"
-                            onClick={() => scrollSecondary('left')}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <ScrollArea className="w-full whitespace-nowrap border rounded-lg bg-muted/20 p-1">
-                            <div className="flex gap-2 p-1" ref={secondaryScrollRef}>
+                    <div className="relative">
+                        <ScrollArea className="w-full max-h-40 border rounded-lg bg-muted/20 p-2">
+                            <div className="flex flex-wrap gap-2">
                                 {secondaryOptions.map((opt) => (
                                     <button
                                         key={opt.value}
@@ -188,17 +160,7 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                                     </button>
                                 ))}
                             </div>
-                            <ScrollBar orientation="horizontal" />
                         </ScrollArea>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-10 w-10 shrink-0"
-                            onClick={() => scrollSecondary('right')}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
                     </div>
                 )}
             </div>

@@ -159,53 +159,44 @@ const ReturnsManagementPage = () => {
                     </div>
 
                     {/* Stats */}
+                    {/* Stats */}
                     {stats && (
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                            <Card>
-                                <CardContent className="pt-6">
-                                    <div className="text-center">
-                                        <PackageX className="h-8 w-8 mx-auto mb-2 text-red-600" />
-                                        <p className="text-2xl font-bold">{stats.total}</p>
-                                        <p className="text-sm text-muted-foreground">إجمالي المرتجعات</p>
-                                    </div>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6">
+                            <Card className="col-span-1">
+                                <CardContent className="p-4 md:pt-6 flex flex-col items-center justify-center h-full">
+                                    <PackageX className="h-6 w-6 md:h-8 md:w-8 mb-2 text-red-600" />
+                                    <p className="text-xl md:text-2xl font-bold">{stats.total}</p>
+                                    <p className="text-xs md:text-sm text-muted-foreground text-center">إجمالي المرتجعات</p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardContent className="pt-6">
-                                    <div className="text-center">
-                                        <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                                        <p className="text-sm text-muted-foreground">قيد الانتظار</p>
-                                    </div>
+                            <Card className="col-span-1">
+                                <CardContent className="p-4 md:pt-6 flex flex-col items-center justify-center h-full">
+                                    <p className="text-xl md:text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                                    <p className="text-xs md:text-sm text-muted-foreground text-center">قيد الانتظار</p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardContent className="pt-6">
-                                    <div className="text-center">
-                                        <RefreshCw className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                                        <p className="text-2xl font-bold">{stats.replaced}</p>
-                                        <p className="text-sm text-muted-foreground">تم الاستبدال</p>
-                                    </div>
+                            <Card className="col-span-1">
+                                <CardContent className="p-4 md:pt-6 flex flex-col items-center justify-center h-full">
+                                    <RefreshCw className="h-6 w-6 md:h-8 md:w-8 mb-2 text-blue-600" />
+                                    <p className="text-xl md:text-2xl font-bold">{stats.replaced}</p>
+                                    <p className="text-xs md:text-sm text-muted-foreground text-center">تم الاستبدال</p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardContent className="pt-6">
-                                    <div className="text-center">
-                                        <DollarSign className="h-8 w-8 mx-auto mb-2 text-green-600" />
-                                        <p className="text-2xl font-bold">{stats.totalRefundValue.toFixed(0)}</p>
-                                        <p className="text-sm text-muted-foreground">قيمة المستردات</p>
-                                    </div>
+                            <Card className="col-span-1">
+                                <CardContent className="p-4 md:pt-6 flex flex-col items-center justify-center h-full">
+                                    <DollarSign className="h-6 w-6 md:h-8 md:w-8 mb-2 text-green-600" />
+                                    <p className="text-xl md:text-2xl font-bold">{stats.totalRefundValue.toFixed(0)}</p>
+                                    <p className="text-xs md:text-sm text-muted-foreground text-center">قيمة المستردات</p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
-                                <CardContent className="pt-6">
-                                    <div className="text-center">
-                                        <p className="text-2xl font-bold text-red-600">{stats.totalQuantity}</p>
-                                        <p className="text-sm text-muted-foreground">عدد القطع</p>
-                                    </div>
+                            <Card className="col-span-2 md:col-span-1">
+                                <CardContent className="p-4 md:pt-6 flex flex-col items-center justify-center h-full">
+                                    <p className="text-xl md:text-2xl font-bold text-red-600">{stats.totalQuantity}</p>
+                                    <p className="text-xs md:text-sm text-muted-foreground text-center">عدد القطع</p>
                                 </CardContent>
                             </Card>
                         </div>
@@ -231,41 +222,43 @@ const ReturnsManagementPage = () => {
                                 ) : (
                                     <div className="space-y-3">
                                         {filterReturns().map(returnItem => (
-                                            <div key={returnItem.id} className="p-4 border rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow">
-                                                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                                                    <div className="flex-1 w-full">
-                                                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                                                            <span className="font-bold text-lg">{returnItem.product_name}</span>
-                                                            <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20">{returnItem.variant}</Badge>
-                                                            <Badge variant="secondary">{returnTypeLabels[returnItem.return_type]}</Badge>
-                                                            <Badge variant={
-                                                                returnItem.status === 'pending' ? 'outline' :
-                                                                    returnItem.status === 'approved' ? 'default' :
-                                                                        returnItem.status === 'replaced' || returnItem.status === 'refunded' ? 'default' :
-                                                                            'destructive'
-                                                            } className={returnItem.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800' : ''}>
-                                                                {statusLabels[returnItem.status]}
-                                                            </Badge>
+                                            <div key={returnItem.id} className="p-3 md:p-4 border rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow">
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="w-full">
+                                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                                                            <span className="font-bold text-base md:text-lg break-words">{returnItem.product_name}</span>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 whitespace-nowrap">{returnItem.variant}</Badge>
+                                                                <Badge variant="secondary" className="whitespace-nowrap">{returnTypeLabels[returnItem.return_type]}</Badge>
+                                                                <Badge variant={
+                                                                    returnItem.status === 'pending' ? 'outline' :
+                                                                        returnItem.status === 'approved' ? 'default' :
+                                                                            returnItem.status === 'replaced' || returnItem.status === 'refunded' ? 'default' :
+                                                                                'destructive'
+                                                                } className={returnItem.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800 whitespace-nowrap' : 'whitespace-nowrap'}>
+                                                                    {statusLabels[returnItem.status]}
+                                                                </Badge>
+                                                            </div>
                                                         </div>
 
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                                        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                                                             <p><strong>الكمية:</strong> {returnItem.quantity}</p>
                                                             <p><strong>التاريخ:</strong> {new Date(returnItem.created_at).toLocaleDateString('ar-EG')}</p>
                                                             {returnItem.supplier_name && (
-                                                                <p className="sm:col-span-2"><strong>المورد:</strong> {returnItem.supplier_name}</p>
+                                                                <p className="col-span-2"><strong>المورد:</strong> {returnItem.supplier_name}</p>
                                                             )}
-                                                            <p className="sm:col-span-2 bg-muted p-2 rounded mt-1">
+                                                            <div className="col-span-2 bg-muted/50 p-2 rounded mt-1 text-foreground">
                                                                 <strong>السبب:</strong> {returnItem.reason}
-                                                            </p>
+                                                            </div>
                                                         </div>
                                                     </div>
 
                                                     {returnItem.status === 'pending' && (
-                                                        <div className="flex flex-wrap md:flex-col gap-2 w-full md:w-auto">
-                                                            <Button size="sm" onClick={() => handleUpdateStatus(returnItem.id, 'approved')} className="flex-1 md:w-full">
+                                                        <div className="flex flex-col sm:flex-row gap-2 w-full pt-2 border-t mt-1">
+                                                            <Button size="sm" onClick={() => handleUpdateStatus(returnItem.id, 'approved')} className="flex-1">
                                                                 موافقة
                                                             </Button>
-                                                            <div className="flex gap-2 w-full">
+                                                            <div className="flex gap-2 flex-1">
                                                                 <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(returnItem.id, 'replaced')} className="flex-1">
                                                                     استبدال
                                                                 </Button>
@@ -273,7 +266,7 @@ const ReturnsManagementPage = () => {
                                                                     استرداد
                                                                 </Button>
                                                             </div>
-                                                            <Button size="sm" variant="destructive" onClick={() => handleUpdateStatus(returnItem.id, 'rejected')} className="flex-1 md:w-full">
+                                                            <Button size="sm" variant="destructive" onClick={() => handleUpdateStatus(returnItem.id, 'rejected')} className="flex-1">
                                                                 رفض
                                                             </Button>
                                                         </div>

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScanBarcode, Camera, X } from 'lucide-react';
 import { useBarcodeScanner, ParsedGS1Data, extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
 import { Card } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuickActionScannerProps {
     onScan: (data: ParsedGS1Data) => void;
@@ -13,10 +14,21 @@ interface QuickActionScannerProps {
 
 const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoading }) => {
     const { t, direction } = useLanguage();
+    const { toast } = useToast();
     const inputRef = useRef<HTMLInputElement>(null);
     const [manualInput, setManualInput] = useState('');
 
     const handleScanSuccess = (data: ParsedGS1Data) => {
+        // Haptic feedback if available (mobile)
+        if (navigator.vibrate) navigator.vibrate(200);
+
+        // Visual feedback
+        toast({
+            title: t('barcode_scanned'),
+            description: `${data.gtin || data.rawValue} (${t('success')})`,
+            duration: 2000,
+        });
+
         onScan(data);
         setManualInput('');
         stopScanner();

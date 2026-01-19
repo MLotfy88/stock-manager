@@ -55,7 +55,7 @@ export default function ReorderPointManagerPage() {
                 .from('product_definitions')
                 .select(`
             *,
-            supply_type:supply_types(id, name, name_en)
+            supply_type:supply_types(id, name)
         `)
                 .order('name');
 
@@ -132,7 +132,7 @@ export default function ReorderPointManagerPage() {
     // If product has no variants, the product itself is a row (using base reorder_point).
     const rows = products.flatMap(p => {
         // Determine type label for filter matching
-        const typeLabel = language === 'ar' ? p.supply_type?.name : (p.supply_type?.name_en || p.supply_type?.name);
+        const typeLabel = p.supply_type?.name;
 
         // Filter by Type
         if (selectedType !== 'all' && p.type_id !== selectedType) {
@@ -203,7 +203,7 @@ export default function ReorderPointManagerPage() {
                                 <SelectItem value="all">{t('all_types')}</SelectItem>
                                 {supplyTypes.map(type => (
                                     <SelectItem key={type.id} value={type.id}>
-                                        {language === 'ar' ? type.name : (type.name_en || type.name)}
+                                        {language === 'ar' ? type.name : type.name_en || type.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
