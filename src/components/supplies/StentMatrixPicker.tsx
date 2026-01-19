@@ -77,14 +77,14 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
 
             <div
                 dir="ltr"
-                className="w-full max-h-64 overflow-auto border rounded-lg bg-card/50 p-2 touch-auto overscroll-contain"
+                className="w-full overflow-x-auto border rounded-lg bg-card/50 p-2 overscroll-contain"
                 style={{
                     WebkitOverflowScrolling: 'touch',
-                    touchAction: 'auto'
+                    touchAction: 'pan-x pan-y'
                 }}
                 data-vaul-no-drag
             >
-                <div className="min-w-max flex flex-col gap-2">
+                <div className="w-max flex flex-col gap-2">
                     {/* Header Row (Lengths) */}
                     <div className="flex gap-2 mb-2 ml-14">
                         {lengths.map(len => (
