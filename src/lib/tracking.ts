@@ -36,9 +36,18 @@ export const trackEvent = async (
     });
 
     if (error) {
-      // console.warn('Tracking event failed (silent):', error.message);
+      // Diagnostic logging for user
+      if (error instanceof Error) {
+        if (error.message.includes('FunctionsHttpError')) {
+          console.warn('Tracking Service: Edge Function Invocation Failed. Check Supabase Edge Function logs for details (500/404/400).');
+        } else {
+          console.warn(`Tracking Service Warning: ${error.message}`);
+        }
+      } else {
+        console.warn('Tracking Service Warning: Unknown error occurred during event tracking.');
+      }
     }
-  } catch (error) {
-    // console.warn('Failed to invoke tracking function (silent).');
+  } catch (error: any) {
+    console.warn('Tracking Failed (Network/Client Error):', error.message || 'Unknown error');
   }
 };
