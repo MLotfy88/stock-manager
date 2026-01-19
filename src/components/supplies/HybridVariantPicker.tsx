@@ -102,14 +102,8 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                     {activePrimary && <span className="text-primary">{activePrimary}</span>}
                 </Label>
                 <div className="relative">
-                    <div
-                        className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2"
-                        style={{ WebkitOverflowScrolling: 'touch' }}
-                        data-vaul-no-drag
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex flex-wrap gap-2 pb-2">
+                    <div className="w-full border rounded-lg bg-muted/20 p-2">
+                        <div className="flex flex-wrap gap-2">
                             {primaryOptions.map((opt) => (
                                 <button
                                     key={opt.value}
@@ -149,14 +143,8 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                     </Select>
                 ) : (
                     <div className="relative">
-                        <div
-                            className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2"
-                            style={{ WebkitOverflowScrolling: 'touch' }}
-                            data-vaul-no-drag
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onTouchStart={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex flex-wrap gap-2 pb-2">
+                        <div className="w-full border rounded-lg bg-muted/20 p-2">
+                            <div className="flex flex-wrap gap-2">
                                 {secondaryOptions.map((opt) => (
                                     <button
                                         key={opt.value}
