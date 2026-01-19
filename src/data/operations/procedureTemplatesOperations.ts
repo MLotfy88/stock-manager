@@ -245,3 +245,58 @@ export async function toggleTemplateActive(id: string, isActive: boolean): Promi
         throw error;
     }
 }
+/**
+ * Create a new procedure type
+ */
+export async function createProcedureType(name: string, description?: string): Promise<ProcedureType> {
+    try {
+        const { data, error } = await supabase
+            .from('procedure_types')
+            .insert({ name, description })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        console.error('Error creating procedure type:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update a procedure type
+ */
+export async function updateProcedureType(id: string, name: string, description?: string): Promise<ProcedureType> {
+    try {
+        const { data, error } = await supabase
+            .from('procedure_types')
+            .update({ name, description })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        console.error('Error updating procedure type:', error);
+        throw error;
+    }
+}
+
+/**
+ * Delete a procedure type
+ */
+export async function deleteProcedureType(id: string): Promise<void> {
+    try {
+        const { error } = await supabase
+            .from('procedure_types')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('Error deleting procedure type:', error);
+        throw error;
+    }
+}
