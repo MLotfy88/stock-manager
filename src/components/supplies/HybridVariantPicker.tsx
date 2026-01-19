@@ -105,6 +105,9 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                     <div
                         className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2"
                         style={{ WebkitOverflowScrolling: 'touch' }}
+                        data-vaul-no-drag
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
                     >
                         <div className="flex flex-wrap gap-2 pb-2">
                             {primaryOptions.map((opt) => (
@@ -149,6 +152,9 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                         <div
                             className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2"
                             style={{ WebkitOverflowScrolling: 'touch' }}
+                            data-vaul-no-drag
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                         >
                             <div className="flex flex-wrap gap-2 pb-2">
                                 {secondaryOptions.map((opt) => (
