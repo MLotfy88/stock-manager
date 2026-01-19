@@ -75,7 +75,11 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
                 </span>
             </div>
 
-            <div className="w-full max-h-64 overflow-auto border rounded-lg bg-card/50 p-2 touch-pan-x touch-pan-y">
+            <div
+                dir="ltr"
+                className="w-full max-h-64 overflow-auto border rounded-lg bg-card/50 p-2"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+            >
                 <div className="min-w-max flex flex-col gap-2">
                     {/* Header Row (Lengths) */}
                     <div className="flex gap-2 mb-2 ml-14">

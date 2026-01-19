@@ -102,7 +102,10 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                     {activePrimary && <span className="text-primary">{activePrimary}</span>}
                 </Label>
                 <div className="relative">
-                    <div className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2 touch-pan-y">
+                    <div
+                        className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2"
+                        style={{ WebkitOverflowScrolling: 'touch' }}
+                    >
                         <div className="flex flex-wrap gap-2 pb-2">
                             {primaryOptions.map((opt) => (
                                 <button
@@ -143,7 +146,10 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                     </Select>
                 ) : (
                     <div className="relative">
-                        <div className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2 touch-pan-y">
+                        <div
+                            className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2"
+                            style={{ WebkitOverflowScrolling: 'touch' }}
+                        >
                             <div className="flex flex-wrap gap-2 pb-2">
                                 {secondaryOptions.map((opt) => (
                                     <button
