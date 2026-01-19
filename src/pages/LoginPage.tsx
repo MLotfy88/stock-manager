@@ -43,7 +43,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-primary/10 dark:via-slate-900 dark:to-slate-900 px-4">
+    <div className="flex items-center justify-center min-h-screen bg-background dark:bg-slate-950 px-4">
       <Card className="w-full max-w-sm glass-card border-primary/10 animate-slide-up">
         <CardHeader className="text-center space-y-4 pb-2">
           <AppLogo className="mx-auto mb-2 scale-110" />
