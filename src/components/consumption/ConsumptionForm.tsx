@@ -409,7 +409,9 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess, initialIte
               <Label htmlFor="store">{t('store')}</Label>
               <Select value={selectedStoreId || undefined} onValueChange={setSelectedStoreId}>
                 <SelectTrigger><SelectValue placeholder={t('select_store')} /></SelectTrigger>
-                <SelectContent>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {stores.filter(s => s.id && s.id.trim() !== '').map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
           </div>

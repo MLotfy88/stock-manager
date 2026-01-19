@@ -110,7 +110,7 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
                         <SelectValue placeholder={t('select_supply')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableSupplies.map(supply => {
+                        {availableSupplies.filter(s => s.id && s.id.trim() !== '').map(supply => {
                           const def = productDefs.find(p => p.id === supply.product_definition_id);
                           return (
                             <SelectItem key={supply.id} value={supply.id}>
@@ -205,7 +205,7 @@ const ConsumptionItemsTable: React.FC<ConsumptionItemsTableProps> = ({
                       <SelectValue placeholder={t('select_supply')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableSupplies.map(supply => {
+                      {availableSupplies.filter(s => s.id && s.id.trim() !== '').map(supply => {
                         const def = productDefs.find(p => p.id === supply.product_definition_id);
                         return (
                           <SelectItem key={supply.id} value={supply.id}>
