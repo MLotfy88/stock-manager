@@ -197,6 +197,20 @@ export default {
   all_supplies_safe: 'جميع المستلزمات آمنة من انتهاء الصلاحية',
   all_supplies_valid: 'جميع المستلزمات صالحة',
 
+  // Dashboard Insights
+  quick_insights: 'نظرة سريعة',
+  expiring_this_week: 'تنتهي هذا الأسبوع',
+  below_reorder_point: 'أقل من حد الطلب',
+  today_consumption: 'استهلاك اليوم',
+  items_consumed: 'عنصر مستهلك',
+  recent_alerts: 'أحدث التنبيهات',
+  view_all_alerts: 'عرض كل التنبيهات',
+  no_alerts: 'لا توجد تنبيهات حالياً',
+  notifications: 'الإشعارات',
+  no_notifications: 'لا توجد إشعارات',
+  needs_reorder: 'يحتاج إعادة طلب',
+  low_stock: 'مخزون منخفض',
+
   // Days of the week
   saturday: 'سبت',
   sunday: 'أحد',

@@ -15,12 +15,48 @@ import {
   Truck,
   Factory,
   Tag,
-  Replace
+  Replace,
+  Activity
 } from 'lucide-react';
+
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useNavigationItems = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const role = user?.profile?.role;
 
+  // Store Manager View (Non-Admin)
+  if (role !== 'admin') {
+    return [
+      {
+        type: 'link',
+        label: t('consumption_nav'),
+        icon: <Recycle className="h-5 w-5" />,
+        href: '/consumption',
+      },
+      {
+        type: 'link',
+        label: t('transfer_inventory_nav'),
+        icon: <ArrowRightLeft className="h-5 w-5" />,
+        href: '/transfer-inventory',
+      },
+      {
+        type: 'link',
+        label: t('alerts_nav'),
+        icon: <AlertTriangle className="h-5 w-5" />,
+        href: '/alerts',
+      },
+      {
+        type: 'link',
+        label: t('inventory_report_nav'),
+        icon: <BarChart4 className="h-5 w-5" />,
+        href: '/inventory-report',
+      },
+    ];
+  }
+
+  // Admin View (Full Access)
   return [
     {
       type: 'link',
@@ -29,60 +65,29 @@ export const useNavigationItems = () => {
       href: '/',
     },
     {
-      type: 'header',
+      type: 'collapsible',
+      label: t('inventory_management'), // Consider adding this key to translations or reusing existing
+      icon: <Warehouse className="h-5 w-5" />, // Using Warehouse icon for Inventory Group
+      subItems: [
+        { type: 'link', label: t('supplies_nav'), href: '/supplies' },
+        { type: 'link', label: t('transfer_inventory_nav'), href: '/transfer-inventory' },
+        { type: 'link', label: t('reorder_point_manager_nav'), href: '/reorder-point-manager' },
+      ]
+    },
+    {
+      type: 'collapsible',
       label: t('operations'),
-    },
-    {
-      type: 'link',
-      label: t('supplies_nav'),
-      icon: <Package className="h-5 w-5" />,
-      href: '/supplies',
-    },
-    {
-      type: 'link',
-      label: t('consumption_nav'),
-      icon: <Recycle className="h-5 w-5" />,
-      href: '/consumption',
-    },
-    {
-      type: 'link',
-      label: t('transfer_inventory_nav'),
-      icon: <ArrowRightLeft className="h-5 w-5" />,
-      href: '/transfer-inventory',
-    },
-    {
-      type: 'link',
-      label: t('on_shelf_invoicing_nav'),
-      icon: <Package className="h-5 w-5" />,
-      href: '/on-shelf-invoicing',
-    },
-    {
-      type: 'link',
-      label: t('replacement_voucher_nav'),
-      icon: <Replace className="h-5 w-5" />,
-      href: '/replacement-voucher',
-    },
-    {
-      type: 'link',
-      label: t('returns_management_nav'),
-      icon: <Truck className="h-5 w-5" />,
-      href: '/returns-management',
+      icon: <Activity className="h-5 w-5" />, // Need to import Activity
+      subItems: [
+        { type: 'link', label: t('consumption_nav'), href: '/consumption' },
+        { type: 'link', label: t('returns_management_nav'), href: '/returns-management' },
+        { type: 'link', label: t('replacement_voucher_nav'), href: '/replacement-voucher' },
+        { type: 'link', label: t('on_shelf_invoicing_nav'), href: '/on-shelf-invoicing' },
+      ]
     },
     {
       type: 'header',
       label: t('monitoring_and_planning'),
-    },
-    {
-      type: 'link',
-      label: t('calendar_nav'),
-      icon: <Calendar className="h-5 w-5" />,
-      href: '/calendar',
-    },
-    {
-      type: 'link',
-      label: t('alerts_nav'),
-      icon: <AlertTriangle className="h-5 w-5" />,
-      href: '/alerts',
     },
     {
       type: 'collapsible',
@@ -98,6 +103,18 @@ export const useNavigationItems = () => {
       ]
     },
     {
+      type: 'link',
+      label: t('calendar_nav'),
+      icon: <Calendar className="h-5 w-5" />,
+      href: '/calendar',
+    },
+    {
+      type: 'link',
+      label: t('alerts_nav'),
+      icon: <AlertTriangle className="h-5 w-5" />,
+      href: '/alerts',
+    },
+    {
       type: 'header',
       label: t('settings'),
     },
@@ -108,7 +125,6 @@ export const useNavigationItems = () => {
       subItems: [
         { type: 'link', label: t('data_settings_nav'), href: '/admin' },
         { type: 'link', label: t('management_settings_nav'), href: '/management' },
-        { type: 'link', label: t('reorder_point_manager_nav'), href: '/reorder-point-manager' },
         { type: 'link', label: t('procedure_templates_nav'), href: '/procedure-templates' },
       ]
     },

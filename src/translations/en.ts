@@ -197,6 +197,20 @@ export default {
   all_supplies_safe: 'All supplies are safe from expiration',
   all_supplies_valid: 'All supplies are valid',
 
+  // Dashboard Insights
+  quick_insights: 'Quick Insights',
+  expiring_this_week: 'Expiring This Week',
+  below_reorder_point: 'Below Reorder Point',
+  today_consumption: "Today's Consumption",
+  items_consumed: 'items consumed',
+  recent_alerts: 'Recent Alerts',
+  view_all_alerts: 'View All Alerts',
+  no_alerts: 'No alerts at this time',
+  notifications: 'Notifications',
+  no_notifications: 'No notifications',
+  needs_reorder: 'Needs reorder',
+  low_stock: 'Low Stock',
+
   // Days of the week
   saturday: 'Sat',
   sunday: 'Sun',

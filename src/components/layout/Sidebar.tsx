@@ -48,14 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, closeSi
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border/50">
               <h2 className="text-lg font-bold text-gradient">{t('menu')}</h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={closeSidebar}
-                className="h-8 w-8 rounded-full"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              {/* Default Sheet close button is used */}
             </div>
 
             {/* Navigation */}

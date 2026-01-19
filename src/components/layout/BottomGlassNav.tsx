@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Package, ScanBarcode, Box, Menu } from 'lucide-react';
+import { Home, Package, ScanBarcode, ArrowRightLeft, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface BottomGlassNavProps {
@@ -13,9 +13,10 @@ const BottomGlassNav: React.FC<BottomGlassNavProps> = ({ onMenuClick }) => {
 
     const navItems = [
         { icon: Home, label: t('dashboard'), path: '/' },
-        { icon: Box, label: t('inventory'), path: '/supplies' },
-        { icon: ScanBarcode, label: t('scan'), path: '/consumption', isPrimary: true },
-        { icon: Package, label: t('packages'), path: '/packages' },
+        { icon: Package, label: t('supplies_nav'), path: '/supplies' },
+        { icon: ScanBarcode, label: t('consumption_nav'), path: '/consumption', isPrimary: true },
+        { icon: ArrowRightLeft, label: t('transfer_inventory_nav'), path: '/transfer-inventory' },
+        { icon: AlertTriangle, label: t('alerts_nav'), path: '/alerts' },
     ];
 
     return (
@@ -51,19 +52,6 @@ const BottomGlassNav: React.FC<BottomGlassNavProps> = ({ onMenuClick }) => {
                         )}
                     </NavLink>
                 ))}
-
-                {/* Menu Button - Opens Sidebar */}
-                <button
-                    onClick={onMenuClick}
-                    className="flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-300 text-muted-foreground hover:text-foreground"
-                >
-                    <div className="p-2 rounded-xl transition-all duration-300 bg-transparent">
-                        <Menu className="h-5 w-5" />
-                    </div>
-                    <span className="text-[10px] font-medium opacity-70">
-                        {t('more')}
-                    </span>
-                </button>
             </div>
         </nav>
     );

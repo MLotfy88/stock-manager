@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { Bell, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from '@/contexts/LanguageContext';
 import AppLogo from './AppLogo';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import NotificationDropdown from './NotificationDropdown';
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -28,9 +29,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="ghost" size="icon" className="relative hover:bg-secondary/10 touch-target">
-            <Bell className="w-5 h-5 text-muted-foreground" />
-          </Button>
+          <NotificationDropdown />
         </div>
       </div>
     </header>
@@ -38,3 +37,4 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
 };
 
 export default Header;
+
