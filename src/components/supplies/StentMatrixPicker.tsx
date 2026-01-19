@@ -83,8 +83,6 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
                     touchAction: 'pan-x pan-y'
                 }}
                 data-vaul-no-drag
-                onPointerDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
             >
                 <div className="min-w-max flex flex-col gap-2">
                     {/* Header Row (Lengths) */}
