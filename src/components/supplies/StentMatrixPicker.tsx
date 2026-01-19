@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { ProductVariant } from '@/types';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface StentMatrixPickerProps {
     availableVariants: ProductVariant[];
@@ -64,6 +65,40 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
         return parts.length === 2 ? parts : ['', ''];
     }, [selectedVariant]);
 
+    // Scroll Management with explicit buttons
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+    const [showLeftArrow, setShowLeftArrow] = React.useState(false);
+    const [showRightArrow, setShowRightArrow] = React.useState(true);
+
+    const checkScrollButtons = () => {
+        if (scrollContainerRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+            setShowLeftArrow(scrollLeft > 10);
+            setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+        }
+    };
+
+    React.useEffect(() => {
+        checkScrollButtons();
+        // Add resize listener just in case
+        window.addEventListener('resize', checkScrollButtons);
+        return () => window.removeEventListener('resize', checkScrollButtons);
+    }, [diameters, lengths]); // Re-check when content changes
+
+    const handleScroll = () => {
+        checkScrollButtons();
+    };
+
+    const scrollContainer = (direction: 'left' | 'right') => {
+        if (scrollContainerRef.current) {
+            const scrollAmount = 200;
+            scrollContainerRef.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
+
     return (
         <div className="space-y-4 select-none">
             {/* Legend with scroll hint */}
@@ -71,71 +106,98 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
                 <span>Diameter (mm) ↓</span>
                 <span className="flex items-center gap-1">
                     Length (mm) →
-                    <span className="text-primary text-[10px]">(scroll →)</span>
+                    <span className="text-primary text-[10px] hidden sm:inline">(scroll or swipe)</span>
                 </span>
             </div>
 
-            <div
-                dir="ltr"
-                className="w-full overflow-x-auto border rounded-lg bg-card/50 p-2 scrollbar-touch-friendly"
-                style={{
-                    WebkitOverflowScrolling: 'touch'
-                }}
-                data-vaul-no-drag
-            >
-                <div className="min-w-full w-max flex flex-col gap-2">
-                    {/* Header Row (Lengths) */}
-                    <div className="flex gap-2 mb-2 ml-14">
-                        {lengths.map(len => (
-                            <div key={len} className="w-10 text-center font-mono text-xs font-bold text-muted-foreground">
-                                {len}
+            {/* Horizontal Scroll Controls */}
+            <div className="relative group">
+                {showLeftArrow && (
+                    <button
+                        onClick={() => scrollContainer('left')}
+                        className="absolute left-0 top-0 bottom-0 z-10 bg-gradient-to-r from-background to-transparent px-2 flex items-center justify-start opacity-70 hover:opacity-100 transition-opacity"
+                    >
+                        <div className="bg-primary/10 hover:bg-primary/20 p-1 rounded-full backdrop-blur-sm border border-primary/20 text-primary">
+                            <ChevronLeft className="h-6 w-6" />
+                        </div>
+                    </button>
+                )}
+
+                {showRightArrow && (
+                    <button
+                        onClick={() => scrollContainer('right')}
+                        className="absolute right-0 top-0 bottom-0 z-10 bg-gradient-to-l from-background to-transparent px-2 flex items-center justify-end opacity-70 hover:opacity-100 transition-opacity"
+                    >
+                        <div className="bg-primary/10 hover:bg-primary/20 p-1 rounded-full backdrop-blur-sm border border-primary/20 text-primary">
+                            <ChevronRight className="h-6 w-6" />
+                        </div>
+                    </button>
+                )}
+
+                <div
+                    ref={scrollContainerRef}
+                    onScroll={handleScroll}
+                    dir="ltr"
+                    className="w-full overflow-x-auto border rounded-lg bg-card/50 p-2 scrollbar-touch-friendly"
+                    style={{
+                        WebkitOverflowScrolling: 'touch'
+                    }}
+                    data-vaul-no-drag
+                >
+                    <div className="min-w-full w-max flex flex-col gap-2">
+                        {/* Header Row (Lengths) */}
+                        <div className="flex gap-2 mb-2 ml-14">
+                            {lengths.map(len => (
+                                <div key={len} className="w-10 text-center font-mono text-xs font-bold text-muted-foreground">
+                                    {len}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Matrix Rows */}
+                        {diameters.map(diam => (
+                            <div key={diam} className="flex gap-2 items-center">
+                                {/* Diameter Label */}
+                                <div className={cn(
+                                    "w-12 text-center font-mono text-sm font-bold py-1.5 rounded bg-muted/50",
+                                    selectedD === diam && "bg-primary text-primary-foreground"
+                                )}>
+                                    {diam}
+                                </div>
+
+                                {/* Length Buttons */}
+                                {lengths.map(len => {
+                                    const key = `${diam}x${len}`;
+                                    const originalName = matrix.get(key); // Get the ACTUAL name to return
+                                    const exists = !!originalName;
+                                    const isSelected = selectedD === diam && selectedL === len;
+
+                                    return (
+                                        <button
+                                            key={key}
+                                            disabled={!exists}
+                                            onClick={() => exists && onSelect(originalName!)}
+                                            className={cn(
+                                                "w-10 h-8 rounded text-xs transition-all border",
+                                                !exists && "opacity-20 cursor-not-allowed bg-slate-100 dark:bg-slate-800 border-transparent",
+                                                exists && !isSelected && "bg-background hover:bg-muted text-muted-foreground hover:border-primary/50",
+                                                isSelected && "bg-primary text-primary-foreground font-bold shadow-md scale-105 border-primary"
+                                            )}
+                                            title={originalName || "Unavailable"}
+                                        >
+                                            {isSelected ? '✓' : (exists ? '•' : '')}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         ))}
-                    </div>
 
-                    {/* Matrix Rows */}
-                    {diameters.map(diam => (
-                        <div key={diam} className="flex gap-2 items-center">
-                            {/* Diameter Label */}
-                            <div className={cn(
-                                "w-12 text-center font-mono text-sm font-bold py-1.5 rounded bg-muted/50",
-                                selectedD === diam && "bg-primary text-primary-foreground"
-                            )}>
-                                {diam}
+                        {diameters.length === 0 && (
+                            <div className="p-4 text-center text-muted-foreground text-sm">
+                                No valid matrix variants found (format: Dia x Len)
                             </div>
-
-                            {/* Length Buttons */}
-                            {lengths.map(len => {
-                                const key = `${diam}x${len}`;
-                                const originalName = matrix.get(key); // Get the ACTUAL name to return
-                                const exists = !!originalName;
-                                const isSelected = selectedD === diam && selectedL === len;
-
-                                return (
-                                    <button
-                                        key={key}
-                                        disabled={!exists}
-                                        onClick={() => exists && onSelect(originalName!)}
-                                        className={cn(
-                                            "w-10 h-8 rounded text-xs transition-all border",
-                                            !exists && "opacity-20 cursor-not-allowed bg-slate-100 dark:bg-slate-800 border-transparent",
-                                            exists && !isSelected && "bg-background hover:bg-muted text-muted-foreground hover:border-primary/50",
-                                            isSelected && "bg-primary text-primary-foreground font-bold shadow-md scale-105 border-primary"
-                                        )}
-                                        title={originalName || "Unavailable"}
-                                    >
-                                        {isSelected ? '✓' : (exists ? '•' : '')}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    ))}
-
-                    {diameters.length === 0 && (
-                        <div className="p-4 text-center text-muted-foreground text-sm">
-                            No valid matrix variants found (format: Dia x Len)
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
 
