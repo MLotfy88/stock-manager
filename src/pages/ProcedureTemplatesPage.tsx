@@ -161,6 +161,40 @@ const ProcedureTemplatesPage = () => {
         }
     };
 
+    const handleSaveType = async () => {
+        if (!typeFormData.name) {
+            toast({ title: t('error'), description: 'الرجاء إدخال اسم النوع', variant: 'destructive' });
+            return;
+        }
+
+        try {
+            if (editingType) {
+                await updateProcedureType(editingType.id, typeFormData.name, typeFormData.description);
+                toast({ title: t('success'), description: 'تم تحديث النوع بنجاح' });
+            } else {
+                await createProcedureType(typeFormData.name, typeFormData.description);
+                toast({ title: t('success'), description: 'تم إنشاء النوع بنجاح' });
+            }
+            setTypeFormData({ name: '', description: '' });
+            setEditingType(null);
+            loadData();
+        } catch (error) {
+            toast({ title: t('error'), description: String(error), variant: 'destructive' });
+        }
+    };
+
+    const handleDeleteType = async (id: string) => {
+        if (!confirm('هل أنت متأكد من حذف هذا النوع؟ سيتم حذف جميع القوالب المرتبطة به!')) return;
+
+        try {
+            await deleteProcedureType(id);
+            toast({ title: t('success'), description: 'تم حذف النوع بنجاح' });
+            loadData();
+        } catch (error) {
+            toast({ title: t('error'), description: String(error), variant: 'destructive' });
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
             <Header toggleSidebar={toggleSidebar} />
