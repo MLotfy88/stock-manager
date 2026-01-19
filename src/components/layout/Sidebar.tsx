@@ -7,7 +7,7 @@ import SidebarContent from './sidebar/SidebarContent';
 import SidebarFooter from './sidebar/SidebarFooter';
 import { MobileBackdrop } from './sidebar/MobileControls';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -47,7 +47,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, closeSi
           <div className="flex flex-col h-full bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border/50">
-              <h2 className="text-lg font-bold text-gradient">{t('menu')}</h2>
+              <SheetTitle className="text-lg font-bold text-gradient">{t('menu')}</SheetTitle>
+              <SheetDescription className="sr-only">{t('navigation_menu')}</SheetDescription>
               {/* Default Sheet close button is used */}
             </div>
 

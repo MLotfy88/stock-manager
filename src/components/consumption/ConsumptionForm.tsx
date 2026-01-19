@@ -364,12 +364,12 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess, initialIte
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="procedure-type">نوع الإجراء (اختياري)</Label>
-                <Select value={selectedProcedureType} onValueChange={handleProcedureTypeChange}>
+                <Select value={selectedProcedureType} onValueChange={(val) => handleProcedureTypeChange(val === 'none' ? '' : val)}>
                   <SelectTrigger id="procedure-type">
                     <SelectValue placeholder="اختر نوع الإجراء" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">-- بدون قالب --</SelectItem>
+                    <SelectItem value="none">-- بدون قالب --</SelectItem>
                     {procedureTypes.map((type) => (
                       <SelectItem key={type.id} value={type.id}>
                         {type.name}
@@ -382,12 +382,12 @@ const ConsumptionForm: React.FC<ConsumptionFormProps> = ({ onSuccess, initialIte
               {selectedProcedureType && (
                 <div>
                   <Label htmlFor="template">القالب</Label>
-                  <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
+                  <Select value={selectedTemplate} onValueChange={(val) => handleTemplateSelect(val === 'none' ? '' : val)}>
                     <SelectTrigger id="template">
                       <SelectValue placeholder="اختر قالب" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">-- اختر قالب --</SelectItem>
+                      <SelectItem value="none">-- اختر قالب --</SelectItem>
                       {procedureTemplates.map((template) => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name} ({template.items.length} صنف)
