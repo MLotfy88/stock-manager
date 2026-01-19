@@ -80,7 +80,7 @@ export const StentMatrixPicker: React.FC<StentMatrixPickerProps> = ({
                 className="w-full max-h-64 overflow-auto border rounded-lg bg-card/50 p-2 touch-auto overscroll-contain"
                 style={{
                     WebkitOverflowScrolling: 'touch',
-                    touchAction: 'pan-x pan-y'
+                    touchAction: 'auto'
                 }}
                 data-vaul-no-drag
             >
