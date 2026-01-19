@@ -90,28 +90,26 @@ export const CatheterCurvePicker: React.FC<CatheterCurvePickerProps> = ({
     return (
         <div className={cn("space-y-4", className)}>
             {/* Shape Tabs */}
-            <ScrollArea className="w-full pb-2">
-                <div className="flex space-x-2">
-                    {shapes.map(shape => (
-                        <button
-                            key={shape}
-                            onClick={() => setActiveTab(shape)}
-                            className={cn(
-                                "px-4 py-2 rounded-full text-sm font-bold transition-all border-2 whitespace-nowrap",
-                                activeTab === shape
-                                    ? "bg-primary text-primary-foreground border-primary shadow-md"
-                                    : "bg-background text-muted-foreground border-muted hover:border-primary/50"
-                            )}
-                        >
-                            {shape}
-                        </button>
-                    ))}
-                </div>
-            </ScrollArea>
+            <div className="flex flex-wrap gap-2 mb-4">
+                {shapes.map(shape => (
+                    <button
+                        key={shape}
+                        onClick={() => setActiveTab(shape)}
+                        className={cn(
+                            "px-4 py-2 rounded-full text-sm font-bold transition-all border-2",
+                            activeTab === shape
+                                ? "bg-primary text-primary-foreground border-primary shadow-md"
+                                : "bg-background text-muted-foreground border-muted hover:border-primary/50"
+                        )}
+                    >
+                        {shape}
+                    </button>
+                ))}
+            </div>
 
             {/* Variants Grid for Active Shape */}
-            <ScrollArea className="h-72 w-full rounded-md border p-2">
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="w-full rounded-md border p-2 bg-muted/20">
+                <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {groups[activeTab]?.map((variant) => {
                         const isSelected = selectedCurve === variant.name;
                         // Extract display label (suffix) if possible
@@ -119,34 +117,28 @@ export const CatheterCurvePicker: React.FC<CatheterCurvePickerProps> = ({
                         const label = match ? match[2] : variant.name;
 
                         return (
-                            <Card
+                            <button
                                 key={variant.name}
                                 onClick={() => onSelect(variant.name)}
                                 className={cn(
-                                    "cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 border-2 flex flex-col items-center justify-center p-3 h-20 text-center relative overflow-hidden",
+                                    "flex items-center justify-center p-3 h-14 min-w-[4rem] rounded-md text-sm font-bold border transition-all relative overflow-hidden",
                                     isSelected
-                                        ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 ring-offset-2"
-                                        : "border-transparent bg-muted/30 hover:bg-muted hover:border-muted-foreground/20"
+                                        ? "border-primary bg-primary text-primary-foreground shadow-md scale-105"
+                                        : "border-border bg-background hover:bg-muted hover:border-primary/50"
                                 )}
                             >
-                                {/* Color Accent */}
+                                {/* Color Accent (Optional - simplified for button style) */}
                                 <div
-                                    className="absolute top-0 right-0 w-6 h-6 -mr-3 -mt-3 transform rotate-45 opacity-50"
+                                    className="absolute top-0 right-0 w-3 h-3 -mr-1.5 -mt-1.5 transform rotate-45 opacity-50"
                                     style={{ backgroundColor: getShapeColor(activeTab) }}
                                 />
 
-                                <span className="font-bold text-xl leading-tight">{label}</span>
-
-                                {isSelected && (
-                                    <div className="absolute top-1 left-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                                        <Check className="h-3 w-3" />
-                                    </div>
-                                )}
-                            </Card>
+                                <span>{label}</span>
+                            </button>
                         );
                     })}
                 </div>
-            </ScrollArea>
+            </div>
 
             <div className="h-4"></div>
         </div>

@@ -301,7 +301,11 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
 
     return (
         <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <SheetContent side="bottom" className="rounded-t-[20px] max-h-[90vh] min-h-[50vh] overflow-y-auto">
+            <SheetContent
+                side="bottom"
+                className="rounded-t-[20px] max-h-[90vh] min-h-[50vh] overflow-y-auto"
+                data-vaul-no-drag
+            >
                 <SheetHeader className="mb-4">
                     <SheetTitle className="flex justify-between items-center">
                         <span>
