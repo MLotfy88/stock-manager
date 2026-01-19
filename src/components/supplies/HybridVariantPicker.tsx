@@ -102,8 +102,8 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                     {activePrimary && <span className="text-primary">{activePrimary}</span>}
                 </Label>
                 <div className="relative">
-                    <ScrollArea className="w-full max-h-40 border rounded-lg bg-muted/20 p-2">
-                        <div className="flex flex-wrap gap-2">
+                    <div className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2 touch-pan-y">
+                        <div className="flex flex-wrap gap-2 pb-2">
                             {primaryOptions.map((opt) => (
                                 <button
                                     key={opt.value}
@@ -119,7 +119,7 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                                 </button>
                             ))}
                         </div>
-                    </ScrollArea>
+                    </div>
                 </div>
             </div>
 
@@ -143,8 +143,8 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                     </Select>
                 ) : (
                     <div className="relative">
-                        <ScrollArea className="w-full max-h-40 border rounded-lg bg-muted/20 p-2">
-                            <div className="flex flex-wrap gap-2">
+                        <div className="w-full max-h-48 overflow-y-auto overflow-x-hidden border rounded-lg bg-muted/20 p-2 touch-pan-y">
+                            <div className="flex flex-wrap gap-2 pb-2">
                                 {secondaryOptions.map((opt) => (
                                     <button
                                         key={opt.value}
@@ -160,7 +160,7 @@ export const HybridVariantPicker: React.FC<HybridVariantPickerProps> = ({
                                     </button>
                                 ))}
                             </div>
-                        </ScrollArea>
+                        </div>
                     </div>
                 )}
             </div>
