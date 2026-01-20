@@ -284,7 +284,7 @@ const ProcedureTemplatesPage = () => {
 
             {/* Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
                     <DialogHeader>
                         <DialogTitle>{editingTemplate ? 'تعديل القالب' : 'قالب جديد'}</DialogTitle>
                     </DialogHeader>
@@ -323,9 +323,19 @@ const ProcedureTemplatesPage = () => {
                                 </Button>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {formItems.map((item, index) => (
-                                    <div key={index} className="flex flex-col md:flex-row gap-4 md:items-end p-4 border rounded-lg bg-gray-50/50 dark:bg-muted/50">
+                                    <div key={index} className="flex flex-col md:flex-row gap-4 p-4 border rounded-lg bg-gray-50/50 dark:bg-muted/50 relative">
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => handleRemoveItem(index)}
+                                            className="absolute top-2 left-2 md:relative md:top-auto md:left-auto md:self-center text-destructive h-8 w-8"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+
                                         <div className="flex-1 space-y-2">
                                             <Label className="text-xs font-semibold">المنتج</Label>
                                             <Select
@@ -335,7 +345,7 @@ const ProcedureTemplatesPage = () => {
                                                     handleItemChange(index, 'variant', '');
                                                 }}
                                             >
-                                                <SelectTrigger className="bg-white dark:bg-background">
+                                                <SelectTrigger className="bg-white dark:bg-background h-9">
                                                     <SelectValue placeholder="اختر المنتج" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -353,7 +363,7 @@ const ProcedureTemplatesPage = () => {
                                                 onValueChange={(val) => handleItemChange(index, 'variant', val)}
                                                 disabled={!item.product_definition_id}
                                             >
-                                                <SelectTrigger className="bg-white dark:bg-background">
+                                                <SelectTrigger className="bg-white dark:bg-background h-9">
                                                     <SelectValue placeholder="اختر المتغير" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -364,21 +374,15 @@ const ProcedureTemplatesPage = () => {
                                             </Select>
                                         </div>
 
-                                        <div className="flex gap-4 items-end">
-                                            <div className="flex-1 md:w-24 space-y-2">
-                                                <Label className="text-xs font-semibold">الكمية</Label>
-                                                <Input
-                                                    type="number"
-                                                    min="1"
-                                                    value={item.default_quantity}
-                                                    onChange={(e) => handleItemChange(index, 'default_quantity', parseInt(e.target.value))}
-                                                    className="bg-white dark:bg-background"
-                                                />
-                                            </div>
-
-                                            <Button type="button" size="icon" variant="destructive" onClick={() => handleRemoveItem(index)} className="shrink-0 mb-[2px]">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                        <div className="w-full md:w-24 space-y-2">
+                                            <Label className="text-xs font-semibold">الكمية</Label>
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                value={item.default_quantity}
+                                                onChange={(e) => handleItemChange(index, 'default_quantity', parseInt(e.target.value))}
+                                                className="bg-white dark:bg-background h-9"
+                                            />
                                         </div>
                                     </div>
                                 ))}
@@ -395,7 +399,7 @@ const ProcedureTemplatesPage = () => {
 
             {/* Manage Types Dialog */}
             <Dialog open={isTypeDialogOpen} onOpenChange={setIsTypeDialogOpen}>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto p-4 md:p-6">
                     <DialogHeader>
                         <DialogTitle>إدارة أنواع الإجراءات</DialogTitle>
                     </DialogHeader>
@@ -438,44 +442,46 @@ const ProcedureTemplatesPage = () => {
                         </div>
 
                         {/* List */}
-                        <div className="border rounded-md">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>الاسم</TableHead>
-                                        <TableHead>الوصف</TableHead>
-                                        <TableHead className="w-[100px]">إجراءات</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {procedureTypes.map((type) => (
-                                        <TableRow key={type.id}>
-                                            <TableCell className="font-medium">{type.name}</TableCell>
-                                            <TableCell>{type.description || '-'}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                                                        setEditingType(type);
-                                                        setTypeFormData({ name: type.name, description: type.description || '' });
-                                                    }}>
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDeleteType(type.id)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {procedureTypes.length === 0 && (
+                        <div className="border rounded-md overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
-                                                لا توجد أنواع مضافة
-                                            </TableCell>
+                                            <TableHead className="whitespace-nowrap">الاسم</TableHead>
+                                            <TableHead className="whitespace-nowrap">الوصف</TableHead>
+                                            <TableHead className="w-[100px] whitespace-nowrap">إجراءات</TableHead>
                                         </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {procedureTypes.map((type) => (
+                                            <TableRow key={type.id}>
+                                                <TableCell className="font-medium whitespace-nowrap">{type.name}</TableCell>
+                                                <TableCell className="min-w-[150px]">{type.description || '-'}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                                                            setEditingType(type);
+                                                            setTypeFormData({ name: type.name, description: type.description || '' });
+                                                        }}>
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDeleteType(type.id)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {procedureTypes.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                                                    لا توجد أنواع مضافة
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
                     </div>
                 </DialogContent>
