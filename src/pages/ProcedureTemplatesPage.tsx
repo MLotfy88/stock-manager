@@ -202,19 +202,21 @@ const ProcedureTemplatesPage = () => {
 
             <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
                 <div className="max-w-6xl mx-auto">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                         <div>
                             <h1 className="text-2xl md:text-3xl font-bold">قوالب الإجراءات الطبية</h1>
                             <p className="text-muted-foreground">إدارة قوالب المستلزمات حسب نوع الإجراء</p>
                         </div>
-                        <Button onClick={() => handleOpenDialog()}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            قالب جديد
-                        </Button>
-                        <Button variant="outline" className="ml-2" onClick={() => setIsTypeDialogOpen(true)}>
-                            <Settings className="h-4 w-4 mr-2" />
-                            إدارة الأنواع
-                        </Button>
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <Button onClick={() => handleOpenDialog()} className="flex-1 md:flex-none">
+                                <Plus className="h-4 w-4 mr-2" />
+                                قالب جديد
+                            </Button>
+                            <Button variant="outline" onClick={() => setIsTypeDialogOpen(true)} className="flex-1 md:flex-none">
+                                <Settings className="h-4 w-4 mr-2" />
+                                إدارة الأنواع
+                            </Button>
+                        </div>
                     </div>
 
                     {isLoading ? (
@@ -341,11 +343,16 @@ const ProcedureTemplatesPage = () => {
                                             <Select
                                                 value={item.product_definition_id}
                                                 onValueChange={(val) => {
-                                                    handleItemChange(index, 'product_definition_id', val);
-                                                    handleItemChange(index, 'variant', '');
+                                                    const newItems = [...formItems];
+                                                    newItems[index] = {
+                                                        ...newItems[index],
+                                                        product_definition_id: val,
+                                                        variant: ''
+                                                    };
+                                                    setFormItems(newItems);
                                                 }}
                                             >
-                                                <SelectTrigger className="bg-white dark:bg-background h-9">
+                                                <SelectTrigger className="bg-white dark:bg-background h-9 w-full">
                                                     <SelectValue placeholder="اختر المنتج" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -363,7 +370,7 @@ const ProcedureTemplatesPage = () => {
                                                 onValueChange={(val) => handleItemChange(index, 'variant', val)}
                                                 disabled={!item.product_definition_id}
                                             >
-                                                <SelectTrigger className="bg-white dark:bg-background h-9">
+                                                <SelectTrigger className="bg-white dark:bg-background h-9 w-full">
                                                     <SelectValue placeholder="اختر المتغير" />
                                                 </SelectTrigger>
                                                 <SelectContent>
