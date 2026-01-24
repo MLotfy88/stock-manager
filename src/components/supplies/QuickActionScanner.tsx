@@ -110,13 +110,20 @@ const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoadi
             )}
 
             {/* Input Area */}
-            <form onSubmit={handleManualSubmit} className="relative flex gap-2 items-center">
+            <div className="relative flex gap-2 items-center">
                 <div className="relative flex-1">
                     <ScanBarcode className={`absolute top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground ${direction === 'rtl' ? 'right-3' : 'left-3'}`} />
                     <Input
                         ref={inputRef}
                         value={manualInput}
                         onChange={(e) => setManualInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                e.stopPropagation(); // Stop it from triggering outer form submit
+                                handleManualSubmit(e);
+                            }
+                        }}
                         placeholder={t('scan_barcode_placeholder') || "Scan or enter barcode..."}
                         className={`h-14 text-lg shadow-sm border-primary/20 focus-visible:ring-primary ${direction === 'rtl' ? 'pr-10 pl-4' : 'pl-10 pr-4'}`}
                         disabled={isLoading}
@@ -133,7 +140,7 @@ const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoadi
                 >
                     <Camera className="h-6 w-6" />
                 </Button>
-            </form>
+            </div>
         </div>
     );
 };
