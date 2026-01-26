@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,10 @@ const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoadi
     const inputRef = useRef<HTMLInputElement>(null);
     const [manualInput, setManualInput] = useState('');
 
-    const handleScanSuccess = (data: ParsedGS1Data) => {
+    // Ref to hold stopScanner to avoid circular dependency
+    const stopScannerRef = useRef<() => void>(() => { });
+
+    const handleScanSuccess = useCallback((data: ParsedGS1Data) => {
         // Haptic feedback
         if (navigator.vibrate) navigator.vibrate(200);
 
@@ -35,12 +38,12 @@ const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoadi
 
         // Stop only if NOT continuous
         if (!continuous) {
-            stopScanner();
+            stopScannerRef.current();
         }
 
         // Re-focus input
         setTimeout(() => inputRef.current?.focus(), 100);
-    };
+    }, [onScan, continuous, t, toast]);
 
     const {
         videoRef,
@@ -52,6 +55,11 @@ const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoadi
         onScanSuccess: handleScanSuccess,
         onScanFailure: (err) => console.error(err)
     });
+
+    // Update ref when stopScanner changes
+    useEffect(() => {
+        stopScannerRef.current = stopScanner;
+    }, [stopScanner]);
 
     // Auto-focus input on mount
     useEffect(() => {

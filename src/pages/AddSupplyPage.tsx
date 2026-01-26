@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
@@ -184,13 +184,31 @@ const AddInventoryPage = () => {
   const [batchProduct, setBatchProduct] = useState<string>('');
   const [batchVariant, setBatchVariant] = useState<string>('');
 
-  const handleScan = async (data: ParsedGS1Data) => {
+  const handleScan = useCallback(async (data: ParsedGS1Data) => {
     setIsScannerLoading(true);
     setCurrentScannedData(data);
 
     // Batch mode: Add to queue with GTIN lookup
     if (scanMode === 'batch') {
       try {
+        // --- Smart Validation Logic ---
+        // If it looks like a GS1 barcode (has GTIN), it SHOULD have LOT and Expiry
+        const isMedicalGS1 = !!data.gtin;
+        const isMissingCriticalData = isMedicalGS1 && (!data.lotNumber || !data.expiryDate);
+
+        if (isMissingCriticalData && isMedicalGS1) {
+          toast({
+            title: t('incomplete_scan') || "⚠️ Incomplete Scan",
+            description: t('missing_lot_expiry') || "Missing LOT or Expiry date. Please rescan clearly.",
+            variant: "destructive",
+            duration: 3000
+          });
+          // Play error sound/haptic
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+          return; // Stop processing
+        }
+        // -----------------------------
+
         // Perform GTIN lookup
         let detectedProduct: string | undefined;
         let detectedVariant: string | undefined;
@@ -216,7 +234,7 @@ const AddInventoryPage = () => {
         setBatchScans(prev => [...prev, entry]);
         toast({
           title: t('scan_successful') || "Added to Batch",
-          description: `${batchScans.length + 1} items scanned`,
+          description: `${data.gtin || 'Item'} added (${batchScans.length + 1})`, // Show simplified msg
           duration: 800,
           className: "bg-blue-500 text-white border-none"
         });
@@ -251,7 +269,7 @@ const AddInventoryPage = () => {
     } finally {
       setIsScannerLoading(false);
     }
-  };
+  }, [scanMode, batchScans.length, t, toast, productDefsCache]);
 
   const handleConfirmItem = (data: ConfirmedItemData) => {
     if (!currentScannedData || !currentScannedData.product_id) return;
