@@ -10,29 +10,38 @@ import { useToast } from '@/hooks/use-toast';
 interface QuickActionScannerProps {
     onScan: (data: ParsedGS1Data) => void;
     isLoading?: boolean;
+    continuous?: boolean; // NEW
 }
 
-const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoading }) => {
+const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoading, continuous = false }) => {
     const { t, direction } = useLanguage();
     const { toast } = useToast();
     const inputRef = useRef<HTMLInputElement>(null);
     const [manualInput, setManualInput] = useState('');
 
     const handleScanSuccess = (data: ParsedGS1Data) => {
-        // Haptic feedback if available (mobile)
+        // Haptic feedback
         if (navigator.vibrate) navigator.vibrate(200);
 
         // Visual feedback
         toast({
             title: t('barcode_scanned'),
             description: `${data.gtin || data.rawValue} (${t('success')})`,
-            duration: 2000,
+            duration: 1000, // Shorter duration
         });
 
         onScan(data);
         setManualInput('');
-        stopScanner();
-        // Re-focus input after processing (small delay to ensure UI updates)
+
+        // Stop only if NOT continuous
+        if (!continuous) {
+            stopScanner();
+        } else {
+            // In continuous mode, add a small delay to preventing double scanning
+            // This is usually handled by the hook, but good for UI feedback
+        }
+
+        // Re-focus input
         setTimeout(() => inputRef.current?.focus(), 100);
     };
 
