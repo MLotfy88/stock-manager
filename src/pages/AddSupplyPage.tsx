@@ -56,8 +56,8 @@ interface BatchScanEntry {
 const generateFingerprint = (data: ParsedGS1Data): string => {
   const parts = [
     data.gtin || '',
-    data.batch || '',
-    data.expiry || '',
+    (data as any).batch || (data as any).batchNumber || '', // Safe access
+    (data as any).expiry || (data as any).expiryDate || '', // Safe access
     data.quantity?.toString() || '1'
   ];
   return parts.join('|');
