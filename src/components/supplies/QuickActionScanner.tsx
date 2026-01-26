@@ -36,9 +36,6 @@ const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoadi
         // Stop only if NOT continuous
         if (!continuous) {
             stopScanner();
-        } else {
-            // In continuous mode, add a small delay to preventing double scanning
-            // This is usually handled by the hook, but good for UI feedback
         }
 
         // Re-focus input

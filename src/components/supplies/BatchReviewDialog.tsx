@@ -1,15 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ProductDefinition } from '@/types';
-import { format } from 'date-fns';
-import { Check, X } from 'lucide-react';
+import { Trash2, Check, X, AlertCircle } from 'lucide-react';
 import { ParsedGS1Data } from '@/hooks/useBarcodeScanner';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface BatchScanEntry {
     id: string;
@@ -34,8 +32,8 @@ interface BatchReviewDialogProps {
     isOpen: boolean;
     onClose: () => void;
     batchScans: BatchScanEntry[];
-    productName: string;           // NEW: Pre-selected
-    variantName: string;            // NEW: Pre-selected
+    productName: string;
+    variantName: string;
     onAddToCart: (items: {
         patterns: Array<{
             fingerprint: string;
@@ -46,10 +44,10 @@ interface BatchReviewDialogProps {
             scanCount: number;
             totalQuantity: number;
             entries: any[];
-            price: number;              // NEW: Price per pattern
+            price: number;
         }>;
     }) => void;
-    onBack: () => void;             // NEW: Back button
+    onBack: () => void;
 }
 
 const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
@@ -63,67 +61,85 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
 }) => {
     const { t } = useLanguage();
 
-    // Price state for each pattern
-    const [patternPrices, setPatternPrices] = React.useState<Record<string, number>>({});
+    const [patterns, setPatterns] = useState<GroupedPattern[]>([]);
+    const [prices, setPrices] = useState<Record<string, number>>({});
+    const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-    // Group scans by fingerprint
-    const groupedPatterns = useMemo(() => {
-        const groups = new Map<string, GroupedPattern>();
+    // Initialize patterns from scans
+    useEffect(() => {
+        if (isOpen && batchScans.length > 0) {
+            const groups = new Map<string, GroupedPattern>();
+            batchScans.forEach(entry => {
+                const existing = groups.get(entry.fingerprint);
+                const qty = typeof entry.parsedData.quantity === 'number' ? entry.parsedData.quantity : parseInt(entry.parsedData.quantity || '1') || 1;
+                const batchNum = (entry.parsedData as any).batch || (entry.parsedData as any).batchNumber || '';
+                const expiryDate = (entry.parsedData as any).expiry || (entry.parsedData as any).expiryDate || '';
 
-        batchScans.forEach(entry => {
-            const existing = groups.get(entry.fingerprint);
-            const qty = typeof entry.parsedData.quantity === 'number' ? entry.parsedData.quantity : parseInt(entry.parsedData.quantity || '1') || 1;
-            const batchNum = (entry.parsedData as any).batch || (entry.parsedData as any).batchNumber || '';
-            const expiryDate = (entry.parsedData as any).expiry || (entry.parsedData as any).expiryDate || '';
+                if (existing) {
+                    existing.scanCount++;
+                    existing.totalQuantity += qty;
+                    existing.entries.push(entry);
+                } else {
+                    groups.set(entry.fingerprint, {
+                        fingerprint: entry.fingerprint,
+                        gtin: entry.parsedData.gtin || '',
+                        batch: batchNum,
+                        expiry: expiryDate,
+                        quantityPerUnit: qty,
+                        scanCount: 1,
+                        totalQuantity: qty,
+                        entries: [entry]
+                    });
+                }
+            });
+            const initialPatterns = Array.from(groups.values());
+            setPatterns(initialPatterns);
 
-            if (existing) {
-                existing.scanCount++;
-                existing.totalQuantity += qty;
-                existing.entries.push(entry);
-            } else {
-                groups.set(entry.fingerprint, {
-                    fingerprint: entry.fingerprint,
-                    gtin: entry.parsedData.gtin || '',
-                    batch: batchNum,
-                    expiry: expiryDate,
-                    quantityPerUnit: qty,
-                    scanCount: 1,
-                    totalQuantity: qty,
-                    entries: [entry]
-                });
-            }
-        });
-
-        return Array.from(groups.values());
-    }, [batchScans]);
+            // Initialize quantities
+            const initialQtys: Record<string, number> = {};
+            initialPatterns.forEach(p => initialQtys[p.fingerprint] = p.totalQuantity);
+            setQuantities(initialQtys);
+        }
+    }, [isOpen, batchScans]);
 
     const totalQuantity = useMemo(() => {
-        return groupedPatterns.reduce((sum, p) => sum + p.totalQuantity, 0);
-    }, [groupedPatterns]);
+        return patterns.reduce((sum, p) => sum + (quantities[p.fingerprint] || 0), 0);
+    }, [patterns, quantities]);
+
+    const removePattern = (fingerprint: string) => {
+        setPatterns(prev => prev.filter(p => p.fingerprint !== fingerprint));
+    };
+
+    const updateQuantity = (fingerprint: string, newVal: number) => {
+        if (newVal >= 0) {
+            setQuantities(prev => ({ ...prev, [fingerprint]: newVal }));
+        }
+    };
 
     const handleSubmit = () => {
-        // Validate all prices are set
-        const patternsWithPrices = groupedPatterns.map(p => ({
+        // Validate
+        const finalPatterns = patterns.map(p => ({
             ...p,
-            price: patternPrices[p.fingerprint] || 0
-        }));
+            totalQuantity: quantities[p.fingerprint] || 0,
+            price: prices[p.fingerprint] || 0
+        })).filter(p => p.totalQuantity > 0);
 
-        if (patternsWithPrices.some(p => p.price <= 0)) {
-            return; // Don't submit if any price is invalid
+        if (finalPatterns.length === 0 || finalPatterns.some(p => p.price <= 0)) {
+            return;
         }
 
         onAddToCart({
-            patterns: patternsWithPrices
+            patterns: finalPatterns
         });
 
         // Reset
-        setPatternPrices({});
+        setPrices({});
+        setQuantities({});
         onClose();
     };
 
     const formatExpiry = (expiry: string) => {
         if (!expiry) return '-';
-        // Expiry format: YYMMDD
         try {
             const year = parseInt('20' + expiry.substring(0, 2));
             const month = parseInt(expiry.substring(2, 4));
@@ -134,120 +150,166 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
         }
     };
 
+    const renderPatternRow = (pattern: GroupedPattern, isMobile: boolean) => {
+        const qty = quantities[pattern.fingerprint] || 0;
+        const price = prices[pattern.fingerprint] || '';
+
+        if (isMobile) {
+            return (
+                <Card key={pattern.fingerprint} className="mb-3 relative">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 text-destructive h-8 w-8"
+                        onClick={() => removePattern(pattern.fingerprint)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <CardContent className="p-4 space-y-3">
+                        <div className="flex justify-between items-start pr-8">
+                            <div>
+                                <div className="font-mono text-xs text-muted-foreground">{pattern.gtin || 'No GTIN'}</div>
+                                <div className="font-semibold text-sm">Batch: {pattern.batch || '-'}</div>
+                                <div className="text-xs">Exp: {formatExpiry(pattern.expiry)}</div>
+                            </div>
+                            <div className="text-right">
+                                <span className="bg-blue-100 dark:bg-blue-900 text-xs px-2 py-1 rounded">
+                                    {pattern.scanCount} scans
+                                </span>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                            <div>
+                                <Label className="text-xs">{t('quantity')}</Label>
+                                <Input
+                                    type="number"
+                                    value={qty}
+                                    onChange={e => updateQuantity(pattern.fingerprint, parseInt(e.target.value) || 0)}
+                                    className="h-9"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs">{t('price')}</Label>
+                                <Input
+                                    type="number"
+                                    value={price}
+                                    placeholder="0.00"
+                                    onChange={e => setPrices(prev => ({ ...prev, [pattern.fingerprint]: parseFloat(e.target.value) || 0 }))}
+                                    className="h-9"
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        return (
+            <TableRow key={pattern.fingerprint}>
+                <TableCell className="font-mono text-xs">{pattern.gtin || '-'}</TableCell>
+                <TableCell className="font-semibold">{pattern.batch || '-'}</TableCell>
+                <TableCell>{formatExpiry(pattern.expiry)}</TableCell>
+                <TableCell className="text-center">
+                    <span className="bg-blue-100 dark:bg-blue-900 px-2 py-0.5 rounded text-sm">
+                        {pattern.scanCount}×
+                    </span>
+                </TableCell>
+                <TableCell className="text-center w-[120px]">
+                    <Input
+                        type="number"
+                        value={qty}
+                        onChange={e => updateQuantity(pattern.fingerprint, parseInt(e.target.value) || 0)}
+                        className="h-8 text-center"
+                    />
+                </TableCell>
+                <TableCell className="w-[120px]">
+                    <Input
+                        type="number"
+                        value={price}
+                        placeholder="0.00"
+                        onChange={e => setPrices(prev => ({ ...prev, [pattern.fingerprint]: parseFloat(e.target.value) || 0 }))}
+                        className="h-8 text-right"
+                    />
+                </TableCell>
+                <TableCell>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => removePattern(pattern.fingerprint)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </TableCell>
+            </TableRow>
+        );
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+                <DialogHeader className="p-6 pb-2">
                     <DialogTitle className="text-xl">
                         {t('batch_review') || 'Batch Review & Assign'}
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-6">
-                    {/* Product/Variant Info (Read-only) */}
-                    <div className="bg-primary/5 p-4 rounded-lg border-2 border-primary/20">
-                        <h3 className="font-semibold mb-3 text-sm text-muted-foreground">
-                            {t('selected_product_variant') || 'Selected Product & Variant'}
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <div className="text-xs text-muted-foreground">{t('product')}</div>
-                                <div className="text-lg font-semibold">{productName}</div>
-                            </div>
-                            <div>
-                                <div className="text-xs text-muted-foreground">{t('variant')}</div>
-                                <div className="text-lg font-semibold">{variantName}</div>
-                            </div>
+                <div className="flex-1 overflow-y-auto p-6 pt-2">
+                    {/* Header Info */}
+                    <div className="bg-muted/30 p-4 rounded-lg mb-6 flex justify-between items-center">
+                        <div>
+                            <div className="text-sm text-muted-foreground">{t('product')}</div>
+                            <div className="font-bold">{productName}</div>
+                            <div className="text-sm">{variantName}</div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-sm text-muted-foreground">{t('total_quantity')}</div>
+                            <div className="text-2xl font-bold text-primary">{totalQuantity}</div>
                         </div>
                     </div>
 
-                    {/* Patterns Review Section */}
-                    <div>
-                        <h3 className="font-semibold mb-3 flex items-center gap-2">
-                            <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">✓</span>
-                            {t('review_patterns') || 'Review Scanned Patterns - Step 4'}
-                        </h3>
-                        <div className="border rounded-lg overflow-hidden">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-muted/50">
-                                        <TableHead className="w-[50px]">#</TableHead>
-                                        <TableHead>GTIN</TableHead>
-                                        <TableHead>LOT</TableHead>
-                                        <TableHead>{t('expiry') || 'Expiry'}</TableHead>
-                                        <TableHead className="text-center">{t('qty_unit') || 'Qty/Unit'}</TableHead>
-                                        <TableHead className="text-center">{t('scans') || 'Scans'}</TableHead>
-                                        <TableHead className="text-right font-bold">{t('total_qty') || 'Total Qty'}</TableHead>
-                                        <TableHead className="text-right">{t('price_unit') || 'Price/Unit'}</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {groupedPatterns.map((pattern, idx) => (
-                                        <TableRow key={pattern.fingerprint}>
-                                            <TableCell className="font-medium">{idx + 1}</TableCell>
-                                            <TableCell className="font-mono text-xs">{pattern.gtin || '-'}</TableCell>
-                                            <TableCell className="font-semibold">{pattern.batch || '-'}</TableCell>
-                                            <TableCell>{formatExpiry(pattern.expiry)}</TableCell>
-                                            <TableCell className="text-center">{pattern.quantityPerUnit}</TableCell>
-                                            <TableCell className="text-center">
-                                                <span className="bg-blue-100 dark:bg-blue-900 px-2 py-0.5 rounded text-sm">
-                                                    {pattern.scanCount}×
-                                                </span>
-                                            </TableCell>
-                                            <TableCell className="text-right font-bold text-lg">
-                                                {pattern.totalQuantity}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Input
-                                                    type="number"
-                                                    placeholder="0.00"
-                                                    className="w-24 text-right"
-                                                    value={patternPrices[pattern.fingerprint] || ''}
-                                                    onChange={(e) => setPatternPrices(prev => ({
-                                                        ...prev,
-                                                        [pattern.fingerprint]: parseFloat(e.target.value) || 0
-                                                    }))}
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    <TableRow className="bg-primary/10 font-bold">
-                                        <TableCell colSpan={6} className="text-right">
-                                            {t('total_quantity') || 'Total Quantity:'}
-                                        </TableCell>
-                                        <TableCell className="text-right text-xl">
-                                            {totalQuantity}
-                                        </TableCell>
-                                        <TableCell></TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
-                        </div>
+                    {/* Mobile View */}
+                    <div className="md:hidden">
+                        {patterns.map(p => renderPatternRow(p, true))}
                     </div>
+
+                    {/* Desktop View */}
+                    <div className="hidden md:block border rounded-lg overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                    <TableHead>GTIN</TableHead>
+                                    <TableHead>LOT</TableHead>
+                                    <TableHead>{t('expiry') || 'Expiry'}</TableHead>
+                                    <TableHead className="text-center">{t('scans')}</TableHead>
+                                    <TableHead className="text-center">{t('quantity')}</TableHead>
+                                    <TableHead className="text-right">{t('price')}</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {patterns.map(p => renderPatternRow(p, false))}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {patterns.length === 0 && (
+                        <div className="text-center py-10 text-muted-foreground">
+                            {t('no_items_left') || 'No items left'}
+                        </div>
+                    )}
                 </div>
 
-                <DialogFooter className="gap-2">
-                    <div className="text-xs text-muted-foreground flex items-center gap-2">
-                        {Object.keys(patternPrices).length === groupedPatterns.length &&
-                            Object.values(patternPrices).every(p => p > 0) ? (
-                            <span className="text-green-600 flex items-center gap-1">
-                                <Check className="h-3 w-3" /> {t('ready_to_add') || 'Ready to add'}
-                            </span>
-                        ) : (
-                            <span className="text-amber-600 flex items-center gap-1">
-                                <X className="h-3 w-3" /> {t('enter_all_prices') || 'Enter all prices'}
-                            </span>
-                        )}
-                    </div>
+                <DialogFooter className="p-6 pt-2 gap-2 border-t bg-background">
                     <Button variant="outline" onClick={onBack}>
                         {t('back')}
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={Object.keys(patternPrices).length !== groupedPatterns.length ||
-                            Object.values(patternPrices).some(p => p <= 0)}
+                        disabled={patterns.length === 0 || Object.keys(prices).length !== patterns.length || Object.values(prices).some(p => p <= 0)}
+                        className="flex-1 md:flex-none"
                     >
-                        {t('add_to_cart') || 'Add to Cart'}
+                        {t('add_to_cart') || 'Add to Cart'} ({totalQuantity})
                     </Button>
                 </DialogFooter>
             </DialogContent>
