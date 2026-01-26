@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -10,12 +9,7 @@ import {
   Settings,
   Recycle,
   ArrowRightLeft,
-  Database,
   Warehouse,
-  Truck,
-  Factory,
-  Tag,
-  Replace,
   Activity,
   DollarSign
 } from 'lucide-react';
@@ -67,8 +61,8 @@ export const useNavigationItems = () => {
     },
     {
       type: 'collapsible',
-      label: t('inventory_management'), // Consider adding this key to translations or reusing existing
-      icon: <Warehouse className="h-5 w-5" />, // Using Warehouse icon for Inventory Group
+      label: t('inventory_management'),
+      icon: <Warehouse className="h-5 w-5" />,
       subItems: [
         { type: 'link', label: t('supplies_nav'), href: '/supplies' },
         { type: 'link', label: t('transfer_inventory_nav'), href: '/transfer-inventory' },
@@ -78,73 +72,72 @@ export const useNavigationItems = () => {
     {
       type: 'collapsible',
       label: t('operations'),
-      icon: <Activity className="h-5 w-5" />, // Need to import Activity
+      icon: <Activity className="h-5 w-5" />,
       subItems: [
         { type: 'link', label: t('consumption_nav'), href: '/consumption' },
         { type: 'link', label: t('returns_management_nav'), href: '/returns-management' },
         { type: 'link', label: t('replacement_voucher_nav'), href: '/replacement-voucher' },
         { type: 'link', label: t('on_shelf_invoicing_nav'), href: '/on-shelf-invoicing' },
       ]
-      ]
-},
-  {
-    type: 'header',
-    label: t('financials') || 'Financials', // Add to translation later if needed
     },
-{
-  type: 'link',
-    label: t('debt_management') || 'Debt Management',
-      icon: <DollarSign className="h-5 w-5" />, // Need to import DollarSign
-        href: '/debt-management',
+    {
+      type: 'header',
+      label: t('financials') || 'Financials',
     },
-{
-  type: 'link',
-    label: t('debt_calendar') || 'Debt Calendar',
+    {
+      type: 'link',
+      label: t('debt_management') || 'Debt Management',
+      icon: <DollarSign className="h-5 w-5" />,
+      href: '/debt-management',
+    },
+    {
+      type: 'link',
+      label: t('debt_calendar') || 'Debt Calendar',
       icon: <Calendar className="h-5 w-5" />,
-        href: '/debt-calendar',
+      href: '/debt-calendar',
     },
-{
-  type: 'header',
-    label: t('monitoring_and_planning'),
+    {
+      type: 'header',
+      label: t('monitoring_and_planning'),
     },
-{
-  type: 'collapsible',
-    label: t('reports_nav'),
+    {
+      type: 'collapsible',
+      label: t('reports_nav'),
       icon: <BarChart4 className="h-5 w-5" />,
-        subItems: [
-          { type: 'link', label: t('reports_overview'), href: '/reports' },
-          { type: 'link', label: t('inventory_report_nav'), href: '/inventory-report' },
-          { type: 'link', label: t('reorder_point_report_nav'), href: '/reorder-point-report' },
-          { type: 'link', label: t('consumption_report_nav'), href: '/consumption-report' },
-          { type: 'link', label: t('on_shelf_report_nav'), href: '/on-shelf-report' },
-          { type: 'link', label: t('supplier_performance_nav'), href: '/supplier-performance' },
-        ]
-},
-{
-  type: 'link',
-    label: t('calendar_nav'),
+      subItems: [
+        { type: 'link', label: t('reports_overview'), href: '/reports' },
+        { type: 'link', label: t('inventory_report_nav'), href: '/inventory-report' },
+        { type: 'link', label: t('reorder_point_report_nav'), href: '/reorder-point-report' },
+        { type: 'link', label: t('consumption_report_nav'), href: '/consumption-report' },
+        { type: 'link', label: t('on_shelf_report_nav'), href: '/on-shelf-report' },
+        { type: 'link', label: t('supplier_performance_nav'), href: '/supplier-performance' },
+      ]
+    },
+    {
+      type: 'link',
+      label: t('calendar_nav'),
       icon: <Calendar className="h-5 w-5" />,
-        href: '/calendar',
+      href: '/calendar',
     },
-{
-  type: 'link',
-    label: t('alerts_nav'),
+    {
+      type: 'link',
+      label: t('alerts_nav'),
       icon: <AlertTriangle className="h-5 w-5" />,
-        href: '/alerts',
+      href: '/alerts',
     },
-{
-  type: 'header',
-    label: t('settings'),
+    {
+      type: 'header',
+      label: t('settings'),
     },
-{
-  type: 'collapsible',
-    label: t('management'),
+    {
+      type: 'collapsible',
+      label: t('management'),
       icon: <Settings className="h-5 w-5" />,
-        subItems: [
-          { type: 'link', label: t('data_settings_nav'), href: '/admin' },
-          { type: 'link', label: t('management_settings_nav'), href: '/management' },
-          { type: 'link', label: t('procedure_templates_nav'), href: '/procedure-templates' },
-        ]
-},
+      subItems: [
+        { type: 'link', label: t('data_settings_nav'), href: '/admin' },
+        { type: 'link', label: t('management_settings_nav'), href: '/management' },
+        { type: 'link', label: t('procedure_templates_nav'), href: '/procedure-templates' },
+      ]
+    },
   ];
 };

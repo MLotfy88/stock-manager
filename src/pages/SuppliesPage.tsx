@@ -1,229 +1,192 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import {
-  Package, Search, Plus, Filter, ArrowUpDown, AlertTriangle, Clock, CheckCircle, Eye
-} from 'lucide-react';
-import SupplyCard from '@/components/supplies/SupplyCard';
-import { InventoryItem, ProductDefinition, SupplyTypeItem, Store } from '@/types';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from '@/components/ui/select';
-import { useNavigate, Link } from 'react-router-dom';
-import { getInventoryItems } from '@/data/operations/suppliesOperations';
-import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
-import { getSupplyTypes } from '@/data/operations/supplyTypeOperations';
-import { getStores } from '@/data/operations/storesOperations';
 import { useToast } from '@/components/ui/use-toast';
-import { SwipeableList, SwipeableItem } from '@/components/layout/SwipeableList';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Shadcn Tabs
+import { getSupabaseClient } from '@/lib/supabaseClient';
+import { SupplyVoucher } from '@/types';
+import { format } from 'date-fns';
+import { Plus, Search, FileEdit, Trash2, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 
 const SuppliesPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { t, direction } = useLanguage();
-  const navigate = useNavigate();
   const { toast } = useToast();
-
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-  const [productDefinitions, setProductDefinitions] = useState<ProductDefinition[]>([]);
-  const [supplyTypes, setSupplyTypes] = useState<SupplyTypeItem[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // States for filtering and sorting
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [storeFilter, setStoreFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState('name-asc');
+  const navigate = useNavigate();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const closeSidebar = () => isMobile && setIsSidebarOpen(false);
 
-  const closeSidebar = () => {
-    if (isMobile) {
-      setIsSidebarOpen(false);
-    }
-  };
+  // Data
+  const [vouchers, setVouchers] = useState<SupplyVoucher[]>([]);
+  const [drafts, setDrafts] = useState<SupplyVoucher[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = async () => {
+  const fetchVouchers = async () => {
     setIsLoading(true);
-    try {
-      const [items, definitions, types, storesData] = await Promise.all([
-        getInventoryItems(),
-        getProductDefinitions(),
-        getSupplyTypes(),
-        getStores()
-      ]);
-      setInventoryItems(items);
-      setProductDefinitions(definitions);
-      setSupplyTypes(types);
-      setStores(storesData);
-    } catch (error) {
-      toast({ title: t('error'), description: t('error_fetching_data'), variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    // Completed Vouchers
+    const { data: completed, error: err1 } = await supabase
+      .from('supply_vouchers')
+      .select(`*, supplier:suppliers(name)`)
+      .eq('status', 'completed')
+      .order('date', { ascending: false });
+
+    // Drafts
+    const { data: draftData, error: err2 } = await supabase
+      .from('supply_vouchers')
+      .select(`*, supplier:suppliers(name)`)
+      .eq('status', 'draft')
+      .order('created_at', { ascending: false });
+
+    if (err1 || err2) {
+      console.error(err1 || err2);
+      toast({ title: "Error", description: "Failed to load vouchers", variant: "destructive" });
+    } else {
+      setVouchers(completed as any || []);
+      setDrafts(draftData as any || []);
     }
+    setIsLoading(false);
   };
 
   useEffect(() => {
-    loadData();
+    fetchVouchers();
   }, []);
 
-  const enrichedItems = useMemo(() => {
-    return inventoryItems.map(item => {
-      const definition = productDefinitions.find(def => def.id === item.product_definition_id);
-      return {
-        ...item,
-        name: definition?.name || 'Unknown',
-        type_id: definition?.type_id || 'other',
-        // The manufacturer and supplier names are now directly available on the item from the query
-        manufacturerName: item.manufacturer_name || 'Unknown Manufacturer',
-        supplierName: item.supplier_name || 'Unknown Supplier',
-      };
-    });
-  }, [inventoryItems, productDefinitions]);
+  const handleDeleteDraft = async (id: string) => {
+    if (!confirm("Delete this draft permanently?")) return;
 
-  const filteredItems = useMemo(() => {
-    return enrichedItems.filter(item => {
-      const matchesSearch = searchQuery === '' ||
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.batch_number.toLowerCase().includes(searchQuery.toLowerCase());
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { error } = await supabase.from('supply_vouchers').delete().eq('id', id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete", variant: "destructive" });
+    } else {
+      toast({ title: "Deleted", description: "Draft removed" });
+      fetchVouchers();
+    }
+  };
 
-      const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-      const matchesType = typeFilter === 'all' || item.type_id === typeFilter;
-      const matchesStore = storeFilter === 'all' || item.store_id === storeFilter;
-
-      return matchesSearch && matchesStatus && matchesType && matchesStore;
-    });
-  }, [enrichedItems, searchQuery, statusFilter, typeFilter, storeFilter]);
-
-  const sortedItems = useMemo(() => {
-    return [...filteredItems].sort((a, b) => {
-      switch (sortBy) {
-        case 'name-asc':
-          return a.name.localeCompare(b.name);
-        case 'name-desc':
-          return b.name.localeCompare(a.name);
-        case 'expiry-asc':
-          return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
-        case 'expiry-desc':
-          return new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime();
-        case 'quantity-asc':
-          return a.quantity - b.quantity;
-        case 'quantity-desc':
-          return b.quantity - a.quantity;
-        default:
-          return 0;
-      }
-    });
-  }, [filteredItems, sortBy]);
-
-  const statusCounts = useMemo(() => {
-    return inventoryItems.reduce((acc, item) => {
-      if (item.quantity > 0) { // Only count items with quantity > 0
-        acc[item.status] = (acc[item.status] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-  }, [inventoryItems]);
+  const filteredVouchers = vouchers.filter(v =>
+    v.voucher_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (v as any).supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-20" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        closeSidebar={closeSidebar}
-      />
+      <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} closeSidebar={closeSidebar} />
 
-      <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'}`}>
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-1">{t('supplies_nav')}</h1>
-              <p className="text-muted-foreground text-sm md:text-base">{t('supplies_overview')}</p>
-            </div>
-            <div className="flex gap-2">
-              <Button asChild variant="outline">
-                <Link to="/all-supplies">
-                  <Eye className="h-4 w-4" />
-                  <span className="hidden sm:inline ml-2">{t('view_all')}</span>
-                </Link>
-              </Button>
-              <Button asChild>
-                <Link to="/add-supply">
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline ml-2">{t('add_new_supply')}</span>
-                </Link>
-              </Button>
-            </div>
+      <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">{t('supplies_list')}</h1>
+            <Button onClick={() => navigate('/add-supply')}>
+              <Plus className="h-4 w-4 mr-2" /> {t('add_new_invoice')}
+            </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card className="bg-green-50 border-green-200"><CardContent className="p-4 flex items-center gap-3"><div className="p-2 bg-green-100 rounded-full"><CheckCircle className="h-5 w-5 text-green-600" /></div><div><p className="text-sm font-medium text-green-600">{t('valid_supplies')}</p><p className="text-2xl font-bold">{statusCounts.valid || 0}</p></div></CardContent></Card>
-            <Card className="bg-amber-50 border-amber-200"><CardContent className="p-4 flex items-center gap-3"><div className="p-2 bg-amber-100 rounded-full"><Clock className="h-5 w-5 text-amber-600" /></div><div><p className="text-sm font-medium text-amber-600">{t('expiring_soon')}</p><p className="text-2xl font-bold">{statusCounts.expiring_soon || 0}</p></div></CardContent></Card>
-            <Card className="bg-red-50 border-red-200"><CardContent className="p-4 flex items-center gap-3"><div className="p-2 bg-red-100 rounded-full"><AlertTriangle className="h-5 w-5 text-red-600" /></div><div><p className="text-sm font-medium text-red-600">{t('expired')}</p><p className="text-2xl font-bold">{statusCounts.expired || 0}</p></div></CardContent></Card>
-          </div>
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+              <TabsTrigger value="all">Processed Invoices ({vouchers.length})</TabsTrigger>
+              <TabsTrigger value="drafts">Drafts ({drafts.length})</TabsTrigger>
+            </TabsList>
 
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div className="relative lg:col-span-2">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input placeholder={t('search_supplies')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger><div className="flex items-center gap-2"><Filter className="h-4 w-4" /><SelectValue placeholder={t('filter_by_status')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_statuses')}</SelectItem><SelectItem value="valid">{t('valid')}</SelectItem><SelectItem value="expiring_soon">{t('expiring_soon_status')}</SelectItem><SelectItem value="expired">{t('expired_status')}</SelectItem></SelectContent></Select>
-                <Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger><div className="flex items-center gap-2"><Package className="h-4 w-4" /><SelectValue placeholder={t('filter_by_type')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_types')}</SelectItem>{supplyTypes.map((type) => (<SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>))}</SelectContent></Select>
-                <Select value={storeFilter} onValueChange={setStoreFilter}><SelectTrigger><div className="flex items-center gap-2"><Package className="h-4 w-4" /><SelectValue placeholder={t('filter_by_store')} /></div></SelectTrigger><SelectContent><SelectItem value="all">{t('all_stores')}</SelectItem>{stores.map((store) => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}</SelectContent></Select>
+            <div className="mt-4 mb-4">
+              <div className="relative max-w-sm">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search..." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
               </div>
-              <div className="flex justify-between items-center mt-4">
-                <p className="text-sm text-muted-foreground">{t('showing')} <span className="font-medium">{sortedItems.length}</span> {t('of')} <span className="font-medium">{inventoryItems.length}</span> {t('supplies')}</p>
-                <Select value={sortBy} onValueChange={setSortBy}><SelectTrigger className="w-auto"><div className="flex items-center gap-2"><ArrowUpDown className="h-4 w-4" /><SelectValue placeholder={t('sort_by')} /></div></SelectTrigger><SelectContent align="end"><SelectItem value="name-asc">{t('name')} (A-Z)</SelectItem><SelectItem value="name-desc">{t('name')} (Z-A)</SelectItem><SelectItem value="expiry-asc">{t('expiry_date')} ({t('earliest')})</SelectItem><SelectItem value="expiry-desc">{t('expiry_date')} ({t('latest')})</SelectItem><SelectItem value="quantity-asc">{t('quantity')} ({t('lowest')})</SelectItem><SelectItem value="quantity-desc">{t('quantity')} ({t('highest')})</SelectItem></SelectContent></Select>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {isLoading ? (
-            <p className="text-center">{t('loading')}</p>
-          ) : sortedItems.length > 0 ? (
-            <>
-              {/* Desktop Grid */}
-              <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sortedItems.map((item) => (
-                  <SupplyCard key={item.id} supply={item} onDelete={loadData} />
-                ))}
-              </div>
+            <TabsContent value="all">
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Voucher #</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredVouchers.map(v => (
+                        <TableRow key={v.id}>
+                          <TableCell>{v.voucher_number}</TableCell>
+                          <TableCell>{format(new Date(v.date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>{(v as any).supplier?.name}</TableCell>
+                          <TableCell>{v.total_amount?.toFixed(2)}</TableCell>
+                          <TableCell><Badge variant="outline">{v.payment_status}</Badge></TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm">Details</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredVouchers.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8">No invoices found.</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              {/* Mobile SwipeableList */}
-              <div className="md:hidden">
-                <SwipeableList>
-                  {sortedItems.map((item) => (
-                    <SwipeableItem
-                      key={item.id}
-                      actions={
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/supplies/${item.id}`)}
-                        >
-                          {t('view')}
-                        </Button>
-                      }
-                    >
-                      <SupplyCard supply={item} onDelete={loadData} />
-                    </SwipeableItem>
-                  ))}
-                </SwipeableList>
-              </div>
-            </>
-          ) : (
-            <Card className="p-8 text-center"><Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><h3 className="font-medium text-lg mb-1">{t('no_supplies_found')}</h3><p className="text-muted-foreground mb-4">{t('try_different_filters')}</p><Button size="sm" variant="outline" onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all'); setStoreFilter('all'); }}>{t('clear_filters')}</Button></Card>
-          )}
+            <TabsContent value="drafts">
+              <Card className="border-dashed border-2">
+                <CardHeader>
+                  <CardTitle>Saved Drafts</CardTitle>
+                  <CardDescription>Invoices that haven't been finalized yet.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Last Modified</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Items Count</TableHead>
+                        <TableHead>Total Value</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {drafts.map(d => (
+                        <TableRow key={d.id}>
+                          <TableCell>{d.created_at ? format(new Date(d.created_at), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                          <TableCell>{(d as any).supplier?.name || 'Unknown'}</TableCell>
+                          <TableCell>{Array.isArray(d.draft_items) ? d.draft_items.length : 0}</TableCell>
+                          <TableCell>{d.total_amount?.toFixed(2)}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button size="sm" onClick={() => navigate(`/add-supply?draft=${d.id}`)}>
+                              <FileEdit className="h-4 w-4 mr-1" /> Resume
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteDraft(d.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {drafts.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No drafts saved.</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
         </div>
       </main>
     </div>

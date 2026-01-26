@@ -11,12 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSuppliers } from '@/data/operations/supplierOperations';
 import { Supplier, Manufacturer, Store, StockType, ProductDefinition, PaymentMethod, PaymentStatus, VoucherInstallment } from '@/types';
-import { Save, RotateCcw, Trash2, Plus, Edit, Scan, ExternalLink } from 'lucide-react';
+import { Save, RotateCcw, Trash2, Plus, Edit, Scan, ExternalLink, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { getManufacturers } from '@/data/operations/manufacturerOperations';
 import { getStores } from '@/data/operations/storesOperations';
-import { createSupplyVoucherWithItems } from '@/data/operations/voucherOperations';
+import { createSupplyVoucherWithItems, saveDraftVoucher, finalizeDraftVoucher } from '@/data/operations/voucherOperations';
 import { batchSaveGTINMappings, getGTINMapping } from '@/data/operations/gtinMappingOperations';
 import { ParsedGS1Data } from '@/hooks/useBarcodeScanner';
 import QuickActionScanner from '@/components/supplies/QuickActionScanner';
@@ -274,7 +274,7 @@ const AddInventoryPage = () => {
             uploadedImageUrls = await Promise.all(uploadPromises);
           } catch (err) {
             console.error("Upload failed", err);
-            toast({ title: "Warning", description: "Failed to upload some images.", variant: "secondary" });
+            toast({ title: "Warning", description: "Failed to upload some images.", variant: "destructive" });
             // Continue...
           }
         }
@@ -290,7 +290,7 @@ const AddInventoryPage = () => {
         total_amount: totalCartValue,
         paid_amount: paidAmount,
         invoice_image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
-        installments: installments
+        installments: installments as any
       };
 
       const newInventoryItems = cartItems.map(item => ({

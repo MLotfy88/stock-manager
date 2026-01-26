@@ -258,7 +258,7 @@ const InstallmentEditor = ({ voucher, allInstallments, onUpdate, onClose }: { vo
 
     const handleAddInstallment = () => {
         if (diff <= 0.1) {
-            toast({ title: "No remaining amount", description: "Total is already allocated.", variant: "secondary" });
+            toast({ title: "No remaining amount", description: "Total is already allocated.", variant: "destructive" });
             return;
         }
 

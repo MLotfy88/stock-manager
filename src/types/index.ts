@@ -96,6 +96,8 @@ export interface SupplyVoucher {
   paid_amount?: number;
   invoice_image_urls?: string[]; // Array of URLs
   installments?: VoucherInstallment[]; // For frontend convenience
+  status?: 'draft' | 'completed';
+  draft_items?: any[]; // JSONB content for drafts
 }
 
 export interface InventoryItem {

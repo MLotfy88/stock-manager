@@ -180,11 +180,12 @@ export const scanDocument = (
                 // Cleanup DOM
                 document.body.removeChild(tempCanvas);
 
+                // 5. Final Display / Conversion
+                // ... (rest of code)
                 // Cleanup Mats
                 if (resultMat !== src) resultMat.delete();
                 src.delete(); gray.delete(); blur.delete(); edges.delete();
                 contours.delete(); hierarchy.delete();
-                if (approx) approx.delete(); // Delete approx if it was created
 
                 resolve(dataUrl);
             } catch (e) {

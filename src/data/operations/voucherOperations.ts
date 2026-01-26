@@ -74,6 +74,99 @@ export const createSupplyVoucherWithItems = async (
 
   return { voucher, items: newItems };
 };
+// --- Draft Operations ---
+
+export const saveDraftVoucher = async (
+  voucherData: Omit<SupplyVoucher, 'id' | 'created_at'> & { id?: string },
+  cartItems: any[]
+): Promise<SupplyVoucher> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
+  const payload = {
+    supplier_id: voucherData.supplier_id,
+    date: voucherData.date,
+    stock_type: voucherData.stock_type,
+    notes: voucherData.notes,
+    voucher_number: voucherData.voucher_number,
+    payment_method: voucherData.payment_method,
+    payment_status: voucherData.payment_status,
+    total_amount: voucherData.total_amount,
+    paid_amount: voucherData.paid_amount,
+    invoice_image_urls: voucherData.invoice_image_urls,
+    status: 'draft',
+    draft_items: cartItems
+  };
+
+  let result;
+  if (voucherData.id) {
+    // Update
+    result = await supabase.from('supply_vouchers').update(payload).eq('id', voucherData.id).select().single();
+  } else {
+    // Create
+    result = await supabase.from('supply_vouchers').insert(payload).select().single();
+  }
+
+  if (result.error) throw result.error;
+  return result.data;
+};
+
+export const finalizeDraftVoucher = async (
+  voucherId: string,
+  voucherData: Omit<SupplyVoucher, 'id' | 'created_at'>,
+  items: NewInventoryItemPayload[]
+): Promise<{ voucher: SupplyVoucher; items: InventoryItem[] }> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) throw new Error("Supabase client not initialized");
+
+  // 1. Update status to completed and clear draft_items
+  const { data: voucher, error: voucherError } = await supabase
+    .from('supply_vouchers')
+    .update({
+      ...voucherData,
+      status: 'completed',
+      draft_items: [] // Clear draft items to save space
+    })
+    .eq('id', voucherId)
+    .select()
+    .single();
+
+  if (voucherError) throw voucherError;
+
+  // 2. Insert Inventory Items (Same logic as create)
+  const itemsToInsert = items.map(item => ({
+    ...item,
+    supply_voucher_id: voucherId,
+    stock_type: voucher.stock_type,
+  }));
+
+  const { data: newItems, error: itemsError } = await supabase
+    .from('inventory_items')
+    .insert(itemsToInsert)
+    .select();
+
+  if (itemsError) throw itemsError;
+
+  // 3. Insert Installments (Same logic)
+  if (voucherData.installments && voucherData.installments.length > 0) {
+    // Clean installments payload? Usually they don't have IDs yet if from draft.
+    const installmentsToInsert = voucherData.installments.map(inst => ({
+      voucher_id: voucherId,
+      amount: inst.amount,
+      due_date: inst.due_date,
+      status: 'pending',
+      notes: inst.notes
+    }));
+
+    const { error: instError } = await supabase
+      .from('voucher_installments')
+      .insert(installmentsToInsert);
+
+    if (instError) console.error("Error creating installments:", instError);
+  }
+
+  return { voucher, items: newItems };
+};
 
 export const createOnShelfInvoice = async (consumptionItemIds: string[]): Promise<void> => {
   const supabase = getSupabaseClient();
