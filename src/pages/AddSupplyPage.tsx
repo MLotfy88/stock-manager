@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import DocumentScanner from '@/components/common/DocumentScanner';
 import { getSupabaseClient } from '@/lib/supabaseClient';
+import BatchReviewDialog from '@/components/supplies/BatchReviewDialog';
 
 // Extended type for local cart items
 interface CartItem {
@@ -41,6 +42,26 @@ interface CartItem {
   quantity: number;
   purchasePrice: number;
 }
+
+// Batch scan entry
+interface BatchScanEntry {
+  id: string;
+  timestamp: number;
+  rawBarcode: string;
+  fingerprint: string;
+  parsedData: ParsedGS1Data;
+}
+
+// Generate fingerprint for grouping
+const generateFingerprint = (data: ParsedGS1Data): string => {
+  const parts = [
+    data.gtin || '',
+    data.batch || '',
+    data.expiry || '',
+    data.quantity?.toString() || '1'
+  ];
+  return parts.join('|');
+};
 
 const AddInventoryPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -150,9 +171,36 @@ const AddInventoryPage = () => {
   const [confirmDialogProduct, setConfirmDialogProduct] = useState<{ name: string, variant: string }>({ name: '', variant: '' });
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
+  // --- Batch Scan State ---
+  const [scanMode, setScanMode] = useState<'single' | 'batch'>('single');
+  const [batchScans, setBatchScans] = useState<BatchScanEntry[]>([]);
+  const [isBatchReviewOpen, setIsBatchReviewOpen] = useState(false);
+
   const handleScan = async (data: ParsedGS1Data) => {
     setIsScannerLoading(true);
     setCurrentScannedData(data);
+
+    // Batch mode: Add to queue
+    if (scanMode === 'batch') {
+      const entry: BatchScanEntry = {
+        id: `scan_${Date.now()}_${Math.random()}`,
+        timestamp: Date.now(),
+        rawBarcode: data.rawValue,
+        fingerprint: generateFingerprint(data),
+        parsedData: data
+      };
+      setBatchScans(prev => [...prev, entry]);
+      toast({
+        title: t('scan_successful') || "Added to Batch",
+        description: `${batchScans.length + 1} items scanned`,
+        duration: 800,
+        className: "bg-blue-500 text-white border-none"
+      });
+      setIsScannerLoading(false);
+      return;
+    }
+
+    // Single mode: Original flow
     toast({
       title: t('scan_successful') || "Scan Successful",
       description: data.rawValue,
@@ -210,6 +258,61 @@ const AddInventoryPage = () => {
     };
     setCartItems(prev => [...prev, newItem]);
     toast({ title: "New Item Configured", description: `${def.name} - ${variant}` });
+  };
+
+  const handleBatchReview = (data: {
+    productDefId: string;
+    variant: string;
+    price: number;
+    patterns: Array<{
+      fingerprint: string;
+      gtin: string;
+      batch: string;
+      expiry: string;
+      quantityPerUnit: number;
+      scanCount: number;
+      totalQuantity: number;
+      entries: any[];
+    }>;
+  }) => {
+    const def = productDefsCache.find(d => d.id === data.productDefId);
+    if (!def) return;
+
+    // Create cart item for each unique pattern
+    const newItems: CartItem[] = data.patterns.map((pattern, idx) => {
+      // Parse expiry date
+      let expiryDate: Date | undefined;
+      if (pattern.expiry) {
+        try {
+          const year = parseInt('20' + pattern.expiry.substring(0, 2));
+          const month = parseInt(pattern.expiry.substring(2, 4));
+          const day = parseInt(pattern.expiry.substring(4, 6));
+          expiryDate = new Date(year, month - 1, day);
+        } catch {
+          expiryDate = undefined;
+        }
+      }
+
+      return {
+        id: `batch_${Date.now()}_${idx}`,
+        productDefinitionId: data.productDefId,
+        productName: def.name,
+        variant: data.variant,
+        barcode: pattern.entries[0]?.rawBarcode || pattern.gtin,
+        gtin: pattern.gtin,
+        batchNumber: pattern.batch || '',
+        expiryDate,
+        quantity: pattern.totalQuantity,
+        purchasePrice: data.price
+      };
+    });
+
+    setCartItems(prev => [...prev, ...newItems]);
+    setBatchScans([]); // Clear batch queue
+    toast({
+      title: "Batch Added",
+      description: `${newItems.length} patterns added to cart (${newItems.reduce((sum, i) => sum + i.quantity, 0)} total units)`
+    });
   };
 
   const removeItem = (index: number) => {
@@ -549,6 +652,64 @@ const AddInventoryPage = () => {
 
                 {/* Barcode Scanner */}
                 <div className="sticky top-24">
+                  {/* Scan Mode Toggle */}
+                  <Card className="mb-4 border-2">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Scan Mode</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex gap-2">
+                      <Button
+                        variant={scanMode === 'single' ? 'default' : 'outline'}
+                        onClick={() => setScanMode('single')}
+                        className="flex-1"
+                        size="sm"
+                      >
+                        Single
+                      </Button>
+                      <Button
+                        variant={scanMode === 'batch' ? 'default' : 'outline'}
+                        onClick={() => setScanMode('batch')}
+                        className="flex-1"
+                        size="sm"
+                      >
+                        Batch
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Batch Mode Info */}
+                  {scanMode === 'batch' && (
+                    <Card className="mb-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium">Scanned Items</span>
+                          <Badge variant="default" className="text-lg px-3">
+                            {batchScans.length}
+                          </Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBatchScans([])}
+                            disabled={batchScans.length === 0}
+                            className="flex-1"
+                          >
+                            Clear
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => setIsBatchReviewOpen(true)}
+                            disabled={batchScans.length === 0}
+                            className="flex-1"
+                          >
+                            Review
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <Label className="block mb-2 text-lg font-semibold">{t('quick_scan') || 'Quick Scan Item'}</Label>
                   <QuickActionScanner onScan={handleScan} isLoading={isScannerLoading} />
 
@@ -589,6 +750,14 @@ const AddInventoryPage = () => {
         isOpen={isDocScannerOpen}
         onClose={() => setIsDocScannerOpen(false)}
         onScan={handleDocScan}
+      />
+
+      <BatchReviewDialog
+        isOpen={isBatchReviewOpen}
+        onClose={() => setIsBatchReviewOpen(false)}
+        batchScans={batchScans}
+        productDefinitions={productDefsCache}
+        onAddToCart={handleBatchReview}
       />
     </div>
   );
