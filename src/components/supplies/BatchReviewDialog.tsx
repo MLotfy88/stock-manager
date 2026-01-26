@@ -34,26 +34,37 @@ interface BatchReviewDialogProps {
     isOpen: boolean;
     onClose: () => void;
     batchScans: BatchScanEntry[];
-    productDefinitions: ProductDefinition[];
+    productName: string;           // NEW: Pre-selected
+    variantName: string;            // NEW: Pre-selected
     onAddToCart: (items: {
-        productDefId: string;
-        variant: string;
-        price: number;
-        patterns: GroupedPattern[];
+        patterns: Array<{
+            fingerprint: string;
+            gtin: string;
+            batch: string;
+            expiry: string;
+            quantityPerUnit: number;
+            scanCount: number;
+            totalQuantity: number;
+            entries: any[];
+            price: number;              // NEW: Price per pattern
+        }>;
     }) => void;
+    onBack: () => void;             // NEW: Back button
 }
 
 const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
     isOpen,
     onClose,
     batchScans,
-    productDefinitions,
-    onAddToCart
+    productName,
+    variantName,
+    onAddToCart,
+    onBack
 }) => {
     const { t } = useLanguage();
-    const [selectedProductId, setSelectedProductId] = useState('');
-    const [selectedVariant, setSelectedVariant] = useState('');
-    const [purchasePrice, setPurchasePrice] = useState('');
+
+    // Price state for each pattern
+    const [patternPrices, setPatternPrices] = React.useState<Record<string, number>>({});
 
     // Group scans by fingerprint
     const groupedPatterns = useMemo(() => {
@@ -90,26 +101,23 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
         return groupedPatterns.reduce((sum, p) => sum + p.totalQuantity, 0);
     }, [groupedPatterns]);
 
-    const selectedProduct = useMemo(() => {
-        return productDefinitions.find(p => p.id === selectedProductId);
-    }, [selectedProductId, productDefinitions]);
-
     const handleSubmit = () => {
-        if (!selectedProductId || !selectedVariant || !purchasePrice) {
-            return;
+        // Validate all prices are set
+        const patternsWithPrices = groupedPatterns.map(p => ({
+            ...p,
+            price: patternPrices[p.fingerprint] || 0
+        }));
+
+        if (patternsWithPrices.some(p => p.price <= 0)) {
+            return; // Don't submit if any price is invalid
         }
 
         onAddToCart({
-            productDefId: selectedProductId,
-            variant: selectedVariant,
-            price: parseFloat(purchasePrice),
-            patterns: groupedPatterns
+            patterns: patternsWithPrices
         });
 
-        // Reset form
-        setSelectedProductId('');
-        setSelectedVariant('');
-        setPurchasePrice('');
+        // Reset
+        setPatternPrices({});
         onClose();
     };
 
@@ -136,51 +144,19 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
                 </DialogHeader>
 
                 <div className="space-y-6">
-                    {/* Product Assignment Section */}
+                    {/* Product/Variant Info (Read-only) */}
                     <div className="bg-primary/5 p-4 rounded-lg border-2 border-primary/20">
-                        <h3 className="font-semibold mb-3 flex items-center gap-2">
-                            <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">1</span>
-                            {t('assign_product_variant') || 'Assign Product & Variant'}
+                        <h3 className="font-semibold mb-3 text-sm text-muted-foreground">
+                            {t('selected_product_variant') || 'Selected Product & Variant'}
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label className="text-xs text-muted-foreground mb-1">{t('product')}</Label>
-                                <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t('select_product') || 'Select Product...'} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {productDefinitions.map(p => (
-                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="text-xs text-muted-foreground">{t('product')}</div>
+                                <div className="text-lg font-semibold">{productName}</div>
                             </div>
                             <div>
-                                <Label className="text-xs text-muted-foreground mb-1">{t('variant')}</Label>
-                                <Select
-                                    value={selectedVariant}
-                                    onValueChange={setSelectedVariant}
-                                    disabled={!selectedProduct}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t('select_variant') || 'Select Variant...'} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {selectedProduct?.variants.map(v => (
-                                            <SelectItem key={String(v)} value={String(v)}>{String(v)}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label className="text-xs text-muted-foreground mb-1">{t('purchase_price') || 'Price/Unit'}</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="0.00"
-                                    value={purchasePrice}
-                                    onChange={e => setPurchasePrice(e.target.value)}
-                                />
+                                <div className="text-xs text-muted-foreground">{t('variant')}</div>
+                                <div className="text-lg font-semibold">{variantName}</div>
                             </div>
                         </div>
                     </div>
@@ -188,8 +164,8 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
                     {/* Patterns Review Section */}
                     <div>
                         <h3 className="font-semibold mb-3 flex items-center gap-2">
-                            <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">2</span>
-                            {t('review_patterns') || 'Review Scanned Patterns'}
+                            <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-sm">✓</span>
+                            {t('review_patterns') || 'Review Scanned Patterns - Step 4'}
                         </h3>
                         <div className="border rounded-lg overflow-hidden">
                             <Table>
@@ -201,7 +177,8 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
                                         <TableHead>{t('expiry') || 'Expiry'}</TableHead>
                                         <TableHead className="text-center">{t('qty_unit') || 'Qty/Unit'}</TableHead>
                                         <TableHead className="text-center">{t('scans') || 'Scans'}</TableHead>
-                                        <TableHead className="text-right font-bold">{t('total') || 'Total'}</TableHead>
+                                        <TableHead className="text-right font-bold">{t('total_qty') || 'Total Qty'}</TableHead>
+                                        <TableHead className="text-right">{t('price_unit') || 'Price/Unit'}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -220,6 +197,18 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
                                             <TableCell className="text-right font-bold text-lg">
                                                 {pattern.totalQuantity}
                                             </TableCell>
+                                            <TableCell>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="0.00"
+                                                    className="w-24 text-right"
+                                                    value={patternPrices[pattern.fingerprint] || ''}
+                                                    onChange={(e) => setPatternPrices(prev => ({
+                                                        ...prev,
+                                                        [pattern.fingerprint]: parseFloat(e.target.value) || 0
+                                                    }))}
+                                                />
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                     <TableRow className="bg-primary/10 font-bold">
@@ -229,6 +218,7 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
                                         <TableCell className="text-right text-xl">
                                             {totalQuantity}
                                         </TableCell>
+                                        <TableCell></TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
@@ -238,22 +228,24 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
 
                 <DialogFooter className="gap-2">
                     <div className="text-xs text-muted-foreground flex items-center gap-2">
-                        {selectedProductId && selectedVariant && purchasePrice ? (
+                        {Object.keys(patternPrices).length === groupedPatterns.length &&
+                            Object.values(patternPrices).every(p => p > 0) ? (
                             <span className="text-green-600 flex items-center gap-1">
-                                <Check className="h-3 w-3" /> Ready to add
+                                <Check className="h-3 w-3" /> {t('ready_to_add') || 'Ready to add'}
                             </span>
                         ) : (
                             <span className="text-amber-600 flex items-center gap-1">
-                                <X className="h-3 w-3" /> Fill all fields
+                                <X className="h-3 w-3" /> {t('enter_all_prices') || 'Enter all prices'}
                             </span>
                         )}
                     </div>
-                    <Button variant="outline" onClick={onClose}>
-                        {t('cancel')}
+                    <Button variant="outline" onClick={onBack}>
+                        {t('back')}
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={!selectedProductId || !selectedVariant || !purchasePrice}
+                        disabled={Object.keys(patternPrices).length !== groupedPatterns.length ||
+                            Object.values(patternPrices).some(p => p <= 0)}
                     >
                         {t('add_to_cart') || 'Add to Cart'}
                     </Button>

@@ -28,6 +28,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import DocumentScanner from '@/components/common/DocumentScanner';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import BatchReviewDialog from '@/components/supplies/BatchReviewDialog';
+import BatchScanningStep from '@/components/supplies/BatchScanningStep';
+import BatchProductStep from '@/components/supplies/BatchProductStep';
+import BatchVariantStep from '@/components/supplies/BatchVariantStep';
 
 // Extended type for local cart items
 interface CartItem {
@@ -50,6 +53,8 @@ interface BatchScanEntry {
   rawBarcode: string;
   fingerprint: string;
   parsedData: ParsedGS1Data;
+  detectedProduct?: string;    // GTIN lookup result
+  detectedVariant?: string;    // GTIN lookup result
 }
 
 // Generate fingerprint for grouping
@@ -172,31 +177,55 @@ const AddInventoryPage = () => {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
   // --- Batch Scan State ---
+  type BatchWizardStep = 'scanning' | 'product' | 'variant' | 'review' | null;
   const [scanMode, setScanMode] = useState<'single' | 'batch'>('single');
   const [batchScans, setBatchScans] = useState<BatchScanEntry[]>([]);
-  const [isBatchReviewOpen, setIsBatchReviewOpen] = useState(false);
+  const [batchWizardStep, setBatchWizardStep] = useState<BatchWizardStep>(null);
+  const [batchProduct, setBatchProduct] = useState<string>('');
+  const [batchVariant, setBatchVariant] = useState<string>('');
 
   const handleScan = async (data: ParsedGS1Data) => {
     setIsScannerLoading(true);
     setCurrentScannedData(data);
 
-    // Batch mode: Add to queue
+    // Batch mode: Add to queue with GTIN lookup
     if (scanMode === 'batch') {
-      const entry: BatchScanEntry = {
-        id: `scan_${Date.now()}_${Math.random()}`,
-        timestamp: Date.now(),
-        rawBarcode: data.rawValue,
-        fingerprint: generateFingerprint(data),
-        parsedData: data
-      };
-      setBatchScans(prev => [...prev, entry]);
-      toast({
-        title: t('scan_successful') || "Added to Batch",
-        description: `${batchScans.length + 1} items scanned`,
-        duration: 800,
-        className: "bg-blue-500 text-white border-none"
-      });
-      setIsScannerLoading(false);
+      try {
+        // Perform GTIN lookup
+        let detectedProduct: string | undefined;
+        let detectedVariant: string | undefined;
+
+        if (data.gtin) {
+          const mapping = await getGTINMapping(data.gtin);
+          if (mapping) {
+            detectedProduct = mapping.product_definition_id;
+            detectedVariant = mapping.variant_name;
+          }
+        }
+
+        const entry: BatchScanEntry = {
+          id: `scan_${Date.now()}_${Math.random()}`,
+          timestamp: Date.now(),
+          rawBarcode: data.rawValue,
+          fingerprint: generateFingerprint(data),
+          parsedData: data,
+          detectedProduct,
+          detectedVariant
+        };
+
+        setBatchScans(prev => [...prev, entry]);
+        toast({
+          title: t('scan_successful') || "Added to Batch",
+          description: `${batchScans.length + 1} items scanned`,
+          duration: 800,
+          className: "bg-blue-500 text-white border-none"
+        });
+      } catch (error) {
+        console.error('Batch scan error:', error);
+        toast({ title: t('error'), description: "Error processing scan", variant: "destructive" });
+      } finally {
+        setIsScannerLoading(false);
+      }
       return;
     }
 
@@ -260,10 +289,59 @@ const AddInventoryPage = () => {
     toast({ title: "New Item Configured", description: `${def.name} - ${variant}` });
   };
 
+  // Batch wizard handlers
+  const handleBatchScanningNext = () => {
+    // Check for detected products
+    const detections = batchScans
+      .filter(s => s.detectedProduct && s.detectedVariant)
+      .map(s => ({ product: s.detectedProduct!, variant: s.detectedVariant! }));
+
+    if (detections.length > 0) {
+      // Found at least one detection - use it for all
+      const firstDetection = detections[0];
+      setBatchProduct(firstDetection.product);
+      setBatchVariant(firstDetection.variant);
+
+      // Skip to review step
+      setBatchWizardStep('review');
+      toast({
+        title: t('auto_detected') || 'Auto-detected',
+        description: t('product_detected_from_barcode') || 'Product detected from barcode',
+        className: "bg-green-500 text-white"
+      });
+    } else {
+      // No detections - manual selection needed
+      setBatchWizardStep('product');
+    }
+  };
+
+  const handleBatchProductNext = () => {
+    setBatchWizardStep('variant');
+  };
+
+  const handleBatchVariantNext = () => {
+    setBatchWizardStep('review');
+  };
+
+  const handleBatchWizardBack = (fromStep: BatchWizardStep) => {
+    if (fromStep === 'product') {
+      setBatchWizardStep('scanning');
+    } else if (fromStep === 'variant') {
+      setBatchWizardStep('product');
+    } else if (fromStep === 'review') {
+      const hasDetections = batchScans.some(s => s.detectedProduct);
+      setBatchWizardStep(hasDetections ? 'scanning' : 'variant');
+    }
+  };
+
+  const handleBatchCancel = () => {
+    setBatchScans([]);
+    setBatchWizardStep(null);
+    setBatchProduct('');
+    setBatchVariant('');
+  };
+
   const handleBatchReview = (data: {
-    productDefId: string;
-    variant: string;
-    price: number;
     patterns: Array<{
       fingerprint: string;
       gtin: string;
@@ -273,10 +351,11 @@ const AddInventoryPage = () => {
       scanCount: number;
       totalQuantity: number;
       entries: any[];
+      price: number;
     }>;
   }) => {
-    const def = productDefsCache.find(d => d.id === data.productDefId);
-    if (!def) return;
+    const productDef = productDefsCache.find(d => d.id === batchProduct);
+    if (!productDef) return;
 
     // Create cart item for each unique pattern
     const newItems: CartItem[] = data.patterns.map((pattern, idx) => {
@@ -295,23 +374,29 @@ const AddInventoryPage = () => {
 
       return {
         id: `batch_${Date.now()}_${idx}`,
-        productDefinitionId: data.productDefId,
-        productName: def.name,
-        variant: data.variant,
+        productDefinitionId: batchProduct,
+        productName: productDef.name,
+        variant: batchVariant,
         barcode: pattern.entries[0]?.rawBarcode || pattern.gtin,
         gtin: pattern.gtin,
         batchNumber: pattern.batch || '',
         expiryDate,
         quantity: pattern.totalQuantity,
-        purchasePrice: data.price
+        purchasePrice: pattern.price
       };
     });
 
     setCartItems(prev => [...prev, ...newItems]);
-    setBatchScans([]); // Clear batch queue
+
+    // Clear batch state
+    setBatchScans([]);
+    setBatchWizardStep(null);
+    setBatchProduct('');
+    setBatchVariant('');
+
     toast({
       title: "Batch Added",
-      description: `${newItems.length} patterns added to cart (${newItems.reduce((sum, i) => sum + i.quantity, 0)} total units)`
+      description: `${newItems.length} patterns added (${newItems.reduce((sum, i) => sum + i.quantity, 0)} units)`
     });
   };
 
@@ -501,6 +586,7 @@ const AddInventoryPage = () => {
                             <SelectItem value="deferred">{t('deferred') || 'Deferred'}</SelectItem>
                             <SelectItem value="installments">{t('installments') || 'Installments'}</SelectItem>
                             <SelectItem value="check">{t('check') || 'Check'}</SelectItem>
+                            <SelectItem value="opening_balance">{t('opening_balance') || 'رصيد أول المدة'}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -699,7 +785,7 @@ const AddInventoryPage = () => {
                           </Button>
                           <Button
                             size="sm"
-                            onClick={() => setIsBatchReviewOpen(true)}
+                            onClick={() => setBatchWizardStep('scanning')}
                             disabled={batchScans.length === 0}
                             className="flex-1"
                           >
@@ -752,12 +838,42 @@ const AddInventoryPage = () => {
         onScan={handleDocScan}
       />
 
+      {/* Batch Wizard */}
+      <BatchScanningStep
+        isOpen={batchWizardStep === 'scanning'}
+        scans={batchScans}
+        onScan={handleScan}
+        onNext={handleBatchScanningNext}
+        onCancel={handleBatchCancel}
+        isLoading={isScannerLoading}
+      />
+
+      <BatchProductStep
+        isOpen={batchWizardStep === 'product'}
+        products={productDefsCache}
+        selectedProduct={batchProduct}
+        onSelect={setBatchProduct}
+        onNext={handleBatchProductNext}
+        onBack={() => handleBatchWizardBack('product')}
+      />
+
+      <BatchVariantStep
+        isOpen={batchWizardStep === 'variant'}
+        product={productDefsCache.find(p => p.id === batchProduct)}
+        selectedVariant={batchVariant}
+        onSelect={setBatchVariant}
+        onNext={handleBatchVariantNext}
+        onBack={() => handleBatchWizardBack('variant')}
+      />
+
       <BatchReviewDialog
-        isOpen={isBatchReviewOpen}
-        onClose={() => setIsBatchReviewOpen(false)}
+        isOpen={batchWizardStep === 'review'}
+        onClose={() => setBatchWizardStep(null)}
         batchScans={batchScans}
-        productDefinitions={productDefsCache}
+        productName={productDefsCache.find(p => p.id === batchProduct)?.name || ''}
+        variantName={batchVariant}
         onAddToCart={handleBatchReview}
+        onBack={() => handleBatchWizardBack('review')}
       />
     </div>
   );
