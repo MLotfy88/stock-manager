@@ -90,6 +90,12 @@ export interface SupplyVoucher {
   stock_type: StockType;
   notes?: string;
   created_at: string;
+  payment_method?: PaymentMethod;
+  payment_status?: PaymentStatus;
+  total_amount?: number;
+  paid_amount?: number;
+  invoice_image_urls?: string[]; // Array of URLs
+  installments?: VoucherInstallment[]; // For frontend convenience
 }
 
 export interface InventoryItem {
@@ -210,3 +216,21 @@ export interface SignInCredentials {
   email: string;
   password: string;
 }
+
+export type PaymentMethod = 'cash' | 'deferred' | 'installments' | 'check';
+export type PaymentStatus = 'paid' | 'pending' | 'partially_paid' | 'overdue';
+
+export interface VoucherInstallment {
+  id: string;
+  voucher_id: string;
+  amount: number;
+  due_date: string;
+  status: PaymentStatus;
+  payment_date?: string;
+  notes?: string;
+}
+
+// Update SupplyVoucher with new fields
+// Note: We extend the existing interface or modify it. Since it's defined above, let's modify the file content directly where it is defined or extend it here if possible. 
+// But finding and replacing the specific block is better.
+

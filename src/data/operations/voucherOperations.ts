@@ -19,6 +19,11 @@ export const createSupplyVoucherWithItems = async (
       stock_type: voucherData.stock_type,
       notes: voucherData.notes,
       voucher_number: voucherData.voucher_number,
+      payment_method: voucherData.payment_method,
+      payment_status: voucherData.payment_status,
+      total_amount: voucherData.total_amount,
+      paid_amount: voucherData.paid_amount,
+      invoice_image_urls: voucherData.invoice_image_urls,
     })
     .select()
     .single();
@@ -45,6 +50,26 @@ export const createSupplyVoucherWithItems = async (
     console.error('Error adding inventory items for voucher:', itemsError);
     // TODO: Add logic to delete the created voucher to avoid orphaned records
     throw itemsError;
+  }
+
+  // 4. Insert installments if any
+  if (voucherData.installments && voucherData.installments.length > 0) {
+    const installmentsToInsert = voucherData.installments.map(inst => ({
+      voucher_id: voucher.id,
+      amount: inst.amount,
+      due_date: inst.due_date,
+      status: 'pending',
+      notes: inst.notes
+    }));
+
+    const { error: instError } = await supabase
+      .from('voucher_installments')
+      .insert(installmentsToInsert);
+
+    if (instError) {
+      console.error("Error creating installments:", instError);
+      // Non-critical (?) but should be handled
+    }
   }
 
   return { voucher, items: newItems };

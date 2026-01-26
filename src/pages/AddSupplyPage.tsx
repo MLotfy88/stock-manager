@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
@@ -10,8 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSuppliers } from '@/data/operations/supplierOperations';
-import { Supplier, Manufacturer, Store, StockType, ProductDefinition } from '@/types';
-import { Save, RotateCcw, Trash2, Plus, Edit } from 'lucide-react';
+import { Supplier, Manufacturer, Store, StockType, ProductDefinition, PaymentMethod, PaymentStatus, VoucherInstallment } from '@/types';
+import { Save, RotateCcw, Trash2, Plus, Edit, Scan, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { getManufacturers } from '@/data/operations/manufacturerOperations';
@@ -25,6 +25,8 @@ import { NewItemWizard } from '@/components/supplies/NewItemWizard';
 import { getProductDefinitions } from '@/data/operations/productDefinitionOperations';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import DocumentScanner from '@/components/common/DocumentScanner';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 
 // Extended type for local cart items
 interface CartItem {
@@ -54,8 +56,6 @@ const AddInventoryPage = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [manufacturersList, setManufacturersList] = useState<Manufacturer[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
-
-  // Cache product definitions for quick lookup
   const [productDefsCache, setProductDefsCache] = useState<ProductDefinition[]>([]);
 
   useEffect(() => {
@@ -78,66 +78,98 @@ const AddInventoryPage = () => {
     loadInitialData();
   }, [toast, t]);
 
-  // --- Form State (Session Setup) ---
+  // --- Form State ---
   const [supplierId, setSupplierId] = useState('');
   const [manufacturerId, setManufacturerId] = useState('');
   const [storeId, setStoreId] = useState('');
   const [stockType, setStockType] = useState<StockType>('purchased');
   const [voucherNumber, setVoucherNumber] = useState('');
 
+  // --- Payment State ---
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('paid');
+  const [paidAmount, setPaidAmount] = useState<number>(0);
+  const [installments, setInstallments] = useState<Omit<VoucherInstallment, 'id' | 'voucher_id' | 'status'>[]>([]);
+
+  // Installment input state
+  const [newInstAmount, setNewInstAmount] = useState<string>('');
+  const [newInstDate, setNewInstDate] = useState<string>('');
+  const [newInstNote, setNewInstNote] = useState<string>('');
+
+  // --- Scanner State ---
+  const [isDocScannerOpen, setIsDocScannerOpen] = useState(false);
+  // Multi-page support: Arrays instead of single value
+  const [invoiceImageBlobs, setInvoiceImageBlobs] = useState<Blob[]>([]);
+  const [invoiceImageUrls, setInvoiceImageUrls] = useState<string[]>([]);
+
   // --- Cart State ---
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  // --- Scanning & Dialog State ---
+  // Calculated Totals
+  const totalCartValue = useMemo(() => {
+    return cartItems.reduce((acc, item) => acc + (item.quantity * item.purchasePrice), 0);
+  }, [cartItems]);
+
+  useEffect(() => {
+    // Create preview URLs
+    const urls = invoiceImageBlobs.map(blob => URL.createObjectURL(blob));
+    setInvoiceImageUrls(urls);
+    // Cleanup
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [invoiceImageBlobs]);
+
+  const handleDocScan = (blob: Blob) => {
+    setInvoiceImageBlobs(prev => [...prev, blob]);
+    // Keep scanner open or close? Let's stay open to allow consecutive scans?
+    // No, usually better to confirm one by one. Or ask user.
+    // Behavior: Scanner closes after confirm. User clicks "Add Page" to scan more.
+  };
+
+  const removeImage = (index: number) => {
+    setInvoiceImageBlobs(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Sync paid amount/status defaults based on method
+  useEffect(() => {
+    if (paymentMethod === 'cash') {
+      setPaidAmount(totalCartValue);
+      setPaymentStatus('paid');
+      setInstallments([]);
+    } else if (paymentMethod === 'deferred' || paymentMethod === 'installments') {
+      setPaymentStatus('pending');
+    }
+  }, [paymentMethod, totalCartValue]);
+
+
+  // --- Scanning Logic ---
   const [isScannerLoading, setIsScannerLoading] = useState(false);
   const [currentScannedData, setCurrentScannedData] = useState<ParsedGS1Data | null>(null);
-
-  // Dialogs
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmDialogProduct, setConfirmDialogProduct] = useState<{ name: string, variant: string }>({ name: '', variant: '' });
-
   const [isWizardOpen, setIsWizardOpen] = useState(false);
-
-  // --- Handlers ---
 
   const handleScan = async (data: ParsedGS1Data) => {
     setIsScannerLoading(true);
     setCurrentScannedData(data);
-
-    // Immediate Feedback
     toast({
       title: t('scan_successful') || "Scan Successful",
       description: data.rawValue,
       duration: 1000,
       className: "bg-green-500 text-white border-none"
     });
-
     try {
-      // 1. Check if we have a product_id directly from the scanner (via GTIN mapping)
       let matchedDefId = data.product_id;
       let matchedVariant = data.variant_name;
-
-      // 2. If not, try to find by barcode (if it's a simple barcode that matches a known item)
-      // Note: In a real app we might query an API 'findByBarcode', but here we rely on the hook's mapping 
-      // OR we can check our local cache/db if we had barcode index. 
-      // For now, we trust the hook's GTIN mapping. 
-      // If the hook didn't find it, we treat it as unknown.
-
       if (matchedDefId && matchedVariant) {
-        // Found! Open Confirmation Dialog
         const def = productDefsCache.find(d => d.id === matchedDefId);
-        setConfirmDialogProduct({
-          name: def?.name || "Unknown Product",
-          variant: matchedVariant
-        });
+        setConfirmDialogProduct({ name: def?.name || "Unknown Product", variant: matchedVariant });
         setIsConfirmOpen(true);
       } else {
-        // Not found! Open New Item Wizard
         setIsWizardOpen(true);
       }
-
     } catch (e) {
-      console.error(e);
       toast({ title: t('error'), description: "Error processing scan", variant: "destructive" });
     } finally {
       setIsScannerLoading(false);
@@ -146,9 +178,7 @@ const AddInventoryPage = () => {
 
   const handleConfirmItem = (data: ConfirmedItemData) => {
     if (!currentScannedData || !currentScannedData.product_id) return;
-
     const def = productDefsCache.find(d => d.id === currentScannedData.product_id);
-
     const newItem: CartItem = {
       id: `item_${Date.now()}`,
       productDefinitionId: currentScannedData.product_id,
@@ -161,32 +191,24 @@ const AddInventoryPage = () => {
       quantity: data.quantity,
       purchasePrice: data.purchasePrice
     };
-
     setCartItems(prev => [...prev, newItem]);
     toast({ title: "Item Added", description: `${newItem.productName} (x${newItem.quantity})` });
   };
 
   const handleWizardComplete = (def: ProductDefinition, variant: string, data: ConfirmedItemData) => {
-    // 1. Add to cart
     const newItem: CartItem = {
       id: `item_${Date.now()}`,
       productDefinitionId: def.id,
       productName: def.name,
       variant: variant,
       barcode: currentScannedData?.rawValue || "",
-      gtin: currentScannedData?.gtin, // If scanner picked up a GTIN but it wasn't mapped yet
+      gtin: currentScannedData?.gtin,
       batchNumber: data.batchNumber,
       expiryDate: data.expiryDate,
       quantity: data.quantity,
       purchasePrice: data.purchasePrice
     };
-
     setCartItems(prev => [...prev, newItem]);
-
-    // 2. Update cache if it's a new definition (though wizard selects *existing* def mostly)
-    // If wizard created a NEW def (not implemented in this wizard version, it selects existing), we'd need to re-fetch.
-    // Since wizard selects existing, we are good.
-
     toast({ title: "New Item Configured", description: `${def.name} - ${variant}` });
   };
 
@@ -194,6 +216,29 @@ const AddInventoryPage = () => {
     setCartItems(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Payment Handlers
+  const addInstallment = () => {
+    const amount = parseFloat(newInstAmount);
+    if (!amount || amount <= 0 || !newInstDate) {
+      toast({ title: t('error'), description: t('invalid_installment'), variant: "destructive" });
+      return;
+    }
+    setInstallments(prev => [...prev, { amount, due_date: newInstDate, notes: newInstNote }]);
+    setNewInstAmount('');
+    setNewInstDate('');
+    setNewInstNote('');
+  };
+
+  const removeInstallment = (index: number) => {
+    setInstallments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const remainingAmount = useMemo(() => {
+    const planned = installments.reduce((sum, i) => sum + i.amount, 0);
+    return totalCartValue - planned - (paymentMethod === 'cash' ? 0 : paidAmount); // Deduct paidAmount if partially paid
+  }, [totalCartValue, installments, paymentMethod, paidAmount]);
+
+  // Save Logic
   const handleSaveInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -201,37 +246,70 @@ const AddInventoryPage = () => {
       toast({ title: t('error'), description: t('please_fill_header_fields'), variant: 'destructive' });
       return;
     }
-
     if (cartItems.length === 0) {
       toast({ title: t('error'), description: "Cart is empty", variant: 'destructive' });
       return;
     }
 
-    const voucherData = {
-      supplier_id: supplierId,
-      date: format(new Date(), 'yyyy-MM-dd'),
-      stock_type: stockType,
-      voucher_number: voucherNumber,
-    };
-
-    const newInventoryItems = cartItems.map(item => ({
-      product_definition_id: item.productDefinitionId,
-      variant: item.variant,
-      barcode: item.barcode || null,
-      quantity: item.quantity,
-      initial_quantity: item.quantity,
-      store_id: storeId,
-      manufacturer_id: manufacturerId || null, // Optional in DB but good to have
-      supplier_id: supplierId,
-      batch_number: item.batchNumber,
-      expiry_date: item.expiryDate ? format(item.expiryDate, 'yyyy-MM-dd') : undefined,
-      purchase_price: item.purchasePrice,
-    }));
-
     try {
+      // Upload Images
+      let uploadedImageUrls: string[] = [];
+      if (invoiceImageBlobs.length > 0) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          // Upload all in parallel
+          const uploadPromises = invoiceImageBlobs.map(async (blob) => {
+            const fileName = `invoice_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+            const { data: uploadData, error } = await supabase.storage
+              .from('invoices')
+              .upload(fileName, blob);
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage.from('invoices').getPublicUrl(fileName);
+            return publicUrl;
+          });
+
+          try {
+            uploadedImageUrls = await Promise.all(uploadPromises);
+          } catch (err) {
+            console.error("Upload failed", err);
+            toast({ title: "Warning", description: "Failed to upload some images.", variant: "secondary" });
+            // Continue...
+          }
+        }
+      }
+
+      const voucherData = {
+        supplier_id: supplierId,
+        date: format(new Date(), 'yyyy-MM-dd'),
+        stock_type: stockType,
+        voucher_number: voucherNumber,
+        payment_method: paymentMethod,
+        payment_status: paymentStatus,
+        total_amount: totalCartValue,
+        paid_amount: paidAmount,
+        invoice_image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
+        installments: installments
+      };
+
+      const newInventoryItems = cartItems.map(item => ({
+        product_definition_id: item.productDefinitionId,
+        variant: item.variant,
+        barcode: item.barcode || null,
+        quantity: item.quantity,
+        initial_quantity: item.quantity,
+        store_id: storeId,
+        manufacturer_id: manufacturerId || null,
+        supplier_id: supplierId,
+        batch_number: item.batchNumber,
+        expiry_date: item.expiryDate ? format(item.expiryDate, 'yyyy-MM-dd') : undefined,
+        purchase_price: item.purchasePrice,
+      }));
+
       await createSupplyVoucherWithItems(voucherData, newInventoryItems as any);
 
-      // Save GTIN mappings for items that have GTINs
+      // GTIN mapping saving...
       const gtinMappings = cartItems
         .filter(item => item.gtin && item.productDefinitionId && item.variant)
         .map(item => ({
@@ -241,10 +319,7 @@ const AddInventoryPage = () => {
           last_supplier_id: supplierId,
           average_price: item.purchasePrice || undefined,
         }));
-
-      if (gtinMappings.length > 0) {
-        await batchSaveGTINMappings(gtinMappings);
-      }
+      if (gtinMappings.length > 0) await batchSaveGTINMappings(gtinMappings);
 
       toast({ title: t('success'), description: t('invoice_processed_successfully') });
       navigate('/supplies');
@@ -255,14 +330,9 @@ const AddInventoryPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background dark:from-slate-900 dark:to-slate-950 pb-20" dir={direction}>
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-background pb-20" dir={direction}>
       <Header toggleSidebar={toggleSidebar} />
-      <Sidebar
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        closeSidebar={closeSidebar}
-      />
-
+      <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} closeSidebar={closeSidebar} />
       <main className={`pt-20 ${isMobile ? 'px-4' : direction === 'rtl' ? 'pr-72 pl-8' : 'pl-72 pr-8'} transition-all`}>
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex justify-between items-center">
@@ -270,131 +340,228 @@ const AddInventoryPage = () => {
           </div>
 
           <form onSubmit={handleSaveInvoice}>
-            {/* Session Setup */}
-            <Card className="mb-6 border-l-4 border-l-primary shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Edit className="h-4 w-4 text-muted-foreground" />
-                  {t('invoice_details')}
-                </CardTitle>
-                <CardDescription>Configure session defaults for this invoice.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="stockType" className="text-xs text-muted-foreground">{t('stock_type')}</Label>
-                  <Select value={stockType} onValueChange={(value) => setStockType(value as StockType)}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder={t('select_stock_type')} /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="purchased">{t('purchased')}</SelectItem>
-                      <SelectItem value="on_shelf">{t('on_shelf')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="voucherNumber" className="text-xs text-muted-foreground">{t('voucher_number')}</Label>
-                  <Input id="voucherNumber" value={voucherNumber} onChange={(e) => setVoucherNumber(e.target.value)} className="h-9" />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="manufacturer" className="text-xs text-muted-foreground">{t('manufacturer')}</Label>
-                  <Select value={manufacturerId} onValueChange={setManufacturerId}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder={`${t('select')} ${t('manufacturer')}`} /></SelectTrigger>
-                    <SelectContent>{manufacturersList.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="supplier" className="text-xs text-muted-foreground">{t('supplier')}</Label>
-                  <Select value={supplierId} onValueChange={setSupplierId}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder={`${t('select')} ${t('supplier')}`} /></SelectTrigger>
-                    <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="store" className="text-xs text-muted-foreground">{t('store')}</Label>
-                  <Select value={storeId} onValueChange={setStoreId}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder={t('select_store')} /></SelectTrigger>
-                    <SelectContent>{stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column: Invoice Header & Payment */}
+              <div className="lg:col-span-2 space-y-6">
+                <Card className="border-l-4 border-l-primary shadow-sm">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Edit className="h-4 w-4 text-muted-foreground" />
+                      {t('invoice_details')}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t('stock_type')}</Label>
+                      <Select value={stockType} onValueChange={(value) => setStockType(value as StockType)}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder={t('select_stock_type')} /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="purchased">{t('purchased')}</SelectItem>
+                          <SelectItem value="on_shelf">{t('on_shelf')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t('voucher_number')}</Label>
+                      <Input value={voucherNumber} onChange={(e) => setVoucherNumber(e.target.value)} className="h-9" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t('supplier')}</Label>
+                      <Select value={supplierId} onValueChange={setSupplierId}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder={t('select_supplier')} /></SelectTrigger>
+                        <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t('store')}</Label>
+                      <Select value={storeId} onValueChange={setStoreId}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder={t('select_store')} /></SelectTrigger>
+                        <SelectContent>{stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            {/* Scanner Section */}
-            <div className="mb-8">
-              <Label className="block mb-2 text-lg font-semibold">{t('scan_item') || 'مسح صنف'}</Label>
-              <QuickActionScanner onScan={handleScan} isLoading={isScannerLoading} />
-            </div>
+                {/* Payment Section */}
+                <Card className="border-l-4 border-l-green-500 shadow-sm">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg">{t('payment_details') || 'Payment Details'}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">{t('payment_method') || 'Payment Method'}</Label>
+                        <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">{t('cash') || 'Cash'}</SelectItem>
+                            <SelectItem value="deferred">{t('deferred') || 'Deferred'}</SelectItem>
+                            <SelectItem value="installments">{t('installments') || 'Installments'}</SelectItem>
+                            <SelectItem value="check">{t('check') || 'Check'}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {(paymentMethod === 'deferred' || paymentMethod === 'installments') && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">{t('paid_amount_now') || 'Paid Amount Now'}</Label>
+                          <Input
+                            type="number"
+                            value={paidAmount}
+                            onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                            min="0"
+                          />
+                        </div>
+                      )}
+                    </div>
 
-            {/* Cart List */}
-            {cartItems.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex justify-between">
-                    <span>{t('scanned_items') || 'الأصناف الممسوحة'} ({cartItems.length})</span>
-                    <Badge variant="secondary">{cartItems.reduce((acc, item) => acc + item.quantity, 0)} {t('total_quantity') || 'إجمالي الكمية'}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[40%] text-right">{t('product')}</TableHead>
-                          <TableHead className="text-right">{t('batch_expiry') || 'الباتش / الصلاحية'}</TableHead>
-                          <TableHead className="text-center">{t('quantity')}</TableHead>
-                          <TableHead className="text-right">{t('price')}</TableHead>
-                          <TableHead className="w-[50px]"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {cartItems.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              <div className="font-medium">{item.productName}</div>
-                              <div className="text-xs text-muted-foreground">{item.variant}</div>
-                              <div className="text-[10px] font-mono text-muted-foreground mt-0.5">{item.barcode}</div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">{item.batchNumber}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {item.expiryDate ? format(item.expiryDate, 'MM/yyyy') : '-'}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center font-bold text-lg">
-                              {item.quantity}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {item.purchasePrice > 0 ? item.purchasePrice.toFixed(2) : '-'}
-                            </TableCell>
-                            <TableCell>
+                    {/* Installments Table */}
+                    {(paymentMethod === 'installments' || paymentMethod === 'deferred') && (
+                      <div className="bg-muted/30 p-4 rounded-lg border">
+                        <div className="mb-3 flex justify-between items-center">
+                          <span className="font-semibold text-sm">{t('installments_schedule') || 'Installments Schedule'}</span>
+                          <Badge variant={Math.abs(remainingAmount) < 1 ? "default" : "destructive"}>
+                            {t('remaining')}: {remainingAmount.toFixed(2)}
+                          </Badge>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>{t('amount')}</TableHead>
+                              <TableHead>{t('due_date')}</TableHead>
+                              <TableHead>{t('notes')}</TableHead>
+                              <TableHead></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {installments.map((inst, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>{inst.amount}</TableCell>
+                                <TableCell>{inst.due_date}</TableCell>
+                                <TableCell>{inst.notes}</TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="sm" onClick={() => removeInstallment(idx)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow>
+                              <TableCell><Input type="number" placeholder="0.00" value={newInstAmount} onChange={e => setNewInstAmount(e.target.value)} className="h-8 w-24" /></TableCell>
+                              <TableCell><Input type="date" value={newInstDate} onChange={e => setNewInstDate(e.target.value)} className="h-8" /></TableCell>
+                              <TableCell><Input placeholder="Check no..." value={newInstNote} onChange={e => setNewInstNote(e.target.value)} className="h-8" /></TableCell>
+                              <TableCell>
+                                <Button variant="secondary" size="sm" onClick={addInstallment} disabled={remainingAmount <= 0}><Plus className="h-4 w-4" /></Button>
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Cart Items */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex justify-between">
+                      <span>{t('scanned_items')} ({cartItems.length})</span>
+                      <Badge variant="secondary">{t('total')}: {totalCartValue.toFixed(2)}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {cartItems.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[40%] text-right">{t('product')}</TableHead>
+                            <TableHead className="text-center">{t('quantity')}</TableHead>
+                            <TableHead className="text-right">{t('price')}</TableHead>
+                            <TableHead className="w-[50px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {cartItems.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell>
+                                <div className="font-medium">{item.productName}</div>
+                                <div className="text-xs text-muted-foreground">{item.variant}</div>
+                              </TableCell>
+                              <TableCell className="text-center font-bold">{item.quantity}</TableCell>
+                              <TableCell className="text-right">{item.purchasePrice > 0 ? item.purchasePrice.toFixed(2) : '-'}</TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="p-8 text-center text-muted-foreground">{t('no_items_added')}</div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column: Scanner & Actions */}
+              <div className="space-y-6">
+                {/* Invoice Image Scanner */}
+                <Card className="border-l-4 border-l-blue-500 shadow-sm overflow-hidden">
+                  <CardHeader className="bg-blue-50/50 pb-2">
+                    <CardTitle className="text-base text-blue-700">{t('invoice_image') || 'Invoice Images'}</CardTitle>
+                    <CardDescription className="text-xs">Scan one or more pages</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 flex flex-col items-center justify-center min-h-[200px] border-b">
+                    {invoiceImageUrls.length > 0 ? (
+                      <div className="w-full space-y-4">
+                        <div className="grid grid-cols-2 gap-2">
+                          {invoiceImageUrls.map((url, idx) => (
+                            <div key={idx} className="relative group aspect-[3/4]">
+                              <img src={url} alt={`Page ${idx + 1}`} className="w-full h-full object-cover rounded-md border" />
                               <Button
                                 type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                onClick={() => removeItem(index)}
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => removeImage(idx)}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3 w-3" />
                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                              <span className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1 rounded">P{idx + 1}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <Button type="button" onClick={() => setIsDocScannerOpen(true)} className="w-full" variant="secondary">
+                          <Plus className="h-4 w-4 mr-2" />
+                          {t('add_another_page') || 'Add Page'}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center space-y-4">
+                        <div className="bg-blue-100 p-4 rounded-full inline-block">
+                          <Scan className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">Scan invoice pages (Multi-page supported)</p>
+                        <Button type="button" onClick={() => setIsDocScannerOpen(true)} className="w-full">
+                          {t('scan_invoice') || 'Scan First Page'}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-            {/* Footer Actions */}
-            <div className="flex flex-col sm:flex-row justify-end gap-3 mt-8 pb-10">
-              <Button type="button" variant="outline" onClick={() => navigate('/supplies')} className="gap-2 h-12">
-                <RotateCcw className="h-4 w-4" />
-                {t('cancel')}
-              </Button>
-              <Button type="submit" className="gap-2 h-12 text-lg px-8 shadow-lg shadow-primary/20" disabled={cartItems.length === 0}>
-                <Save className="h-5 w-5" />
-                {t('save_invoice')}
-              </Button>
+                {/* Barcode Scanner */}
+                <div className="sticky top-24">
+                  <Label className="block mb-2 text-lg font-semibold">{t('quick_scan') || 'Quick Scan Item'}</Label>
+                  <QuickActionScanner onScan={handleScan} isLoading={isScannerLoading} />
+
+                  <div className="mt-8 flex flex-col gap-3">
+                    <Button type="submit" className="h-12 text-lg shadow-lg" disabled={cartItems.length === 0}>
+                      <Save className="h-5 w-5 mr-2" /> {t('save_invoice')}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => navigate('/supplies')} className="h-10">
+                      {t('cancel')}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </form>
         </div>
@@ -416,6 +583,12 @@ const AddInventoryPage = () => {
         onComplete={handleWizardComplete}
         scannedData={currentScannedData}
         defaultBarcode={currentScannedData?.rawValue}
+      />
+
+      <DocumentScanner
+        isOpen={isDocScannerOpen}
+        onClose={() => setIsDocScannerOpen(false)}
+        onScan={handleDocScan}
       />
     </div>
   );

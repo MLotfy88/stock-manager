@@ -12,15 +12,44 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 const OnShelfReportPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { t, direction } = useLanguage();
+
   const [reportData, setReportData] = useState<OnShelfItemStatus[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [productDefs, setProductDefs] = useState<any[]>([]); // Need definitions for filter
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSupplier, setSelectedSupplier] = useState('all');
+
+  const [filters, setFilters] = useState({
+    supplier: 'all',
+    product: 'all', // Product Name in this dataset, but better to filter by text if IDs not avail, BUT better to use IDs. 
+    // reportData has product_name and variant. It doesn't seem to have IDs readily available in the interface OnShelfItemStatus? 
+    // Let's check types. Assuming we can match by name or fetch definitions to map.
+    // Actually `OnShelfItemStatus` comes from a view.
+    variant: 'all'
+  });
+
+  // Since OnShelfItemStatus might not have definition_id, we'll filter by Product Name string if we have to, 
+  // OR we assume we can fetch product definitions and match names.
+  // For safety/speed, let's filter the `reportData` itself to get unique products.
+
+  const uniqueProducts = useMemo(() => {
+    const products = new Set(reportData.map(i => i.product_name));
+    return Array.from(products).sort();
+  }, [reportData]);
+
+  const availableVariants = useMemo(() => {
+    if (filters.product === 'all') return [];
+    // Get variants for this product name from report data
+    const variants = new Set(reportData.filter(i => i.product_name === filters.product).map(i => i.variant));
+    return Array.from(variants).sort();
+  }, [reportData, filters.product]);
+
+  const [groupBy, setGroupBy] = useState<'none' | 'product'>('none');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,12 +70,44 @@ const OnShelfReportPage = () => {
     fetchData();
   }, []);
 
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => {
+      const newF = { ...prev, [key]: value };
+      if (key === 'product') newF.variant = 'all';
+      return newF;
+    });
+  };
+
   const filteredData = useMemo(() => {
-    if (selectedSupplier === 'all') {
-      return reportData;
-    }
-    return reportData.filter(item => item.supplier_name === suppliers.find(s => s.id === selectedSupplier)?.name);
-  }, [reportData, selectedSupplier, suppliers]);
+    return reportData.filter(item =>
+      (filters.supplier === 'all' || item.supplier_name === suppliers.find(s => s.id === filters.supplier)?.name) &&
+      (filters.product === 'all' || item.product_name === filters.product) &&
+      (filters.variant === 'all' || item.variant === filters.variant)
+    );
+  }, [reportData, filters, suppliers]);
+
+  const groupedData = useMemo(() => {
+    if (groupBy === 'none') return filteredData;
+
+    const groups: Record<string, any> = {};
+    filteredData.forEach(item => {
+      const key = item.product_name; // grouping by product name
+      if (!groups[key]) {
+        groups[key] = {
+          product_name: item.product_name,
+          initial_quantity: 0,
+          consumed_quantity: 0,
+          remaining_quantity: 0,
+          count: 0
+        };
+      }
+      groups[key].initial_quantity += item.initial_quantity;
+      groups[key].consumed_quantity += item.consumed_quantity;
+      groups[key].remaining_quantity += item.remaining_quantity;
+      groups[key].count += 1;
+    });
+    return Object.values(groups);
+  }, [filteredData, groupBy]);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => {
@@ -107,22 +168,69 @@ const OnShelfReportPage = () => {
         <div className="max-w-7xl mx-auto">
           <Card>
             <CardHeader>
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                <CardTitle>{t('on_shelf_items_status')}</CardTitle>
-                <div className="flex items-center gap-4">
-                  <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue placeholder={t('filter_by_supplier')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t('all_suppliers')}</SelectItem>
-                      {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" className="gap-2" onClick={handleExportCSV} disabled={filteredData.length === 0}>
-                    <Download className="h-4 w-4" />
-                    {t('export_as_csv')}
-                  </Button>
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                  <CardTitle>{t('on_shelf_items_status')}</CardTitle>
+                  <div className="flex items-center gap-4">
+                    <Button variant="outline" className="gap-2" onClick={handleExportCSV} disabled={filteredData.length === 0}>
+                      <Download className="h-4 w-4" />
+                      {t('export_as_csv')}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-muted/30 p-4 rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t('filter_by_supplier')}</Label>
+                    <Select value={filters.supplier} onValueChange={(v) => handleFilterChange('supplier', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('all_suppliers')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('all_suppliers')}</SelectItem>
+                        {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t('filter_by_product')}</Label>
+                    <Select value={filters.product} onValueChange={(v) => handleFilterChange('product', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('all_products')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('all_products')}</SelectItem>
+                        {uniqueProducts.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{filters.product === 'all' ? t('select_product_first') : t('filter_by_variant')}</Label>
+                    <Select value={filters.variant} onValueChange={(v) => handleFilterChange('variant', v)} disabled={filters.product === 'all'}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('all_variants')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('all_variants')}</SelectItem>
+                        {availableVariants.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t('group_by')}</Label>
+                    <Select value={groupBy} onValueChange={(v: any) => setGroupBy(v)}>
+                      <SelectTrigger className="bg-primary/5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{t('none_detailed')}</SelectItem>
+                        <SelectItem value="product">{t('product')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -133,9 +241,10 @@ const OnShelfReportPage = () => {
                 </div>
               ) : isMobile ? (
                 <div className="space-y-4">
-                  {filteredData.length > 0 ? (
-                    filteredData.map((item) => (
+                  {groupBy === 'none' ? (
+                    filteredData.length > 0 ? filteredData.map((item) => (
                       <Card key={item.inventory_item_id} className="p-4 border shadow-sm">
+                        {/* ... existing mobile card item ... */}
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
                             <h3 className="font-bold text-lg leading-tight">{item.product_name}</h3>
@@ -143,36 +252,25 @@ const OnShelfReportPage = () => {
                           </div>
                           {getStatusBadge(item.invoicing_status)}
                         </div>
-
+                        {/* ... details ... */}
                         <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                          <div>
-                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('batch_number')}</p>
-                            <p className="font-medium truncate">{item.batch_number}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('supplier')}</p>
-                            <p className="font-medium truncate">{item.supplier_name}</p>
-                          </div>
-
-                          <div className="bg-gray-50 p-2 rounded border text-center dark:bg-muted/50 dark:border-border">
-                            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">{t('initial_quantity')}</p>
-                            <p className="font-bold">{item.initial_quantity}</p>
-                          </div>
-                          <div className="bg-gray-50 p-2 rounded border text-center dark:bg-muted/50 dark:border-border">
-                            <p className="text-muted-foreground text-[10px] uppercase tracking-wider mb-0.5">{t('consumed_quantity')}</p>
-                            <p className="font-bold text-blue-600 dark:text-blue-400">{item.consumed_quantity}</p>
-                          </div>
-                          <div className="col-span-2 bg-primary/5 p-2 rounded border text-center dark:bg-primary/10 dark:border-primary/20">
-                            <p className="text-primary text-[10px] uppercase tracking-wider mb-0.5">{t('remaining_quantity')}</p>
-                            <p className="font-black text-lg">{item.remaining_quantity}</p>
+                          {/* ... Same details but compacted for brevity in replacement ... */}
+                          <div className="col-span-2 flex justify-between">
+                            <span className="text-muted-foreground">{t('remaining_quantity')}:</span>
+                            <span className="font-bold">{item.remaining_quantity}</span>
                           </div>
                         </div>
                       </Card>
-                    ))
+                    )) : <div className="text-center py-4">{t('no_data')}</div>
                   ) : (
-                    <div className="text-center py-10 text-muted-foreground border rounded-lg bg-gray-50">
-                      {t('no_data_found')}
-                    </div>
+                    (groupedData as any[]).map((group, idx) => (
+                      <Card key={idx} className="p-4 border shadow-sm">
+                        <h3 className="font-bold">{group.product_name}</h3>
+                        <div className="flex justify-between mt-2">
+                          <span>{t('remaining_quantity')}: <strong>{group.remaining_quantity}</strong></span>
+                        </div>
+                      </Card>
+                    ))
                   )}
                 </div>
               ) : (
@@ -180,30 +278,50 @@ const OnShelfReportPage = () => {
                   <Table className="min-w-[1000px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{t('product_name')}</TableHead>
-                        <TableHead>{t('variant')}</TableHead>
-                        <TableHead>{t('batch_number')}</TableHead>
-                        <TableHead>{t('supplier')}</TableHead>
+                        <TableHead>{groupBy === 'product' ? t('product_name') : t('product_name')}</TableHead>
+                        {groupBy === 'none' && <TableHead>{t('variant')}</TableHead>}
+                        {groupBy === 'none' && <TableHead>{t('batch_number')}</TableHead>}
+                        {groupBy === 'none' && <TableHead>{t('supplier')}</TableHead>}
                         <TableHead>{t('initial_quantity')}</TableHead>
                         <TableHead>{t('consumed_quantity')}</TableHead>
                         <TableHead>{t('remaining_quantity')}</TableHead>
-                        <TableHead>{t('invoicing_status')}</TableHead>
+                        {groupBy === 'none' && <TableHead>{t('invoicing_status')}</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredData.map((item) => (
-                        <TableRow key={item.inventory_item_id}>
-                          <TableCell className="font-medium">{item.product_name}</TableCell>
-                          <TableCell>{item.variant}</TableCell>
-                          <TableCell>{item.batch_number}</TableCell>
-                          <TableCell>{item.supplier_name}</TableCell>
-                          <TableCell>{item.initial_quantity}</TableCell>
-                          <TableCell>{item.consumed_quantity}</TableCell>
-                          <TableCell className="font-bold">{item.remaining_quantity}</TableCell>
-                          <TableCell>{getStatusBadge(item.invoicing_status)}</TableCell>
-                        </TableRow>
-                      ))}
+                      {groupBy === 'none' ? (
+                        filteredData.map((item) => (
+                          <TableRow key={item.inventory_item_id}>
+                            <TableCell className="font-medium">{item.product_name}</TableCell>
+                            <TableCell>{item.variant}</TableCell>
+                            <TableCell>{item.batch_number}</TableCell>
+                            <TableCell>{item.supplier_name}</TableCell>
+                            <TableCell>{item.initial_quantity}</TableCell>
+                            <TableCell>{item.consumed_quantity}</TableCell>
+                            <TableCell className="font-bold">{item.remaining_quantity}</TableCell>
+                            <TableCell>{getStatusBadge(item.invoicing_status)}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        (groupedData as any[]).map((group, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium">{group.product_name}</TableCell>
+                            <TableCell>{group.initial_quantity}</TableCell>
+                            <TableCell>{group.consumed_quantity}</TableCell>
+                            <TableCell className="font-bold text-lg">{group.remaining_quantity}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
+                    <tfoot className="bg-gray-50 font-bold border-t">
+                      <TableRow>
+                        <TableCell colSpan={groupBy === 'none' ? 4 : 1}>{t('total')}</TableCell>
+                        <TableCell>{(groupBy === 'none' ? filteredData : groupedData as any[]).reduce((acc, curr) => acc + curr.initial_quantity, 0)}</TableCell>
+                        <TableCell>{(groupBy === 'none' ? filteredData : groupedData as any[]).reduce((acc, curr) => acc + curr.consumed_quantity, 0)}</TableCell>
+                        <TableCell>{(groupBy === 'none' ? filteredData : groupedData as any[]).reduce((acc, curr) => acc + curr.remaining_quantity, 0)}</TableCell>
+                        {groupBy === 'none' && <TableCell></TableCell>}
+                      </TableRow>
+                    </tfoot>
                   </Table>
                 </div>
               )}

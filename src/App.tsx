@@ -41,7 +41,10 @@ const OnShelfInvoicingPage = lazy(() => import('./pages/OnShelfInvoicingPage'));
 const ProcedureTemplatesPage = lazy(() => import('./pages/ProcedureTemplatesPage'));
 const SupplierPerformancePage = lazy(() => import('./pages/SupplierPerformancePage'));
 const ReturnsManagementPage = lazy(() => import('./pages/ReturnsManagementPage'));
+const ReturnsManagementPage = lazy(() => import('./pages/ReturnsManagementPage'));
 const PackagesPage = lazy(() => import('./pages/PackagesPage'));
+const DebtManagementPage = lazy(() => import('./pages/DebtManagementPage'));
+const DebtCalendarPage = lazy(() => import('./pages/DebtCalendarPage'));
 
 const PageTracker = () => {
   usePageTracking();
@@ -120,6 +123,8 @@ const AppRoutes = () => {
           <Route path="/supplier-performance" element={<SupplierPerformancePage />} />
           <Route path="/returns-management" element={<ReturnsManagementPage />} />
           <Route path="/packages" element={<PackagesPage />} />
+          <Route path="/debt-management" element={<DebtManagementPage />} />
+          <Route path="/debt-calendar" element={<DebtCalendarPage />} />
         </Route>
       ) : (
         <Route element={<UserLayout />}>

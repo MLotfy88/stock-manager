@@ -13,6 +13,7 @@ import { getSuppliers } from '@/data/operations/supplierOperations';
 import { Store, Supplier } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface ReorderItem {
   productName: string;
@@ -36,7 +37,14 @@ const ReorderPointReportPage = () => {
     store: 'all',
     supplier: 'all',
     stock_type: 'all',
+    product: 'all',
+    variant: 'all'
   });
+
+  const availableVariants = useMemo(() => {
+    if (filters.product === 'all') return [];
+    return productDefs.find(d => d.id === filters.product)?.variants.map(v => v.name) || [];
+  }, [productDefs, filters.product]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,7 +70,11 @@ const ReorderPointReportPage = () => {
   }, []);
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-    setFilters(prev => ({ ...prev, [filterName]: value }));
+    setFilters(prev => {
+      const newF = { ...prev, [filterName]: value };
+      if (filterName === 'product') newF.variant = 'all';
+      return newF;
+    });
   };
 
   const reorderItems = useMemo(() => {
@@ -71,7 +83,9 @@ const ReorderPointReportPage = () => {
     const filteredInventory = inventory.filter(item =>
       (filters.store === 'all' || item.store_id === filters.store) &&
       (filters.supplier === 'all' || item.supplier_id === filters.supplier) &&
-      (filters.stock_type === 'all' || item.stock_type === filters.stock_type)
+      (filters.stock_type === 'all' || item.stock_type === filters.stock_type) &&
+      (filters.product === 'all' || item.product_definition_id === filters.product) &&
+      (filters.variant === 'all' || item.variant === filters.variant)
     );
 
     const stockMap: { [key: string]: number } = {};
@@ -82,10 +96,18 @@ const ReorderPointReportPage = () => {
 
     const itemsToReorder: ReorderItem[] = [];
     productDefs.forEach(def => {
+      // If specific product selected, skip others
+      if (filters.product !== 'all' && def.id !== filters.product) return;
+
       if (def.variants && Array.isArray(def.variants)) {
         def.variants.forEach(variant => {
+          // If specific variant selected, skip others
+          if (filters.variant !== 'all' && variant.name !== filters.variant) return;
+
           const key = `${def.id}-${variant.name}`;
           const currentStock = stockMap[key] || 0;
+
+          // Only show if below reorder point
           if (currentStock <= variant.reorder_point) {
             itemsToReorder.push({
               productName: def.name,
@@ -114,9 +136,12 @@ const ReorderPointReportPage = () => {
           <h1 className="text-2xl font-bold mb-6">{t('reorder_point_report_nav')}</h1>
           <Card>
             <CardHeader>
-              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                <CardTitle>{t('items_below_reorder_point')}</CardTitle>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full md:w-auto">
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                  <CardTitle>{t('items_below_reorder_point')}</CardTitle>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <Select value={filters.store} onValueChange={(v) => handleFilterChange('store', v)}>
                     <SelectTrigger><SelectValue placeholder={t('filter_by_store')} /></SelectTrigger>
                     <SelectContent>
@@ -139,6 +164,34 @@ const ReorderPointReportPage = () => {
                       <SelectItem value="on_shelf">{t('on_shelf')}</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Smart Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg border border-dashed">
+                  <div>
+                    <Label className="text-xs mb-1 block text-muted-foreground">{t('filter_by_product')}</Label>
+                    <Select value={filters.product} onValueChange={(v) => handleFilterChange('product', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('all_products')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('all_products')}</SelectItem>
+                        {productDefs.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1 block text-muted-foreground">{filters.product === 'all' ? t('select_product_first') : t('filter_by_variant')}</Label>
+                    <Select value={filters.variant} onValueChange={(v) => handleFilterChange('variant', v)} disabled={filters.product === 'all'}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('all_variants')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('all_variants')}</SelectItem>
+                        {availableVariants.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </CardHeader>

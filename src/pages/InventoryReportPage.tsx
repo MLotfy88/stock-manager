@@ -10,6 +10,7 @@ import { Store, ProductDefinition, InventoryItem, Manufacturer, SupplyTypeItem, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ArrowLeft, FileSpreadsheet, Package, DollarSign, Warehouse, Building2, Tag, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,7 @@ const InventoryReportPage = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplyTypes, setSupplyTypes] = useState<SupplyTypeItem[]>([]);
+  const [productDefs, setProductDefs] = useState<ProductDefinition[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -54,11 +56,14 @@ const InventoryReportPage = () => {
   const [filters, setFilters] = useState({
     store: 'all',
     supplier: 'all',
-    product: '',
+    product: 'all', // Now ID based
     type: 'all',
-    variant: '',
+    variant: 'all', // Now Name based, but from dropdown
     stock_type: 'all',
   });
+
+  // Grouping state
+  const [groupBy, setGroupBy] = useState<'none' | 'product' | 'variant' | 'store' | 'supplier'>('none');
 
   // Column visibility state
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
@@ -81,15 +86,17 @@ const InventoryReportPage = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [storesData, suppliersData, typesData, inventoryData] = await Promise.all([
+        const [storesData, suppliersData, typesData, defsData, inventoryData] = await Promise.all([
           getStores(),
           getSuppliers(),
           getSupplyTypes(),
-          getInventoryItems(), // This now fetches the comprehensive view
+          getProductDefinitions(),
+          getInventoryItems(),
         ]);
         setStores(storesData);
         setSuppliers(suppliersData);
         setSupplyTypes(typesData);
+        setProductDefs(defsData);
         setInventory(inventoryData);
       } catch (error) {
         console.error("Failed to fetch report data:", error);
@@ -101,20 +108,77 @@ const InventoryReportPage = () => {
   }, []);
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-    setFilters(prev => ({ ...prev, [filterName]: value }));
+    setFilters(prev => {
+      const newFilters = { ...prev, [filterName]: value };
+      // Reset combination filter if product changes
+      if (filterName === 'product') {
+        newFilters.variant = 'all';
+      }
+      return newFilters;
+    });
   };
 
+  // 1. Filter Data
   const filteredInventory = useMemo(() => {
     return inventory.filter(item =>
       (filters.store === 'all' || item.store_id === filters.store) &&
       (filters.supplier === 'all' || item.supplier_id === filters.supplier) &&
       (filters.type === 'all' || item.supply_type_name === supplyTypes.find(st => st.id === filters.type)?.name) &&
-      (item.product_name.toLowerCase().includes(filters.product.toLowerCase())) &&
-      (item.variant.toLowerCase().includes(filters.variant.toLowerCase())) &&
+      (filters.product === 'all' || item.product_definition_id === filters.product) &&
+      (filters.variant === 'all' || item.variant === filters.variant) &&
       (filters.stock_type === 'all' || item.stock_type === filters.stock_type)
     );
   }, [inventory, filters, supplyTypes]);
 
+  // 2. Group Data (if enabled)
+  const groupedInventory = useMemo(() => {
+    if (groupBy === 'none') return filteredInventory;
+
+    const groups: Record<string, any> = {};
+
+    filteredInventory.forEach(item => {
+      let key = '';
+      let groupName = '';
+
+      switch (groupBy) {
+        case 'product':
+          key = item.product_definition_id || 'unknown';
+          groupName = item.product_name;
+          break;
+        case 'variant':
+          key = `${item.product_definition_id}-${item.variant}`;
+          groupName = `${item.product_name} - ${item.variant}`;
+          break;
+        case 'store':
+          key = item.store_id;
+          groupName = item.store_name;
+          break;
+        case 'supplier':
+          key = item.supplier_id || 'unknown';
+          groupName = item.supplier_name || t('unknown');
+          break;
+      }
+
+      if (!groups[key]) {
+        groups[key] = {
+          id: key,
+          name: groupName,
+          quantity: 0,
+          value: 0,
+          count: 0,
+          items: [] // Keep explicit items if needed for drill-down later
+        };
+      }
+      groups[key].quantity += item.quantity;
+      groups[key].value += (item.quantity * (item.purchase_price || 0));
+      groups[key].count += 1;
+      groups[key].items.push(item);
+    });
+
+    return Object.values(groups);
+  }, [filteredInventory, groupBy, t]);
+
+  // 3. Stats Calculation
   const reportStats = useMemo(() => {
     const totalItems = new Set(filteredInventory.map(i => i.product_definition_id + i.variant)).size;
     const totalQuantity = filteredInventory.reduce((sum, item) => sum + item.quantity, 0);
@@ -122,31 +186,29 @@ const InventoryReportPage = () => {
     return { totalItems, totalQuantity, totalValue };
   }, [filteredInventory]);
 
+  // Helper to get variants for selected product
+  const availableVariants = useMemo(() => {
+    if (filters.product === 'all') return [];
+    const def = productDefs.find(d => d.id === filters.product);
+    return def?.variants.map(v => v.name) || [];
+  }, [productDefs, filters.product]);
+
   const handleExportCSV = () => {
     const headers = Object.values(ALL_COLUMNS).map(col => t(col.label));
-    // Export ALL inventory data, not just filtered data
-    const rows = inventory.map(item =>
+    const rows = filteredInventory.map(item =>
       Object.values(ALL_COLUMNS).map(col => {
         let value = item[col.key as keyof InventoryItem] ?? '';
-        // Handle special formatting for stock_type
-        if (col.key === 'stock_type') {
-          value = t(value as string);
-        }
-        if (typeof value === 'string') {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
+        if (col.key === 'stock_type') value = t(value as string);
+        if (typeof value === 'string') return `"${value.replace(/"/g, '""')}"`;
         return value;
       }).join(',')
     );
 
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + headers.join(',') + "\n"
-      + rows.join('\n');
-
+    const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "inventory_report.csv");
+    link.setAttribute("download", `inventory_report_${new Date().toISOString()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -179,18 +241,73 @@ const InventoryReportPage = () => {
           <Card>
             <CardHeader>
               <div className="space-y-4">
-                {/* Filters Row 1 */}
+                {/* Filters Row 1: Common Filters */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <Select value={filters.store} onValueChange={(v) => handleFilterChange('store', v)}><SelectTrigger><SelectValue placeholder={t('filter_by_store')} /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_stores')}</SelectItem>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
-                  <Select value={filters.supplier} onValueChange={(v) => handleFilterChange('supplier', v)}><SelectTrigger><SelectValue placeholder={t('filter_by_supplier')} /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_suppliers')}</SelectItem>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
-                  <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v)}><SelectTrigger><SelectValue placeholder={t('filter_by_type')} /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_types')}</SelectItem>{supplyTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select>
-                  <Select value={filters.stock_type} onValueChange={(v) => handleFilterChange('stock_type', v)}><SelectTrigger><SelectValue placeholder={t('filter_by_stock_type')} /></SelectTrigger><SelectContent><SelectItem value="all">{t('all_stock_types')}</SelectItem><SelectItem value="purchased">{t('purchased')}</SelectItem><SelectItem value="on_shelf">{t('on_shelf')}</SelectItem></SelectContent></Select>
+                  <Select value={filters.store} onValueChange={(v) => handleFilterChange('store', v)}>
+                    <SelectTrigger><SelectValue placeholder={t('filter_by_store')} /></SelectTrigger>
+                    <SelectContent><SelectItem value="all">{t('all_stores')}</SelectItem>{stores.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Select value={filters.supplier} onValueChange={(v) => handleFilterChange('supplier', v)}>
+                    <SelectTrigger><SelectValue placeholder={t('filter_by_supplier')} /></SelectTrigger>
+                    <SelectContent><SelectItem value="all">{t('all_suppliers')}</SelectItem>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Select value={filters.stock_type} onValueChange={(v) => handleFilterChange('stock_type', v)}>
+                    <SelectTrigger><SelectValue placeholder={t('filter_by_stock_type')} /></SelectTrigger>
+                    <SelectContent><SelectItem value="all">{t('all_stock_types')}</SelectItem><SelectItem value="purchased">{t('purchased')}</SelectItem><SelectItem value="on_shelf">{t('on_shelf')}</SelectItem></SelectContent>
+                  </Select>
+                  {/* Group By Control */}
+                  <Select value={groupBy} onValueChange={(v: any) => setGroupBy(v)}>
+                    <SelectTrigger className="border-primary/50 bg-primary/5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{t('group_by') || 'تجميع حسب'}:</span>
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t('none_detailed') || 'بدون (تفصيلي)'}</SelectItem>
+                      <SelectItem value="product">{t('product') || 'المنتج'}</SelectItem>
+                      <SelectItem value="variant">{t('variant') || 'المتغير'}</SelectItem>
+                      <SelectItem value="store">{t('store') || 'المخزن'}</SelectItem>
+                      <SelectItem value="supplier">{t('supplier') || 'المورد'}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                {/* Filters Row 2 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <Input placeholder={t('filter_by_product_name')} value={filters.product} onChange={(e) => handleFilterChange('product', e.target.value)} />
-                  <Input placeholder={t('filter_by_variant')} value={filters.variant} onChange={(e) => handleFilterChange('variant', e.target.value)} />
+
+                {/* Filters Row 2: Smart Filters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-muted/30 p-4 rounded-lg border border-dashed">
+                  {/* Product Smart Filter */}
+                  <div className="md:col-span-2">
+                    <Label className="text-xs mb-1 block text-muted-foreground">{t('filter_by_product')}</Label>
+                    <Select value={filters.product} onValueChange={(v) => handleFilterChange('product', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('select_product')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('all_products')}</SelectItem>
+                        {productDefs.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Variant Smart Filter (Dependent) */}
+                  <div className="md:col-span-2">
+                    <Label className="text-xs mb-1 block text-muted-foreground">{filters.product === 'all' ? t('select_product_first') : t('filter_by_variant')}</Label>
+                    <Select
+                      value={filters.variant}
+                      onValueChange={(v) => handleFilterChange('variant', v)}
+                      disabled={filters.product === 'all'}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('select_variant')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('all_variants')}</SelectItem>
+                        {availableVariants.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
                 {/* Actions */}
                 <div className="flex justify-between items-center">
                   <DropdownMenu>
@@ -220,65 +337,47 @@ const InventoryReportPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {isMobile ? (
-                <div className="space-y-4">
-                  {isLoading ? (
-                    [...Array(5)].map((_, i) => (
-                      <Card key={i} className="p-4 space-y-2">
-                        <Skeleton className="h-5 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                        <Skeleton className="h-4 w-1/4" />
-                      </Card>
-                    ))
-                  ) : filteredInventory.length > 0 ? (
-                    filteredInventory.map((item) => (
-                      <Card key={item.id} className="p-4 border shadow-sm">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <h3 className="font-bold text-lg leading-tight">{item.product_name}</h3>
-                            <p className="text-sm text-muted-foreground">{item.variant}</p>
-                          </div>
-                          <Badge
-                            variant="secondary"
-                            className={item.stock_type === 'on_shelf' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}
-                          >
-                            {t(item.stock_type)}
-                          </Badge>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                          <div>
-                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('store')}</p>
-                            <p className="font-medium">{item.store_name}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('quantity')}</p>
-                            <p className="font-bold text-primary">{item.quantity}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('batch_number')}</p>
-                            <p className="font-medium truncate">{item.batch_number}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('expiry_date')}</p>
-                            <p className="font-medium">{format(new Date(item.expiry_date), 'P')}</p>
-                          </div>
-                          {item.supplier_name && (
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground text-xs uppercase tracking-wider mb-0.5">{t('supplier')}</p>
-                              <p className="font-medium">{item.supplier_name}</p>
-                            </div>
-                          )}
-                        </div>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="text-center py-10 text-muted-foreground border rounded-lg bg-gray-50">
-                      {t('no_data_for_filters')}
-                    </div>
-                  )}
+              {/* Conditional Rendering: Grouped vs Detailed */}
+              {groupBy !== 'none' ? (
+                // GROUPED VIEW
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>{t('group_name') || 'الاسم'}</TableHead>
+                        <TableHead className="text-center">{t('count') || 'العدد'}</TableHead>
+                        <TableHead className="text-center">{t('total_quantity') || 'إجمالي الكمية'}</TableHead>
+                        <TableHead className="text-right">{t('total_value') || 'إجمالي القيمة'}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {groupedInventory.length > 0 ? (
+                        (groupedInventory as any[]).map((group) => (
+                          <TableRow key={group.id}>
+                            <TableCell className="font-medium">{group.name}</TableCell>
+                            <TableCell className="text-center">{group.count}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary">{group.quantity}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-bold">{group.value.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">EGP</span></TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow><TableCell colSpan={4} className="text-center py-8">{t('no_data')}</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                    <tfoot className="bg-primary/5 font-bold">
+                      <TableRow>
+                        <TableCell>{t('total')}</TableCell>
+                        <TableCell className="text-center">{groupedInventory.length}</TableCell>
+                        <TableCell className="text-center">{reportStats.totalQuantity}</TableCell>
+                        <TableCell className="text-right">{reportStats.totalValue.toLocaleString()}</TableCell>
+                      </TableRow>
+                    </tfoot>
+                  </Table>
                 </div>
               ) : (
+                // DETAILED VIEW (Standard Table)
                 <div className="rounded-md border overflow-x-auto">
                   <Table className="min-w-[1200px]">
                     <TableHeader>
@@ -302,10 +401,10 @@ const InventoryReportPage = () => {
                             {visibleColumns.variant && <TableCell>{item.variant}</TableCell>}
                             {visibleColumns.manufacturer_name && <TableCell>{item.manufacturer_name}</TableCell>}
                             {visibleColumns.supplier_name && <TableCell>{item.supplier_name}</TableCell>}
-                            {visibleColumns.barcode && <TableCell>{item.barcode}</TableCell>}
+                            {visibleColumns.barcode && <TableCell className="font-mono text-xs">{item.barcode}</TableCell>}
                             {visibleColumns.batch_number && <TableCell>{item.batch_number}</TableCell>}
                             {visibleColumns.expiry_date && <TableCell>{format(new Date(item.expiry_date), 'P')}</TableCell>}
-                            {visibleColumns.quantity && <TableCell>{item.quantity}</TableCell>}
+                            {visibleColumns.quantity && <TableCell className="font-bold">{item.quantity}</TableCell>}
                             {visibleColumns.purchase_price && <TableCell>{item.purchase_price?.toFixed(2)}</TableCell>}
                             {visibleColumns.reorder_point && <TableCell>{item.reorder_point}</TableCell>}
                             {visibleColumns.stock_type && <TableCell><span className={`px-2 py-1 rounded-full text-xs font-medium ${item.stock_type === 'on_shelf' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{t(item.stock_type)}</span></TableCell>}
@@ -315,6 +414,15 @@ const InventoryReportPage = () => {
                         <TableRow><TableCell colSpan={Object.values(visibleColumns).filter(v => v).length} className="text-center h-24">{t('no_data_for_filters')}</TableCell></TableRow>
                       )}
                     </TableBody>
+                    <tfoot className="bg-primary/5 font-bold border-t-2 border-primary/20">
+                      <TableRow>
+                        <TableCell colSpan={Object.values(ALL_COLUMNS).findIndex(c => c.key === 'quantity') - (Object.values(ALL_COLUMNS).filter(c => !visibleColumns[c.key]).length > 5 ? 2 : 0)} className="text-right">{t('total')}</TableCell>
+                        {/* Approximate placement of totals based on visibility is hard, simplified for now to just show totals if columns visible */}
+                        {visibleColumns.quantity && <TableCell className="font-black text-lg">{reportStats.totalQuantity}</TableCell>}
+                        {visibleColumns.purchase_price && <TableCell className="font-black text-lg">{reportStats.totalValue.toLocaleString()}</TableCell>}
+                        <TableCell colSpan={5}></TableCell>
+                      </TableRow>
+                    </tfoot>
                   </Table>
                 </div>
               )}
