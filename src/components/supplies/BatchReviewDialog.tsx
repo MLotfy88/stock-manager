@@ -72,8 +72,8 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
             batchScans.forEach(entry => {
                 const existing = groups.get(entry.fingerprint);
                 const qty = typeof entry.parsedData.quantity === 'number' ? entry.parsedData.quantity : parseInt(entry.parsedData.quantity || '1') || 1;
-                const batchNum = (entry.parsedData as any).batch || (entry.parsedData as any).batchNumber || '';
-                const expiryDate = (entry.parsedData as any).expiry || (entry.parsedData as any).expiryDate || '';
+                const batchNum = entry.parsedData.lotNumber || '';
+                const expiryDate = entry.parsedData.expiryDate || '';
 
                 if (existing) {
                     existing.scanCount++;
@@ -140,14 +140,8 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
 
     const formatExpiry = (expiry: string) => {
         if (!expiry) return '-';
-        try {
-            const year = parseInt('20' + expiry.substring(0, 2));
-            const month = parseInt(expiry.substring(2, 4));
-            const day = parseInt(expiry.substring(4, 6));
-            return `${day}/${month}/${year}`;
-        } catch {
-            return expiry;
-        }
+        // Already in ISO format (YYYY-MM-DD) from parser
+        return expiry;
     };
 
     const renderPatternRow = (pattern: GroupedPattern, isMobile: boolean) => {

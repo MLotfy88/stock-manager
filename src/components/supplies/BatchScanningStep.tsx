@@ -57,7 +57,7 @@ const BatchScanningStep: React.FC<BatchScanningStepProps> = ({
 
                     {/* Scanner */}
                     <div>
-                        <QuickActionScanner onScan={onScan} isLoading={isLoading} />
+                        <QuickActionScanner onScan={onScan} isLoading={isLoading} continuous={true} />
                     </div>
 
                     {/* Recent Scans Preview */}
