@@ -31,6 +31,7 @@ import BatchReviewDialog from '@/components/supplies/BatchReviewDialog';
 import BatchScanningStep from '@/components/supplies/BatchScanningStep';
 import BatchProductStep from '@/components/supplies/BatchProductStep';
 import BatchVariantStep from '@/components/supplies/BatchVariantStep';
+import { EditCartItemDialog } from '@/components/supplies/EditCartItemDialog';
 
 // Extended type for local cart items
 interface CartItem {
@@ -130,6 +131,8 @@ const AddInventoryPage = () => {
 
   // --- Cart State ---
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   // Calculated Totals
   const totalCartValue = useMemo(() => {
@@ -422,6 +425,16 @@ const AddInventoryPage = () => {
     setCartItems(prev => prev.filter((_, i) => i !== index));
   };
 
+  const openEditItem = (item: CartItem) => {
+    setEditingItem(item);
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateItem = (updatedItem: CartItem) => {
+    setCartItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    toast({ title: t('success') || 'Success', description: t('item_updated') || 'Item updated successfully' });
+  };
+
   // Payment Handlers
   const addInstallment = () => {
     const amount = parseFloat(newInstAmount);
@@ -490,7 +503,7 @@ const AddInventoryPage = () => {
         supplier_id: supplierId,
         date: format(new Date(), 'yyyy-MM-dd'),
         stock_type: stockType,
-        voucher_number: voucherNumber,
+        voucher_number: voucherNumber.trim() ? voucherNumber.trim() : null,
         payment_method: paymentMethod,
         payment_status: paymentStatus,
         total_amount: totalCartValue,
@@ -529,9 +542,17 @@ const AddInventoryPage = () => {
 
       toast({ title: t('success'), description: t('invoice_processed_successfully') });
       navigate('/supplies');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast({ title: t('error'), description: t('error_saving_invoice'), variant: 'destructive' });
+      if (error.code === '23505' && error.message?.includes('supply_vouchers_voucher_number_key')) {
+        toast({
+          title: t('error') || 'Error',
+          description: t('duplicate_voucher_number') || 'Voucher number already exists. Please use a unique number.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({ title: t('error'), description: t('error_saving_invoice'), variant: 'destructive' });
+      }
     }
   };
 
@@ -693,7 +714,8 @@ const AddInventoryPage = () => {
                               </TableCell>
                               <TableCell className="text-center font-bold">{item.quantity}</TableCell>
                               <TableCell className="text-right">{item.purchasePrice > 0 ? item.purchasePrice.toFixed(2) : '-'}</TableCell>
-                              <TableCell>
+                              <TableCell className="text-right space-x-1">
+                                <Button variant="ghost" size="sm" onClick={() => openEditItem(item)}><Edit className="h-4 w-4 text-blue-500" /></Button>
                                 <Button variant="ghost" size="sm" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                               </TableCell>
                             </TableRow>
@@ -705,6 +727,14 @@ const AddInventoryPage = () => {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Edit Dialog */}
+                <EditCartItemDialog
+                  isOpen={isEditOpen}
+                  onClose={() => setIsEditOpen(false)}
+                  item={editingItem}
+                  onSave={handleUpdateItem}
+                />
               </div>
 
               {/* Right Column: Scanner & Actions */}

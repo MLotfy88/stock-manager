@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -295,6 +295,9 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
                     <DialogTitle className="text-xl">
                         {t('batch_review') || 'Batch Review & Assign'}
                     </DialogTitle>
+                    <DialogDescription>
+                        Review the scanned items, adjust quantities, and set prices before adding to your supply voucher.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="flex-1 overflow-y-auto p-6 pt-2">

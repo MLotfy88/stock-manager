@@ -18,7 +18,11 @@ serve(async (req) => {
 
   if (!SLACK_WEBHOOK_URL) {
     console.error('SLACK_WEBHOOK_URL is not set in environment variables.');
-    return new Response('Internal Server Error: Webhook URL not configured.', { status: 500, headers: corsHeaders });
+    // Return 200 to prevent client-side console errors, but log on server
+    return new Response(JSON.stringify({ success: false, message: 'Slack Webhook not configured' }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 
   try {

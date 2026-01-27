@@ -329,6 +329,11 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
                         </span>
                         <span className="text-sm font-normal text-muted-foreground">Step {step}/3</span>
                     </SheetTitle>
+                    <SheetDescription>
+                        {step === 1 && (t('scan_search_instruction') || "Scan a barcode or search for a product to add.")}
+                        {step === 2 && (t('select_variant_instruction') || "Select the specific variant for this product.")}
+                        {step === 3 && (t('confirm_details_instruction') || "Verify quantity, batch, and expiry details.")}
+                    </SheetDescription>
                 </SheetHeader>
 
                 <div className="py-2">

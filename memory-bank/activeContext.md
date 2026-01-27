@@ -99,10 +99,14 @@ Addressed critical usability issues in barcode scanning and variant selection lo
     *   Fixed `invoice_image_urls` column to be `TEXT[]`.
     *   Ensured `gtin_product_mapping` table exists.
 
-4.  **Frontend Validation**
+4.  **Frontend Validation & UX**
     *   Added strict Expiry Date validation in `NewItemWizard` and `ItemConfirmationDialog`.
     *   Added Expiry Date editing and validation in `BatchReviewDialog`.
-    *   This prevents "Column expiry_date cannot be null" errors.
+    *   **Cart Item Editing**: Implemented full editing capability for cart items (Product Name, Variant, Barcode, GTIN, Batch, Expiry, Quantity, Price) via new `EditCartItemDialog`.
+    *   **Duplicate Voucher Handling**: Fixed logic to send `null` for empty voucher numbers, preventing unique constraint violations. Also added error handling for actual duplicates.
+    *   **Accessibility**: Added missing `DialogDescription` and `SheetDescription` to `BatchReviewDialog` and `NewItemWizard` to fix console warnings.
+    *   **Edge Functions**: Updated `slack-notifier` to gracefully handle missing webhook (returns 200 OK with warning) to prevent 500 errors in client console.
+
 
 ---
 

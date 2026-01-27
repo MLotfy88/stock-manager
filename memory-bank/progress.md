@@ -90,7 +90,12 @@
 - None currently
 
 ### Non-Critical
-- Migration script must be run manually on Supabase (`add_gtin_product_mapping.sql` and `20260127_add_opening_balance_payment_method.sql`)
+- Migration script must be run manually on Supabase (`migrations/fix_all_invoice_issues.sql`)
+- [x] Fix "Invalid Payment Method" error (Added `opening_balance` to DB enum)
+- [x] Fix "Duplicate Invoice Number" error (Updated frontend to send `null` for empty voucher numbers)
+- [x] Fix Console Warnings (Added `DialogDescription` and `SheetDescription`)
+- [x] Fix `slack-notifier` 500 errors (Graceful failure handling)
+- [x] Add user profile table migration (`migrations/ensure_profiles_table.sql`)
 - Recent variants limited to 5 per product (by design)
 - Audio requires user interaction first (browser security)
 
