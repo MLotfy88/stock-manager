@@ -104,6 +104,7 @@ Addressed critical usability issues in barcode scanning and variant selection lo
     *   Added Expiry Date editing and validation in `BatchReviewDialog`.
     *   **Cart Item Editing**: Implemented full editing capability for cart items (Product Name, Variant, Barcode, GTIN, Batch, Expiry, Quantity, Price) via new `EditCartItemDialog`.
     *   **Supplies Page Revamp**: Completely redesigned `SuppliesPage` for mobile responsiveness using Card layout. Added "View Details" (with item fetching) and "Delete" actions. Added missing "Supplies" link to sidebar for non-admin users.
+    *   **Auto-Save Drafts**: Implemented auto-save functionality in `AddSupplyPage`. Drafts are saved/updated automatically in the background (debounced). "Save Invoice" now finalizes the draft. Added draft loading logic for resuming work.
     *   **Duplicate Voucher Handling**: Fixed logic to send `null` for empty voucher numbers, preventing unique constraint violations. Also added error handling for actual duplicates.
     *   **Accessibility**: Added missing `DialogDescription` and `SheetDescription` to `BatchReviewDialog` and `NewItemWizard` to fix console warnings.
     *   **Edge Functions**: Updated `slack-notifier` to gracefully handle missing webhook (returns 200 OK with warning) to prevent 500 errors in client console.
