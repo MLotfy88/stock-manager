@@ -26,6 +26,12 @@ export const useNavigationItems = () => {
     return [
       {
         type: 'link',
+        label: t('supplies_list') || 'Supplies', // Fallback if key missing
+        icon: <Package className="h-5 w-5" />,
+        href: '/supplies',
+      },
+      {
+        type: 'link',
         label: t('consumption_nav'),
         icon: <Recycle className="h-5 w-5" />,
         href: '/consumption',
