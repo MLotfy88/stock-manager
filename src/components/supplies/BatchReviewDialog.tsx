@@ -64,6 +64,7 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
     const [patterns, setPatterns] = useState<GroupedPattern[]>([]);
     const [prices, setPrices] = useState<Record<string, number>>({});
     const [quantities, setQuantities] = useState<Record<string, number>>({});
+    const [expiries, setExpiries] = useState<Record<string, string>>({});
 
     // Initialize patterns from scans
     useEffect(() => {
@@ -95,10 +96,39 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
             const initialPatterns = Array.from(groups.values());
             setPatterns(initialPatterns);
 
-            // Initialize quantities
+            // Initialize quantities and expiries
             const initialQtys: Record<string, number> = {};
-            initialPatterns.forEach(p => initialQtys[p.fingerprint] = p.totalQuantity);
+            const initialExpiries: Record<string, string> = {};
+
+            initialPatterns.forEach(p => {
+                initialQtys[p.fingerprint] = p.totalQuantity;
+                // Parse GS1 date (YYMMDD) to YYYY-MM-DD for input
+                if (p.expiry && p.expiry.length === 6) {
+                    try {
+                        const year = parseInt('20' + p.expiry.substring(0, 2));
+                        const month = parseInt(p.expiry.substring(2, 4));
+                        const day = parseInt(p.expiry.substring(4, 6));
+                        const date = new Date(year, month - 1, day);
+                        // Check valid date
+                        if (!isNaN(date.getTime())) {
+                            initialExpiries[p.fingerprint] = date.toISOString().substring(0, 10);
+                        } else {
+                            initialExpiries[p.fingerprint] = '';
+                        }
+                    } catch {
+                        initialExpiries[p.fingerprint] = '';
+                    }
+                } else {
+                    initialExpiries[p.fingerprint] = ''; // Or keep original if already ISO? Parser returns ISO usually?
+                    // Wait, useBarcodeScanner returns ISO string in expiryDate?
+                    // Let's check Parser. Parsing logic in useBarcodeScanner:
+                    // uses convertGS1DateToISO => returns YYYY-MM-DD.
+                    // So p.expiry is ALREADY YYYY-MM-DD.
+                    initialExpiries[p.fingerprint] = p.expiry || '';
+                }
+            });
             setQuantities(initialQtys);
+            setExpiries(initialExpiries);
         }
     }, [isOpen, batchScans]);
 
@@ -121,10 +151,17 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
         const finalPatterns = patterns.map(p => ({
             ...p,
             totalQuantity: quantities[p.fingerprint] || 0,
+            expiry: expiries[p.fingerprint] || '', // Use edited expiry
             price: prices[p.fingerprint] || 0
         })).filter(p => p.totalQuantity > 0);
 
         if (finalPatterns.length === 0 || finalPatterns.some(p => p.price <= 0)) {
+            return;
+        }
+
+        // Validate Expiry Presence
+        if (finalPatterns.some(p => !p.expiry)) {
+            alert(t('expiry_date_required') || "Expiry Date is required for all items");
             return;
         }
 
@@ -135,14 +172,11 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
         // Reset
         setPrices({});
         setQuantities({});
+        setExpiries({});
         onClose();
     };
 
-    const formatExpiry = (expiry: string) => {
-        if (!expiry) return '-';
-        // Already in ISO format (YYYY-MM-DD) from parser
-        return expiry;
-    };
+
 
     const renderPatternRow = (pattern: GroupedPattern, isMobile: boolean) => {
         const qty = quantities[pattern.fingerprint] || 0;
@@ -164,7 +198,15 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
                             <div>
                                 <div className="font-mono text-xs text-muted-foreground">{pattern.gtin || 'No GTIN'}</div>
                                 <div className="font-semibold text-sm">Batch: {pattern.batch || '-'}</div>
-                                <div className="text-xs">Exp: {formatExpiry(pattern.expiry)}</div>
+                                <div className="mt-1">
+                                    <Label className="text-xs sr-only">Expiry</Label>
+                                    <Input
+                                        type="date"
+                                        value={expiries[pattern.fingerprint] || ''}
+                                        onChange={e => setExpiries(prev => ({ ...prev, [pattern.fingerprint]: e.target.value }))}
+                                        className="h-7 w-32 text-xs"
+                                    />
+                                </div>
                             </div>
                             <div className="text-right">
                                 <span className="bg-blue-100 dark:bg-blue-900 text-xs px-2 py-1 rounded">
@@ -202,7 +244,14 @@ const BatchReviewDialog: React.FC<BatchReviewDialogProps> = ({
             <TableRow key={pattern.fingerprint}>
                 <TableCell className="font-mono text-xs">{pattern.gtin || '-'}</TableCell>
                 <TableCell className="font-semibold">{pattern.batch || '-'}</TableCell>
-                <TableCell>{formatExpiry(pattern.expiry)}</TableCell>
+                <TableCell>
+                    <Input
+                        type="date"
+                        value={expiries[pattern.fingerprint] || ''}
+                        onChange={e => setExpiries(prev => ({ ...prev, [pattern.fingerprint]: e.target.value }))}
+                        className="h-8 w-[130px] text-xs"
+                    />
+                </TableCell>
                 <TableCell className="text-center">
                     <span className="bg-blue-100 dark:bg-blue-900 px-2 py-0.5 rounded text-sm">
                         {pattern.scanCount}×

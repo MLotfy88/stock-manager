@@ -90,7 +90,7 @@
 - None currently
 
 ### Non-Critical
-- Migration script must be run manually on Supabase
+- Migration script must be run manually on Supabase (`add_gtin_product_mapping.sql` and `20260127_add_opening_balance_payment_method.sql`)
 - Recent variants limited to 5 per product (by design)
 - Audio requires user interaction first (browser security)
 

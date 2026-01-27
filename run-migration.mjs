@@ -21,7 +21,8 @@ console.log('🔄 Connecting to Supabase...');
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Read the migration file
-const migrationPath = join(__dirname, 'migrations', 'upgrade_v5_packages_barcode.sql');
+const migrationFile = process.argv[2] || 'upgrade_v5_packages_barcode.sql';
+const migrationPath = join(__dirname, 'migrations', migrationFile);
 console.log(`📄 Reading migration file: ${migrationPath}`);
 
 let migrationSQL;

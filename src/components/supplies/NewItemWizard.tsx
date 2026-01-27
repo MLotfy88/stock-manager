@@ -113,11 +113,25 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
     const handleFinalSave = () => {
         if (!selectedDefinition) return;
 
+        // Validation for Expiry Date (Required by DB)
+        if (!expiryDate) {
+            // Since we don't have toast accessible here easily without prop drilling or hook, 
+            // valid way involves using a simple alert or adding validation state.
+            // But we can use the browser alert for now or just block it.
+            // Better: Add error state.
+            const input = document.querySelector('input[type="date"]') as HTMLInputElement;
+            if (input) input.focus();
+            // Assuming we'll add visual error state in a better refactor, for now let's just use alert or rely on HTML5 validation if form.
+            // Let's add a simple check and return.
+            alert(t('expiry_date_required') || "Expiry Date is required");
+            return;
+        }
+
         onComplete(selectedDefinition, selectedVariant, {
             quantity,
             batchNumber,
             purchasePrice: price,
-            expiryDate: expiryDate ? new Date(expiryDate) : undefined
+            expiryDate: new Date(expiryDate)
         });
         onClose();
     };

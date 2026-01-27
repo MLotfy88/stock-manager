@@ -64,6 +64,12 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
     }, [isOpen, scannedData, defaultPrice]);
 
     const handleConfirm = () => {
+        if (!expiryDate) {
+            // Simple alert for validation
+            alert(t('expiry_date_required') || "Expiry Date is required");
+            return;
+        }
+
         onConfirm({
             quantity,
             expiryDate,

@@ -93,6 +93,17 @@ Addressed critical usability issues in barcode scanning and variant selection lo
     *   Deployed `slack-notifier` edge function with correct CORS headers.
     *   Resolved 400/500 errors masquerading as network blocks.
 
+3.  **Database Fixes**
+    *   Created `migrations/fix_all_invoice_issues.sql` to fix ALL identified invoice entry blockers.
+    *   Added `opening_balance` to `payment_method` enum.
+    *   Fixed `invoice_image_urls` column to be `TEXT[]`.
+    *   Ensured `gtin_product_mapping` table exists.
+
+4.  **Frontend Validation**
+    *   Added strict Expiry Date validation in `NewItemWizard` and `ItemConfirmationDialog`.
+    *   Added Expiry Date editing and validation in `BatchReviewDialog`.
+    *   This prevents "Column expiry_date cannot be null" errors.
+
 ---
 
 ## Technical Implementation
