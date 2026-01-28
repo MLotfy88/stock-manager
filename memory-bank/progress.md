@@ -97,7 +97,8 @@
 - [x] Fix `slack-notifier` 500 errors (Graceful failure handling)
 - [x] Add user profile table migration (`migrations/ensure_profiles_table.sql`)
 - [x] **Supplies Page Revamp**: Fixed mobile layout (Cards), added Actions (View/Delete), and enabled sidebar link for Managers.
-- [x] **Auto-Save Drafts**: Implemented background auto-save and draft finalization.
+- [x] **Auto-Save Drafts**: Implemented background auto-save, draft finalization, and URL persistence for refresh support.
+- [x] **Navigation**: Fixed missing Supplies link for all roles.
 - Recent variants limited to 5 per product (by design)
 - Audio requires user interaction first (browser security)
 

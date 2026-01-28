@@ -192,11 +192,16 @@ const AddInventoryPage = () => {
 
         setDraftId(savedDraft.id);
         setLastSavedFingerprint(currentFingerprint);
+
+        // Update URL silently so refresh loads this draft
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('draft', savedDraft.id);
+        window.history.replaceState(null, '', newUrl.toString());
+
         // Silent success or subtle indicator
         console.log("Draft auto-saved", savedDraft.id);
       } catch (error) {
         console.error("Auto-save failed", error);
-        // Don't toast on background failure to avoid annoyance
       } finally {
         setIsAutoSaving(false);
       }

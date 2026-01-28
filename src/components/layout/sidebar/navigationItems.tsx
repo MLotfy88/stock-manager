@@ -24,12 +24,7 @@ export const useNavigationItems = () => {
   // Store Manager View (Non-Admin)
   if (role !== 'admin') {
     return [
-      {
-        type: 'link',
-        label: t('supplies_list') || 'Supplies', // Fallback if key missing
-        icon: <Package className="h-5 w-5" />,
-        href: '/supplies',
-      },
+
       {
         type: 'link',
         label: t('consumption_nav'),
@@ -66,11 +61,16 @@ export const useNavigationItems = () => {
       href: '/',
     },
     {
+      type: 'link',
+      label: t('supplies_list') || 'Supplies',
+      icon: <Package className="h-5 w-5" />,
+      href: '/supplies',
+    },
+    {
       type: 'collapsible',
       label: t('inventory_management'),
       icon: <Warehouse className="h-5 w-5" />,
       subItems: [
-        { type: 'link', label: t('supplies_nav'), href: '/supplies' },
         { type: 'link', label: t('transfer_inventory_nav'), href: '/transfer-inventory' },
         { type: 'link', label: t('reorder_point_manager_nav'), href: '/reorder-point-manager' },
       ]
