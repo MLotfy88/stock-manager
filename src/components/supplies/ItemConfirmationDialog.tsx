@@ -10,6 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ParsedGS1Data } from '@/hooks/useBarcodeScanner';
+import { getManufacturers } from '@/data/operations/manufacturerOperations';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ItemConfirmationDialogProps {
     isOpen: boolean;
@@ -27,6 +29,8 @@ export interface ConfirmedItemData {
     batchNumber: string;
     purchasePrice: number;
     sellingPrice?: number;
+    manufacturerId?: string;
+    location?: string;
 }
 
 const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
@@ -44,6 +48,9 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
     const [purchasePrice, setPurchasePrice] = useState(defaultPrice);
     const [batchNumber, setBatchNumber] = useState('');
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
+    const [manufacturerId, setManufacturerId] = useState<string>('');
+    const [location, setLocation] = useState<string>('');
+    const [manufacturers, setManufacturers] = useState<Array<{ id: string; name: string }>>([]);
 
     useEffect(() => {
         if (isOpen && scannedData) {
@@ -63,6 +70,18 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
         }
     }, [isOpen, scannedData, defaultPrice]);
 
+    useEffect(() => {
+        const loadManufacturers = async () => {
+            try {
+                const data = await getManufacturers();
+                setManufacturers(data);
+            } catch (error) {
+                console.error('Failed to load manufacturers', error);
+            }
+        };
+        if (isOpen) loadManufacturers();
+    }, [isOpen]);
+
     const handleConfirm = () => {
         if (!expiryDate) {
             // Simple alert for validation
@@ -75,6 +94,8 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
             expiryDate,
             batchNumber,
             purchasePrice,
+            manufacturerId: manufacturerId || undefined,
+            location: location || undefined,
         });
         onClose();
     };
@@ -179,6 +200,36 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
                             onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
                             className="h-11 text-lg font-semibold"
                         />
+                    </div>
+
+                    {/* Manufacturer & Location */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>{t('manufacturer') || 'Manufacturer'}</Label>
+                            <Select
+                                value={manufacturerId}
+                                onValueChange={setManufacturerId}
+                            >
+                                <SelectTrigger className="h-11">
+                                    <SelectValue placeholder={t('select_manufacturer') || 'Select manufacturer'} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">{t('none') || 'None'}</SelectItem>
+                                    {manufacturers.map(m => (
+                                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>{t('location') || 'Location'}</Label>
+                            <Input
+                                value={location}
+                                onChange={(e) => setLocation(e.target.value)}
+                                placeholder={t('storage_location') || 'Storage location'}
+                                className="h-11"
+                            />
+                        </div>
                     </div>
                 </div>
 

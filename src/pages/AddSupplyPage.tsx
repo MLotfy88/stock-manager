@@ -112,6 +112,7 @@ const AddInventoryPage = () => {
   const [supplierId, setSupplierId] = useState('');
   const [manufacturerId, setManufacturerId] = useState('');
   const [storeId, setStoreId] = useState('');
+  const [headerLocation, setHeaderLocation] = useState('');
   const [stockType, setStockType] = useState<StockType>('purchased');
   const [voucherNumber, setVoucherNumber] = useState('');
 
@@ -187,6 +188,7 @@ const AddInventoryPage = () => {
           purchase_price: item.purchasePrice,
           batch_number: item.batchNumber,
           expiry_date: item.expiryDate ? format(item.expiryDate, 'yyyy-MM-dd') : undefined,
+          location: item.location || headerLocation || null, // FIX: Save location (per-item or global header)
         })));
 
         setDraftId(savedDraft.id);
@@ -443,7 +445,9 @@ const AddInventoryPage = () => {
       batchNumber: data.batchNumber,
       expiryDate: data.expiryDate,
       quantity: data.quantity,
-      purchasePrice: data.purchasePrice
+      purchasePrice: data.purchasePrice,
+      manufacturerId: data.manufacturerId,
+      location: data.location
     };
     setCartItems(prev => [...prev, newItem]);
     toast({ title: "Item Added", description: `${newItem.productName} (x${newItem.quantity})` });
@@ -460,7 +464,9 @@ const AddInventoryPage = () => {
       batchNumber: data.batchNumber,
       expiryDate: data.expiryDate,
       quantity: data.quantity,
-      purchasePrice: data.purchasePrice
+      purchasePrice: data.purchasePrice,
+      manufacturerId: data.manufacturerId,
+      location: data.location
     };
     setCartItems(prev => [...prev, newItem]);
     toast({ title: "New Item Configured", description: `${def.name} - ${variant}` });
@@ -681,7 +687,7 @@ const AddInventoryPage = () => {
         batch_number: item.batchNumber,
         expiry_date: item.expiryDate ? format(item.expiryDate, 'yyyy-MM-dd') : undefined,
         purchase_price: item.purchasePrice,
-        location: item.location || null, // FIX: Save location
+        location: item.location || headerLocation || null, // FIX: Save location (per-item or global header)
       }));
 
       // --- FINALIZATION LOGIC ---
@@ -774,6 +780,15 @@ const AddInventoryPage = () => {
                         <SelectTrigger className="h-9"><SelectValue placeholder={t('select_store')} /></SelectTrigger>
                         <SelectContent>{stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t('location') || 'Location'}</Label>
+                      <Input
+                        value={headerLocation}
+                        onChange={(e) => setHeaderLocation(e.target.value)}
+                        placeholder={t('default_location') || 'Shelf/Bin...'}
+                        className="h-9"
+                      />
                     </div>
                   </CardContent>
                 </Card>
