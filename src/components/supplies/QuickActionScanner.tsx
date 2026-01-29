@@ -3,7 +3,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScanBarcode, Camera, X } from 'lucide-react';
+
 import { useBarcodeScanner, ParsedGS1Data, extractGS1DataForSupply } from '@/hooks/useBarcodeScanner';
+import { playSuccessSound } from '@/utils/audio';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,6 +27,9 @@ const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoadi
     const handleScanSuccess = useCallback((data: ParsedGS1Data) => {
         // Haptic feedback
         if (navigator.vibrate) navigator.vibrate(200);
+
+        // Audio feedback
+        playSuccessSound();
 
         // Visual feedback
         toast({
@@ -61,10 +66,10 @@ const QuickActionScanner: React.FC<QuickActionScannerProps> = ({ onScan, isLoadi
         stopScannerRef.current = stopScanner;
     }, [stopScanner]);
 
-    // Auto-focus input on mount
-    useEffect(() => {
-        inputRef.current?.focus();
-    }, []);
+    // Auto-focus removed to prevent mobile scrolling
+    // useEffect(() => {
+    //     inputRef.current?.focus();
+    // }, []);
 
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault();
