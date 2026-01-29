@@ -3,9 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Save } from 'lucide-react';
 import { format } from 'date-fns';
+import { getManufacturers } from '@/data/operations/manufacturerOperations';
 
 interface CartItem {
     id: string;
@@ -18,6 +20,8 @@ interface CartItem {
     expiryDate?: Date;
     quantity: number;
     purchasePrice: number;
+    manufacturerId?: string;
+    location?: string;
 }
 
 interface EditCartItemDialogProps {
@@ -36,12 +40,25 @@ export const EditCartItemDialog: React.FC<EditCartItemDialogProps> = ({
     const { t } = useLanguage();
 
     const [formData, setFormData] = useState<Partial<CartItem>>({});
+    const [manufacturers, setManufacturers] = useState<Array<{ id: string; name: string }>>([]);
 
     useEffect(() => {
         if (item && isOpen) {
             setFormData({ ...item });
         }
     }, [item, isOpen]);
+
+    useEffect(() => {
+        const loadManufacturers = async () => {
+            try {
+                const data = await getManufacturers();
+                setManufacturers(data);
+            } catch (error) {
+                console.error('Failed to load manufacturers', error);
+            }
+        };
+        if (isOpen) loadManufacturers();
+    }, [isOpen]);
 
     const handleChange = (field: keyof CartItem, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -146,6 +163,35 @@ export const EditCartItemDialog: React.FC<EditCartItemDialogProps> = ({
                                 type="number"
                                 value={formData.purchasePrice || 0}
                                 onChange={e => handleChange('purchasePrice', parseFloat(e.target.value) || 0)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Manufacturer & Location */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>{t('manufacturer') || 'Manufacturer'}</Label>
+                            <Select
+                                value={formData.manufacturerId || ''}
+                                onValueChange={value => handleChange('manufacturerId', value || undefined)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('select_manufacturer') || 'Select manufacturer'} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">{t('none') || 'None'}</SelectItem>
+                                    {manufacturers.map(m => (
+                                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>{t('location') || 'Location'}</Label>
+                            <Input
+                                value={formData.location || ''}
+                                onChange={e => handleChange('location', e.target.value)}
+                                placeholder={t('storage_location') || 'Storage location'}
                             />
                         </div>
                     </div>

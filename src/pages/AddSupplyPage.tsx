@@ -46,6 +46,8 @@ interface CartItem {
   expiryDate?: Date;
   quantity: number;
   purchasePrice: number;
+  manufacturerId?: string; // Per-item manufacturer
+  location?: string; // Storage location
 }
 
 // Batch scan entry
@@ -670,14 +672,16 @@ const AddInventoryPage = () => {
         product_definition_id: item.productDefinitionId,
         variant: item.variant,
         barcode: item.barcode || null,
+        gtin: item.gtin || null, // FIX: Save GTIN from scanned data
         quantity: item.quantity,
         initial_quantity: item.quantity,
         store_id: storeId,
-        manufacturer_id: manufacturerId || null,
+        manufacturer_id: item.manufacturerId || manufacturerId || null, // Use per-item or fallback to global
         supplier_id: supplierId,
         batch_number: item.batchNumber,
         expiry_date: item.expiryDate ? format(item.expiryDate, 'yyyy-MM-dd') : undefined,
         purchase_price: item.purchasePrice,
+        location: item.location || null, // FIX: Save location
       }));
 
       // --- FINALIZATION LOGIC ---
