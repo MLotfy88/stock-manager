@@ -83,6 +83,7 @@ export const saveDraftVoucher = async (
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
 
+  // Note: installments are stored in separate table, not in supply_vouchers
   const payload = {
     supplier_id: voucherData.supplier_id,
     date: voucherData.date,
@@ -96,6 +97,7 @@ export const saveDraftVoucher = async (
     invoice_image_urls: voucherData.invoice_image_urls,
     status: 'draft',
     draft_items: cartItems
+    // installments are NOT included here - they're in voucher_installments table
   };
 
   let result;
@@ -120,10 +122,13 @@ export const finalizeDraftVoucher = async (
   if (!supabase) throw new Error("Supabase client not initialized");
 
   // 1. Update status to completed and clear draft_items
+  // Extract installments separately since they go to a different table
+  const { installments, ...voucherUpdateData } = voucherData;
+
   const { data: voucher, error: voucherError } = await supabase
     .from('supply_vouchers')
     .update({
-      ...voucherData,
+      ...voucherUpdateData,
       status: 'completed',
       draft_items: [] // Clear draft items to save space
     })
@@ -150,7 +155,7 @@ export const finalizeDraftVoucher = async (
   // 3. Insert Installments (Same logic)
   if (voucherData.installments && voucherData.installments.length > 0) {
     // Clean installments payload? Usually they don't have IDs yet if from draft.
-    const installmentsToInsert = voucherData.installments.map(inst => ({
+    const installmentsToInsert = installments.map(inst => ({
       voucher_id: voucherId,
       amount: inst.amount,
       due_date: inst.due_date,
