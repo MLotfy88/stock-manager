@@ -48,7 +48,7 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
     const [purchasePrice, setPurchasePrice] = useState(defaultPrice);
     const [batchNumber, setBatchNumber] = useState('');
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
-    const [manufacturerId, setManufacturerId] = useState<string>('');
+    const [manufacturerId, setManufacturerId] = useState<string | undefined>(undefined);
     const [location, setLocation] = useState<string>('');
     const [manufacturers, setManufacturers] = useState<Array<{ id: string; name: string }>>([]);
 
@@ -94,7 +94,7 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
             expiryDate,
             batchNumber,
             purchasePrice,
-            manufacturerId: manufacturerId || undefined,
+            manufacturerId: manufacturerId === 'none' ? undefined : manufacturerId,
             location: location || undefined,
         });
         onClose();
@@ -214,7 +214,7 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
                                     <SelectValue placeholder={t('select_manufacturer') || 'Select manufacturer'} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{t('none') || 'None'}</SelectItem>
+                                    <SelectItem value="none">{t('none') || 'None'}</SelectItem>
                                     {manufacturers.map(m => (
                                         <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                                     ))}
@@ -222,7 +222,7 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>{t('location') || 'Location'}</Label>
+                            <Label>{t('storage_location') || 'Storage Location'}</Label>
                             <Input
                                 value={location}
                                 onChange={(e) => setLocation(e.target.value)}

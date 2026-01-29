@@ -172,14 +172,14 @@ export const EditCartItemDialog: React.FC<EditCartItemDialogProps> = ({
                         <div className="space-y-2">
                             <Label>{t('manufacturer') || 'Manufacturer'}</Label>
                             <Select
-                                value={formData.manufacturerId || ''}
-                                onValueChange={value => handleChange('manufacturerId', value || undefined)}
+                                value={formData.manufacturerId || 'none'}
+                                onValueChange={value => handleChange('manufacturerId', value === 'none' ? undefined : value)}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder={t('select_manufacturer') || 'Select manufacturer'} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{t('none') || 'None'}</SelectItem>
+                                    <SelectItem value="none">{t('none') || 'None'}</SelectItem>
                                     {manufacturers.map(m => (
                                         <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                                     ))}
@@ -187,7 +187,7 @@ export const EditCartItemDialog: React.FC<EditCartItemDialogProps> = ({
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>{t('location') || 'Location'}</Label>
+                            <Label>{t('storage_location') || 'Storage Location'}</Label>
                             <Input
                                 value={formData.location || ''}
                                 onChange={e => handleChange('location', e.target.value)}
