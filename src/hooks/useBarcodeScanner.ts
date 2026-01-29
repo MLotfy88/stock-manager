@@ -232,6 +232,8 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
   const [isSupported, setIsSupported] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const barcodeDetector = useRef<BarcodeDetector | null>(null);
+  const lastScanTime = useRef<number>(0); // Cooldown tracker
+  const lastScannedValue = useRef<string>(''); // Track last scanned barcode
 
   const callbackRef = useRef(props);
   useEffect(() => {
@@ -263,6 +265,21 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
       const barcodes = await barcodeDetector.current.detect(videoRef.current);
       if (barcodes.length > 0) {
         const rawValue = barcodes[0].rawValue;
+
+        // Cooldown: Prevent duplicate scans within 1.5 seconds of same barcode
+        const now = Date.now();
+        const timeSinceLastScan = now - lastScanTime.current;
+        const isSameBarcode = rawValue === lastScannedValue.current;
+
+        if (isSameBarcode && timeSinceLastScan < 1500) {
+          // Skip this scan - too soon after previous scan of same barcode
+          return;
+        }
+
+        // Update last scan tracking
+        lastScanTime.current = now;
+        lastScannedValue.current = rawValue;
+
         const parsedData = extractGS1DataForSupply(rawValue);
 
         let finalData: ParsedGS1Data = parsedData || {
