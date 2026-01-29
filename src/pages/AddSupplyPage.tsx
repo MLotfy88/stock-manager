@@ -200,8 +200,18 @@ const AddInventoryPage = () => {
 
         // Silent success or subtle indicator
         console.log("Draft auto-saved", savedDraft.id);
-      } catch (error) {
-        console.error("Auto-save failed", error);
+      } catch (error: any) {
+        // Handle specific errors
+        if (error.code === '23505') {
+          console.warn("Auto-save skipped: Duplicate voucher number");
+          // Do not reset draftId, just fail to save this revision
+        } else if (error.code === 'PGRST116') {
+          // Row not found (deleted?)
+          console.warn("Draft not found, resetting ID");
+          setDraftId(null);
+        } else {
+          console.error("Auto-save failed:", error.message || error);
+        }
       } finally {
         setIsAutoSaving(false);
       }
