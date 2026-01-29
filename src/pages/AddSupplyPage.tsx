@@ -265,6 +265,21 @@ const AddInventoryPage = () => {
     }
   };
 
+  // Fix: Update names when product definitions load (handle race condition)
+  useEffect(() => {
+    if (productDefsCache.length > 0) {
+      setCartItems(prev => {
+        const needsUpdate = prev.some(item => item.productName === 'Loading...' || !item.productName);
+        if (!needsUpdate) return prev;
+
+        return prev.map(item => {
+          const def = productDefsCache.find(d => d.id === item.productDefinitionId);
+          return def ? { ...item, productName: def.name } : item;
+        });
+      });
+    }
+  }, [productDefsCache]);
+
 
   // Calculated Totals
   const totalCartValue = useMemo(() => {
