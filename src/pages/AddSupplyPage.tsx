@@ -165,19 +165,16 @@ const AddInventoryPage = () => {
       try {
         const voucherData = {
           id: draftId || undefined,
-          supplier_id: supplierId,
+          supplier_id: supplierId || null, // FIX: Send null instead of empty string for UUID
           date: format(new Date(), 'yyyy-MM-dd'),
           stock_type: stockType,
           notes: 'Auto-saved draft',
-          voucher_number: voucherNumber.trim() ? voucherNumber.trim() : null, // Handle duplicates gracefully in drafts? Usually ok
+          voucher_number: voucherNumber.trim() ? voucherNumber.trim() : null,
           payment_method: paymentMethod,
-          payment_status: 'pending', // Drafts are always pending until finalized
+          payment_status: 'pending',
           total_amount: totalCartValue,
-          paid_amount: paidAmount, // Save partial payment info if entered
-          invoice_image_urls: invoiceImageUrls // Note: images might need upload first? For draft, maybe just keep local or ignore for now? 
-          // Logic gap: if we include images, we must upload them. 
-          // For auto-save, maybe skip images unless already uploaded constants.
-          // Let's keep it simple: skip images for background auto-save to avoid bandwidth spam
+          paid_amount: paidAmount,
+          invoice_image_urls: invoiceImageUrls
         };
 
         const savedDraft = await saveDraftVoucher(voucherData as any, cartItems.map(item => ({
@@ -210,7 +207,7 @@ const AddInventoryPage = () => {
           console.warn("Draft not found, resetting ID");
           setDraftId(null);
         } else {
-          console.error("Auto-save failed:", error.message || error);
+          console.error("Auto-save failed:", error.message || JSON.stringify(error));
         }
       } finally {
         setIsAutoSaving(false);
