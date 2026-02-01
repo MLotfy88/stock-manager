@@ -354,6 +354,25 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
+
+          // HARDWARE AUTOFOCUS FIX:
+          // Apply constraints *after* the stream has started. This is much more reliable than getUserMedia constraints.
+          const track = stream.getVideoTracks()[0];
+          const capabilities = track.getCapabilities();
+
+          // @ts-ignore
+          if (capabilities.focusMode) {
+            try {
+              // Create a "pumping" effect to force focus? No, just set continuous explicitly.
+              // @ts-ignore
+              await track.applyConstraints({
+                advanced: [{ focusMode: 'continuous' }]
+              });
+              console.log("Hardware autofocus enabled successfully");
+            } catch (focusErr) {
+              console.warn("Could not apply focus mode:", focusErr);
+            }
+          }
         }
       } catch (err: any) {
         setError(`Failed to start camera: ${err.message}`);
