@@ -262,7 +262,31 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     }
 
     try {
-      const barcodes = await barcodeDetector.current.detect(videoRef.current);
+      // REGION OF INTEREST (ROI) FIX:
+      // Instead of scanning the full frame, we crop the center (where the box is).
+      // This stops "bottom scanning" and improves relative resolution of the target.
+
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas'); // Off-screen canvas
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) return;
+
+      // Define ROI (approx 60% width, 40% height - matching ScannerOverlay aspect)
+      const roiWidth = video.videoWidth * 0.7; // 70% of width
+      const roiHeight = video.videoHeight * 0.5; // 50% of height (box is usually wider)
+      const roiX = (video.videoWidth - roiWidth) / 2;
+      const roiY = (video.videoHeight - roiHeight) / 2;
+
+      canvas.width = roiWidth;
+      canvas.height = roiHeight;
+
+      // Draw only the center part of the video to the canvas
+      ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, roiWidth, roiHeight);
+
+      // Detect from the cropped canvas
+      const barcodes = await barcodeDetector.current.detect(canvas);
+
       if (barcodes.length > 0) {
         const rawValue = barcodes[0].rawValue;
 
