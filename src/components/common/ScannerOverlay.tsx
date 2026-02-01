@@ -78,7 +78,7 @@ export const ScannerOverlay: React.FC<ScannerOverlayProps> = ({
 
                 {/* Dark Overlay with Transparent Window */}
                 <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute inset-0 bg-black/60"></div>
+
                     {/* The "Hole" - using clip-path could be complex for rounded corners, 
                         so instead we use a central box with a box-shadow that covers the rest.
                         Or simpler: top/bottom/left/right dark divs. 
