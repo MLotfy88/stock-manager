@@ -317,6 +317,8 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
             facingMode: 'environment',
             width: { ideal: 1920 },
             height: { ideal: 1080 },
+            // @ts-ignore - 'advanced' is not fully typed in all standard libs yet
+            advanced: [{ focusMode: 'continuous' }, { zoom: 1.0 }]
           },
         });
         if (videoRef.current) {
