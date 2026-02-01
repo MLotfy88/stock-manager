@@ -317,6 +317,14 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
                 </div>
             </div>
 
+            <div className="space-y-2">
+                <Label>{t('expiry_date')}</Label>
+                <Input
+                    type="date"
+                    value={expiryDate ? expiryDate.substring(0, 10) : ''}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                    className="h-12"
+                />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -347,78 +355,78 @@ export const NewItemWizard: React.FC<NewItemWizardProps> = ({
                     />
                 </div>
             </div>
-        </div >
+        </div>
     );
 
-return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <SheetContent
-            side="bottom"
-            className="rounded-t-[20px] max-h-[90vh] min-h-[50vh] overflow-y-auto"
-            data-vaul-no-drag
-        >
-            <SheetHeader className="mb-4">
-                <SheetTitle className="flex justify-between items-center">
-                    <span>
-                        {step === 1 && t('identify_product')}
-                        {step === 2 && t('select_variant')}
-                        {step === 3 && t('confirm_details')}
-                    </span>
-                    <span className="text-sm font-normal text-muted-foreground">Step {step}/3</span>
-                </SheetTitle>
-                <SheetDescription>
-                    {step === 1 && (t('scan_search_instruction') || "Scan a barcode or search for a product to add.")}
-                    {step === 2 && (t('select_variant_instruction') || "Select the specific variant for this product.")}
-                    {step === 3 && (t('confirm_details_instruction') || "Verify quantity, batch, and expiry details.")}
-                </SheetDescription>
-            </SheetHeader>
+    return (
+        <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <SheetContent
+                side="bottom"
+                className="rounded-t-[20px] max-h-[90vh] min-h-[50vh] overflow-y-auto"
+                data-vaul-no-drag
+            >
+                <SheetHeader className="mb-4">
+                    <SheetTitle className="flex justify-between items-center">
+                        <span>
+                            {step === 1 && t('identify_product')}
+                            {step === 2 && t('select_variant')}
+                            {step === 3 && t('confirm_details')}
+                        </span>
+                        <span className="text-sm font-normal text-muted-foreground">Step {step}/3</span>
+                    </SheetTitle>
+                    <SheetDescription>
+                        {step === 1 && (t('scan_search_instruction') || "Scan a barcode or search for a product to add.")}
+                        {step === 2 && (t('select_variant_instruction') || "Select the specific variant for this product.")}
+                        {step === 3 && (t('confirm_details_instruction') || "Verify quantity, batch, and expiry details.")}
+                    </SheetDescription>
+                </SheetHeader>
 
-            <div className="py-2">
-                {step === 1 && renderStep1()}
-                {step === 2 && renderStep2()}
-                {step === 3 && renderStep3()}
-            </div>
+                <div className="py-2">
+                    {step === 1 && renderStep1()}
+                    {step === 2 && renderStep2()}
+                    {step === 3 && renderStep3()}
+                </div>
 
-            <SheetFooter className="mt-6 flex-row gap-3 sm:space-x-0">
-                {step > 1 && (
-                    <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
-                        <ArrowLeft className="mr-2 h-4 w-4" /> {t('back') || 'Back'}
-                    </Button>
-                )}
+                <SheetFooter className="mt-6 flex-row gap-3 sm:space-x-0">
+                    {step > 1 && (
+                        <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
+                            <ArrowLeft className="mr-2 h-4 w-4" /> {t('back') || 'Back'}
+                        </Button>
+                    )}
 
-                {step === 1 && (
-                    <Button
-                        onClick={() => {
-                            if (selectedDefinition?.visual_picker_preference === 'none' || (!selectedDefinition?.visual_picker_preference && selectedDefinition?.variants.length === 0)) {
-                                setStep(3); // Skip to details if no variants
-                            } else {
-                                setStep(2); // Go to variant picker
-                            }
-                        }}
-                        disabled={!selectedDefinition}
-                        className="flex-1"
-                    >
-                        {t('next') || 'Next'} <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                )}
+                    {step === 1 && (
+                        <Button
+                            onClick={() => {
+                                if (selectedDefinition?.visual_picker_preference === 'none' || (!selectedDefinition?.visual_picker_preference && selectedDefinition?.variants.length === 0)) {
+                                    setStep(3); // Skip to details if no variants
+                                } else {
+                                    setStep(2); // Go to variant picker
+                                }
+                            }}
+                            disabled={!selectedDefinition}
+                            className="flex-1"
+                        >
+                            {t('next') || 'Next'} <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    )}
 
-                {step === 2 && (
-                    <Button
-                        onClick={() => setStep(3)}
-                        disabled={!selectedVariant}
-                        className="flex-1"
-                    >
-                        {t('next') || 'Next'} <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                )}
+                    {step === 2 && (
+                        <Button
+                            onClick={() => setStep(3)}
+                            disabled={!selectedVariant}
+                            className="flex-1"
+                        >
+                            {t('next') || 'Next'} <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    )}
 
-                {step === 3 && (
-                    <Button onClick={handleFinalSave} className="flex-[2]">
-                        <Save className="mr-2 h-4 w-4" /> Save Item
-                    </Button>
-                )}
-            </SheetFooter>
-        </SheetContent>
-    </Sheet>
-);
+                    {step === 3 && (
+                        <Button onClick={handleFinalSave} className="flex-[2]">
+                            <Save className="mr-2 h-4 w-4" /> Save Item
+                        </Button>
+                    )}
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
+    );
 };
