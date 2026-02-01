@@ -376,96 +376,92 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [isScannerActive, captureAndDecode]);
-  return () => {
-    if (intervalId) clearInterval(intervalId);
-  };
-}, [isScannerActive, captureAndDecode]);
 
-const startScanner = useCallback(async () => {
-  if (!isSupported) {
-    alert("Barcode scanning is not supported on this browser.");
-    return;
-  }
-
-  if (Capacitor.isNativePlatform()) {
-    try {
-      // Request camera permission
-      await Camera.requestPermissions();
-
-      const image = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera,
-      });
-
-      if (image.webPath) {
-        try {
-          // Fetch the image as a blob
-          const response = await fetch(image.webPath);
-          const blob = await response.blob();
-          const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
-
-          const html5QrCode = new Html5Qrcode("reader-hidden"); // ID doesn't matter for file scan, but instance needed?
-          // Actually Html5Qrcode class allows static scanFile? No, instance method.
-          // Better: Use Html5QrcodeScanner or just Html5Qrcode instance.
-          // We don't have a DOM element "reader-hidden". 
-          // Html5Qrcode needs an element ID constructor, but for scanFile it might not need it mounted?
-          // Let's check docs memory: new Html5Qrcode("identifier") -> scanFile(file)
-          // We can just use a dummy ID.
-
-          const scanner = new Html5Qrcode("permission-request-dummy-element");
-
-          // Note: scanFile(imageFile, showImage)
-          const decodedText = await scanner.scanFile(file, false);
-
-          if (decodedText) {
-            const rawValue = decodedText;
-            const parsedData = extractGS1DataForSupply(rawValue);
-
-            let finalData: ParsedGS1Data = parsedData || {
-              rawValue,
-              formattedValue: rawValue
-            };
-
-            // Auto-detect GTIN
-            const gtin = parsedData?.gtin || (rawValue.length === 14 ? rawValue : null);
-            if (gtin) {
-              const mapping = await getGTINMapping(gtin);
-              if (mapping) {
-                finalData.product_id = mapping.product_definition_id;
-                finalData.variant_name = mapping.variant_name;
-                updateLastScanned(gtin).catch(console.error);
-              }
-            }
-            callbackRef.current.onScanSuccess(finalData);
-          } else {
-            callbackRef.current.onScanFailure?.(new Error("No QR/Barcode found."));
-          }
-
-          // Cleanup? scanner.clear() isn't needed for file scan usually.
-        } catch (err) {
-          console.error("Html5Qrcode scan error:", err);
-          callbackRef.current.onScanFailure?.(err as Error);
-        }
-      }
-    } catch (err: any) {
-      setError(`Failed to use camera: ${err.message}`);
+  const startScanner = useCallback(async () => {
+    if (!isSupported) {
+      alert("Barcode scanning is not supported on this browser.");
+      return;
     }
-  } else {
-    // Web-based scanner
-    setIsScannerActive(true);
-  }
-}, [isSupported]);
 
-const stopScanner = useCallback(() => setIsScannerActive(false), []);
+    if (Capacitor.isNativePlatform()) {
+      try {
+        // Request camera permission
+        await Camera.requestPermissions();
 
-return {
-  videoRef,
-  isScannerActive,
-  error,
-  startScanner,
-  stopScanner,
-  captureAndDecode,
-};
+        const image = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Camera,
+        });
+
+        if (image.webPath) {
+          try {
+            // Fetch the image as a blob
+            const response = await fetch(image.webPath);
+            const blob = await response.blob();
+            const file = new File([blob], "scan.jpg", { type: "image/jpeg" });
+
+            const html5QrCode = new Html5Qrcode("reader-hidden"); // ID doesn't matter for file scan, but instance needed?
+            // Actually Html5Qrcode class allows static scanFile? No, instance method.
+            // Better: Use Html5QrcodeScanner or just Html5Qrcode instance.
+            // We don't have a DOM element "reader-hidden". 
+            // Html5Qrcode needs an element ID constructor, but for scanFile it might not need it mounted?
+            // Let's check docs memory: new Html5Qrcode("identifier") -> scanFile(file)
+            // We can just use a dummy ID.
+
+            const scanner = new Html5Qrcode("permission-request-dummy-element");
+
+            // Note: scanFile(imageFile, showImage)
+            const decodedText = await scanner.scanFile(file, false);
+
+            if (decodedText) {
+              const rawValue = decodedText;
+              const parsedData = extractGS1DataForSupply(rawValue);
+
+              let finalData: ParsedGS1Data = parsedData || {
+                rawValue,
+                formattedValue: rawValue
+              };
+
+              // Auto-detect GTIN
+              const gtin = parsedData?.gtin || (rawValue.length === 14 ? rawValue : null);
+              if (gtin) {
+                const mapping = await getGTINMapping(gtin);
+                if (mapping) {
+                  finalData.product_id = mapping.product_definition_id;
+                  finalData.variant_name = mapping.variant_name;
+                  updateLastScanned(gtin).catch(console.error);
+                }
+              }
+              callbackRef.current.onScanSuccess(finalData);
+            } else {
+              callbackRef.current.onScanFailure?.(new Error("No QR/Barcode found."));
+            }
+
+            // Cleanup? scanner.clear() isn't needed for file scan usually.
+          } catch (err) {
+            console.error("Html5Qrcode scan error:", err);
+            callbackRef.current.onScanFailure?.(err as Error);
+          }
+        }
+      } catch (err: any) {
+        setError(`Failed to use camera: ${err.message}`);
+      }
+    } else {
+      // Web-based scanner
+      setIsScannerActive(true);
+    }
+  }, [isSupported]);
+
+  const stopScanner = useCallback(() => setIsScannerActive(false), []);
+
+  return {
+    videoRef,
+    isScannerActive,
+    error,
+    startScanner,
+    stopScanner,
+    captureAndDecode,
+  };
 };
