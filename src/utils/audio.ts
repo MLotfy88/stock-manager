@@ -5,7 +5,7 @@ export const playSuccessSound = () => {
 
         const ctx = new AudioContext();
 
-        // Professional barcode scanner beep: Two quick sharp beeps
+        // Standard scanner beep: Single sharp beep
         const beep = (frequency: number, startTime: number, duration: number) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
@@ -13,22 +13,18 @@ export const playSuccessSound = () => {
             osc.connect(gain);
             gain.connect(ctx.destination);
 
-            osc.type = 'square'; // Square wave for sharper, more professional sound
+            osc.type = 'square';
             osc.frequency.setValueAtTime(frequency, startTime);
 
-            // Quick attack and decay
-            gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.15, startTime + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+            gain.gain.setValueAtTime(0.1, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
             osc.start(startTime);
             osc.stop(startTime + duration);
         };
 
-        // Classic two-tone scanner beep
-        const now = ctx.currentTime;
-        beep(2000, now, 0.08);        // First beep: 2000Hz
-        beep(1800, now + 0.09, 0.08); // Second beep: 1800Hz (slightly lower pitch)
+        // Single high-pitched beep
+        beep(1500, ctx.currentTime, 0.15);
 
     } catch (e) {
         console.error("Audio play failed", e);
