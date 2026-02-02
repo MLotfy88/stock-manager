@@ -348,7 +348,7 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
             width: { ideal: 1280 }, // 720p is Faster/Standard for mobile scanning
             height: { ideal: 720 },
             // @ts-ignore
-            advanced: [{ focusMode: 'continuous' }, { zoom: 1.0 }, { frameRate: { ideal: 30 } }]
+            advanced: [{ focusMode: 'continuous' } as any, { zoom: 1.0 } as any, { frameRate: { ideal: 30 } } as any]
           },
         });
         if (videoRef.current) {
@@ -366,7 +366,7 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
               // Create a "pumping" effect to force focus? No, just set continuous explicitly.
               // @ts-ignore
               await track.applyConstraints({
-                advanced: [{ focusMode: 'continuous' }]
+                advanced: [{ focusMode: 'continuous' } as any]
               });
               console.log("Hardware autofocus enabled successfully");
             } catch (focusErr) {
