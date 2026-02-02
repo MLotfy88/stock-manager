@@ -5,31 +5,29 @@ export const playSuccessSound = () => {
 
         const ctx = new AudioContext();
 
-        // Professional "Success Chime" (Soft two-tone)
-        const chime = (startTime: number) => {
+        // Classic "Good Read Beep" - Short, sharp confirmation tone
+        const goodReadBeep = (startTime: number) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
 
             osc.connect(gain);
             gain.connect(ctx.destination);
 
-            osc.type = 'sine'; // Sine wave is softer and more pleasant
+            // Square wave for classic scanner sound
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(2600, startTime); // High pitch (standard scanner frequency)
 
-            // First tone: High C (Do)
-            osc.frequency.setValueAtTime(800, startTime);
-            // Slide to Second tone: Higher E (Mi)
-            osc.frequency.exponentialRampToValueAtTime(1200, startTime + 0.1);
-
-            // Envelope: Soft attack, quick decay
+            // Very short burst: Attack → Sustain → Quick decay
             gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+            gain.gain.linearRampToValueAtTime(0.2, startTime + 0.005); // Fast attack (5ms)
+            gain.gain.setValueAtTime(0.2, startTime + 0.06); // Hold (60ms total)
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08); // Quick fade (20ms)
 
             osc.start(startTime);
-            osc.stop(startTime + 0.3);
+            osc.stop(startTime + 0.08);
         };
 
-        chime(ctx.currentTime);
+        goodReadBeep(ctx.currentTime);
 
     } catch (e) {
         console.error("Audio play failed", e);

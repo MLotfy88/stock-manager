@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { useMediaQuery } from '@/hooks/use-mobile';
@@ -82,6 +82,10 @@ const AddInventoryPage = () => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => isMobile && setIsSidebarOpen(false);
 
+  // --- Critical State for Save Flow Integrity ---
+  const [isSaving, setIsSaving] = useState(false); // Prevent duplicate saves
+  const isTransitioning = useRef(false); // Prevent auto-save during mode switch
+
   // --- Data Loading ---
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [manufacturersList, setManufacturersList] = useState<Manufacturer[]>([]);
@@ -147,9 +151,23 @@ const AddInventoryPage = () => {
   const debouncedCart = useDebounce(cartItems, 2000); // Wait 2s after changes
   const debouncedHeader = useDebounce({ supplierId, storeId, stockType, paymentMethod, voucherNumber }, 2000);
 
+  // Helper: Normalize dates for DB (avoid timezone bugs)
+  const normalizeDateForDB = (date: Date | string | undefined): string | undefined => {
+    if (!date) return undefined;
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return undefined;
+    // Force UTC midnight to avoid timezone shifts
+    return format(new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), 'yyyy-MM-dd');
+  };
+
   // Auto-Save Effect
   useEffect(() => {
     const performAutoSave = async () => {
+      // CRITICAL GUARDS: Prevent auto-save conflicts
+      if (isSaving) return; // Don't auto-save if manual save in progress
+      if (isTransitioning.current) return; // Don't auto-save during mode switch
+      if (batchWizardStep !== null) return; // Don't auto-save during batch wizard
+
       // Requirements to save a draft:
       // 1. Must have a supplier (to know who it's for)
       // 2. Must have at least one item OR we are updating an existing draft
@@ -187,7 +205,7 @@ const AddInventoryPage = () => {
           quantity: item.quantity,
           purchase_price: item.purchasePrice,
           batch_number: item.batchNumber,
-          expiry_date: item.expiryDate ? format(item.expiryDate, 'yyyy-MM-dd') : undefined,
+          expiry_date: normalizeDateForDB(item.expiryDate), // FIX: Use normalized date
           location: item.location || headerLocation || null, // FIX: Save location (per-item or global header)
         })));
 
@@ -443,7 +461,7 @@ const AddInventoryPage = () => {
       barcode: currentScannedData.rawValue,
       gtin: currentScannedData.gtin,
       batchNumber: data.batchNumber,
-      expiryDate: data.expiryDate,
+      expiryDate: data.expiryDate ? (typeof data.expiryDate === 'string' ? new Date(data.expiryDate) : data.expiryDate) : undefined, // FIX: Always store as Date
       quantity: data.quantity,
       purchasePrice: data.purchasePrice,
       manufacturerId: data.manufacturerId,
@@ -462,7 +480,7 @@ const AddInventoryPage = () => {
       barcode: currentScannedData?.rawValue || "",
       gtin: currentScannedData?.gtin,
       batchNumber: data.batchNumber,
-      expiryDate: data.expiryDate,
+      expiryDate: data.expiryDate ? (typeof data.expiryDate === 'string' ? new Date(data.expiryDate) : data.expiryDate) : undefined, // FIX: Always store as Date
       quantity: data.quantity,
       purchasePrice: data.purchasePrice,
       manufacturerId: data.manufacturerId,
@@ -623,6 +641,12 @@ const AddInventoryPage = () => {
   const handleSaveInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // CRITICAL: Prevent duplicate saves
+    if (isSaving) {
+      toast({ title: t('please_wait') || "Please wait", description: "Save in progress...", variant: "default" });
+      return;
+    }
+
     if (!supplierId || !storeId || !stockType) {
       toast({ title: t('error'), description: t('please_fill_header_fields'), variant: 'destructive' });
       return;
@@ -632,6 +656,7 @@ const AddInventoryPage = () => {
       return;
     }
 
+    setIsSaving(true); // Lock save operations
     try {
       // Upload Images
       let uploadedImageUrls: string[] = [];
@@ -685,7 +710,7 @@ const AddInventoryPage = () => {
         manufacturer_id: item.manufacturerId || manufacturerId || null, // Use per-item or fallback to global
         supplier_id: supplierId,
         batch_number: item.batchNumber,
-        expiry_date: item.expiryDate ? format(item.expiryDate, 'yyyy-MM-dd') : undefined,
+        expiry_date: normalizeDateForDB(item.expiryDate), // FIX: Use normalized date
         purchase_price: item.purchasePrice,
         location: item.location || headerLocation || null, // FIX: Save location (per-item or global header)
       }));
@@ -724,6 +749,8 @@ const AddInventoryPage = () => {
       } else {
         toast({ title: t('error'), description: t('error_saving_invoice'), variant: 'destructive' });
       }
+    } finally {
+      setIsSaving(false); // Unlock save operations
     }
   };
 
@@ -978,7 +1005,11 @@ const AddInventoryPage = () => {
                     <CardContent className="flex gap-2">
                       <Button
                         variant={scanMode === 'single' ? 'default' : 'outline'}
-                        onClick={() => setScanMode('single')}
+                        onClick={() => {
+                          isTransitioning.current = true;
+                          setScanMode('single');
+                          setTimeout(() => isTransitioning.current = false, 200);
+                        }}
                         className="flex-1"
                         size="sm"
                       >
@@ -986,7 +1017,12 @@ const AddInventoryPage = () => {
                       </Button>
                       <Button
                         variant={scanMode === 'batch' ? 'default' : 'outline'}
-                        onClick={() => setScanMode('batch')}
+                        onClick={() => {
+                          isTransitioning.current = true;
+                          setScanMode('batch');
+                          setBatchWizardStep('scanning'); // Auto-open wizard
+                          setTimeout(() => isTransitioning.current = false, 200);
+                        }}
                         className="flex-1"
                         size="sm"
                       >
