@@ -196,8 +196,9 @@ const ItemConfirmationDialog: React.FC<ItemConfirmationDialogProps> = ({
                         <Input
                             id="price"
                             type="number"
-                            value={purchasePrice}
+                            value={purchasePrice === 0 ? '' : purchasePrice}
                             onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
                             className="h-11 text-lg font-semibold"
                         />
                     </div>

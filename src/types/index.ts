@@ -219,7 +219,7 @@ export interface SignInCredentials {
   password: string;
 }
 
-export type PaymentMethod = 'cash' | 'deferred' | 'installments' | 'check' | 'opening_balance';
+export type PaymentMethod = 'cash' | 'deferred' | 'opening_balance' | 'consignment';
 export type PaymentStatus = 'paid' | 'pending' | 'partially_paid' | 'overdue';
 
 export interface VoucherInstallment {

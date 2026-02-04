@@ -336,14 +336,30 @@ const AddInventoryPage = () => {
     setInvoiceImageBlobs(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleFileUpload = (files: FileList) => {
+    const newBlobs: Blob[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+        newBlobs.push(file);
+      }
+    }
+    setInvoiceImageBlobs(prev => [...prev, ...newBlobs]);
+  };
+
+
   // Sync paid amount/status defaults based on method
   useEffect(() => {
     if (paymentMethod === 'cash') {
       setPaidAmount(totalCartValue);
       setPaymentStatus('paid');
       setInstallments([]);
-    } else if (paymentMethod === 'deferred' || paymentMethod === 'installments') {
+    } else if (paymentMethod === 'deferred') {
       setPaymentStatus('pending');
+    } else if (paymentMethod === 'opening_balance' || paymentMethod === 'consignment') {
+      setPaidAmount(0);
+      setPaymentStatus('paid'); // Opening balance & consignment are "paid" (no debt)
+      setInstallments([]);
     }
   }, [paymentMethod, totalCartValue]);
 
@@ -832,29 +848,38 @@ const AddInventoryPage = () => {
                         <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="cash">{t('cash') || 'Cash'}</SelectItem>
-                            <SelectItem value="deferred">{t('deferred') || 'Deferred'}</SelectItem>
-                            <SelectItem value="installments">{t('installments') || 'Installments'}</SelectItem>
-                            <SelectItem value="check">{t('check') || 'Check'}</SelectItem>
-                            <SelectItem value="opening_balance">{t('opening_balance') || 'رصيد أول المدة'}</SelectItem>
+                            <SelectItem value="cash">نقدي (Cash)</SelectItem>
+                            <SelectItem value="deferred">آجل (Deferred)</SelectItem>
+                            <SelectItem value="opening_balance">رصيد افتتاحى (Opening Balance)</SelectItem>
+                            <SelectItem value="consignment">على سبيل الامانة (Consignment)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      {(paymentMethod === 'deferred' || paymentMethod === 'installments') && (
+                      {paymentMethod === 'deferred' && (
                         <div>
-                          <Label className="text-xs text-muted-foreground">{t('paid_amount_now') || 'Paid Amount Now'}</Label>
+                          <Label className="text-xs text-muted-foreground">{t('paid_amount_now') || 'المبلغ المدفوع الآن'}</Label>
                           <Input
                             type="number"
                             value={paidAmount}
                             onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
                             min="0"
                           />
+                        </div>
+                      )}
+                      {paymentMethod === 'consignment' && (
+                        <div className="col-span-2">
+                          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                            <p className="text-sm text-blue-700 dark:text-blue-300">
+                              ℹ️ {t('consignment_note') || 'أسعار التكلفة غير مطلوبة للأمانات. سيتم فوترتها عند الاستهلاك.'}
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>
 
                     {/* Installments Table */}
-                    {(paymentMethod === 'installments' || paymentMethod === 'deferred') && (
+                    {paymentMethod === 'deferred' && (
                       <div className="bg-muted/30 p-4 rounded-lg border">
                         <div className="mb-3 flex justify-between items-center">
                           <span className="font-semibold text-sm">{t('installments_schedule') || 'Installments Schedule'}</span>
@@ -983,13 +1008,35 @@ const AddInventoryPage = () => {
                       </div>
                     ) : (
                       <div className="text-center space-y-4">
-                        <div className="bg-blue-100 p-4 rounded-full inline-block">
+                        <div className="bg-blue-100 dark:bg-blue-950 p-4 rounded-full inline-block">
                           <Scan className="h-8 w-8 text-blue-600" />
                         </div>
-                        <p className="text-sm text-muted-foreground">Scan invoice pages (Multi-page supported)</p>
-                        <Button type="button" onClick={() => setIsDocScannerOpen(true)} className="w-full">
-                          {t('scan_invoice') || 'Scan First Page'}
-                        </Button>
+                        <p className="text-sm text-muted-foreground">
+                          {t('scan_or_upload_invoice') || 'مسح أو رفع صور الفاتورة'}
+                        </p>
+                        <div className="flex gap-2 w-full">
+                          <Button type="button" onClick={() => setIsDocScannerOpen(true)} className="flex-1">
+                            <Scan className="h-4 w-4 mr-2" />
+                            {t('scan') || 'مسح'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById('invoice-file-upload')?.click()}
+                            className="flex-1"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            {t('upload') || 'رفع'}
+                          </Button>
+                        </div>
+                        <input
+                          id="invoice-file-upload"
+                          type="file"
+                          accept="image/*,application/pdf"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                        />
                       </div>
                     )}
                   </CardContent>
@@ -1004,6 +1051,7 @@ const AddInventoryPage = () => {
                     </CardHeader>
                     <CardContent className="flex gap-2">
                       <Button
+                        type="button"
                         variant={scanMode === 'single' ? 'default' : 'outline'}
                         onClick={() => {
                           isTransitioning.current = true;
@@ -1016,6 +1064,7 @@ const AddInventoryPage = () => {
                         Single
                       </Button>
                       <Button
+                        type="button"
                         variant={scanMode === 'batch' ? 'default' : 'outline'}
                         onClick={() => {
                           isTransitioning.current = true;
