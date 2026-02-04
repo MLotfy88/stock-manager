@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { format, parseISO, getMonth, getYear, setYear, startOfYear, endOfYear, eachMonthOfInterval } from 'date-fns';
+import { ar } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, FileText, Check, X, AlertCircle, Plus, Trash2 } from 'lucide-react';
@@ -18,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 const DebtCalendarPage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const isMobile = useMediaQuery('(max-width: 1024px)');
-    const { t, direction } = useLanguage();
+    const { t, direction, language } = useLanguage();
     const { toast } = useToast();
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -145,7 +146,7 @@ const DebtCalendarPage = () => {
                                     >
                                         <CardHeader className={`py-3 px-4 flex flex-row items-center justify-between space-y-0 border-b ${isCurrentMonth ? 'bg-primary/5' : 'bg-muted/10'}`}>
                                             <CardTitle className={`text-base font-bold capitalize ${isCurrentMonth ? 'text-primary' : ''}`}>
-                                                {format(month, 'MMMM')}
+                                                {format(month, 'MMMM', { locale: language === 'ar' ? ar : undefined })}
                                             </CardTitle>
                                             <Badge variant={isPastMonth && totalDue > 0 ? "destructive" : "secondary"} className="text-xs">
                                                 {totalDue > 0 ? totalDue.toLocaleString() : '-'}

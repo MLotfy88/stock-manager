@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,6 +22,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 export default function ReorderPointManagerPage() {
     const { t, language } = useLanguage();
@@ -128,10 +129,7 @@ export default function ReorderPointManagerPage() {
     };
 
     // Flattened list for the table: { product, variantName, currentReorderPoint }
-    // If product has variants, each variant is a row.
-    // If product has no variants, the product itself is a row (using base reorder_point).
     const rows = products.flatMap(p => {
-        // Determine type label for filter matching
         const typeLabel = p.supply_type?.name;
 
         // Filter by Type
@@ -170,33 +168,33 @@ export default function ReorderPointManagerPage() {
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">{t('reorder_point_manager_nav') || 'Reorder Point Manager'}</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('reorder_point_manager_nav') || 'إدارة نقاط إعادة الطلب'}</h1>
                     <p className="text-muted-foreground">
-                        {t('reorder_point_manager_desc') || 'Manage minimum stock levels for all supplies'}
+                        {t('reorder_point_manager_desc') || 'إدارة مستويات المخزون الأدنى لجميع الإمدادات'}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={fetchData} disabled={loading}>
-                        {loading ? 'Refreshing...' : t('refresh')}
+                        {loading ? t('loading') : t('refresh')}
                     </Button>
                 </div>
             </div>
 
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle>{t('filters')}</CardTitle>
-                    <div className="flex flex-col sm:flex-row gap-4 mt-2">
+            {/* Filters - Always visible */}
+            <Card className="border-none shadow-sm bg-muted/30">
+                <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder={t('search_supplies')}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9"
+                                className="pl-9 bg-background"
                             />
                         </div>
                         <Select value={selectedType} onValueChange={setSelectedType}>
-                            <SelectTrigger className="w-[200px]">
+                            <SelectTrigger className="w-full sm:w-[200px] bg-background">
                                 <SelectValue placeholder={t('filter_by_type')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -209,6 +207,53 @@ export default function ReorderPointManagerPage() {
                             </SelectContent>
                         </Select>
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Mobile Card Layout */}
+            <div className="md:hidden space-y-4">
+                {rows.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                        {t('no_results_found')}
+                    </div>
+                ) : (
+                    rows.map((row) => (
+                        <Card key={row.id} className="overflow-hidden">
+                            <CardContent className="p-4 space-y-3">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-base">{row.productName}</h4>
+                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            {row.variantName ? (
+                                                <Badge variant="secondary" className="text-xs">{row.variantName}</Badge>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground italic">{t('base_item') || 'أساسي'}</span>
+                                            )}
+                                            {row.type && (
+                                                <span className="text-xs text-muted-foreground border-s ps-2 ms-2">{row.type}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-4 border-t mt-2">
+                                    <ReorderPointRow
+                                        row={row}
+                                        onUpdate={handleUpdateReorderPoint}
+                                        t={t}
+                                        mobile={true}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
+            </div>
+
+            {/* Desktop Table Layout */}
+            <Card className="hidden md:block">
+                <CardHeader className="pb-3 border-b mb-2">
+                    <CardTitle>{t('supplies_list') || 'قائمة الإمدادات'}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="rounded-md border overflow-hidden">
@@ -236,6 +281,7 @@ export default function ReorderPointManagerPage() {
                                             row={row}
                                             onUpdate={handleUpdateReorderPoint}
                                             t={t}
+                                            mobile={false}
                                         />
                                     ))
                                 )}
@@ -243,7 +289,7 @@ export default function ReorderPointManagerPage() {
                         </Table>
                     </div>
                     <div className="mt-4 text-sm text-muted-foreground text-center">
-                        Showing {rows.length} items
+                        {t('showing_items')}: {rows.length}
                     </div>
                 </CardContent>
             </Card>
@@ -252,7 +298,7 @@ export default function ReorderPointManagerPage() {
 }
 
 // Sub-component for interaction performance
-const ReorderPointRow = ({ row, onUpdate, t }: { row: any, onUpdate: any, t: any }) => {
+const ReorderPointRow = ({ row, onUpdate, t, mobile = false }: { row: any, onUpdate: any, t: any, mobile?: boolean }) => {
     const [value, setValue] = useState(row.reorderPoint.toString());
     const [isDirty, setIsDirty] = useState(false);
 
@@ -270,6 +316,35 @@ const ReorderPointRow = ({ row, onUpdate, t }: { row: any, onUpdate: any, t: any
         }
     };
 
+    if (mobile) {
+        return (
+            <div className="flex items-end gap-3">
+                <div className="flex-1">
+                    <Label className="mb-2 block text-xs font-medium text-muted-foreground">{t('reorder_point')}</Label>
+                    <Input
+                        type="number"
+                        min="0"
+                        value={value}
+                        onChange={(e) => {
+                            setValue(e.target.value);
+                            setIsDirty(true);
+                        }}
+                        className={`h-10 ${isDirty ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20" : ""}`}
+                    />
+                </div>
+                <Button
+                    onClick={handleSave}
+                    disabled={!isDirty}
+                    size="icon"
+                    variant={isDirty ? "default" : "secondary"}
+                    className={!isDirty ? "opacity-50" : ""}
+                >
+                    <Save className="h-4 w-4" />
+                </Button>
+            </div>
+        );
+    }
+
     return (
         <TableRow>
             <TableCell className="font-medium text-muted-foreground text-xs">{row.type}</TableCell>
@@ -280,7 +355,7 @@ const ReorderPointRow = ({ row, onUpdate, t }: { row: any, onUpdate: any, t: any
                         {row.variantName}
                     </span>
                 ) : (
-                    <span className="text-muted-foreground italic text-xs">{t('base_item') || 'Base'}</span>
+                    <span className="text-muted-foreground italic text-xs">{t('base_item') || 'أساسي'}</span>
                 )}
             </TableCell>
             <TableCell>
