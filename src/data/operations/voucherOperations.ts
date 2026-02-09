@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { SupplyVoucher, InventoryItem, StockType } from '@/types';
+import { ensureValidSession } from '@/lib/sessionManager';
 
 type NewInventoryItemPayload = Omit<InventoryItem, 'id' | 'created_at' | 'updated_at' | 'status' | 'stock_type' | 'supply_voucher_id' | 'store_name' | 'product_name' | 'reorder_point' | 'supply_type_name' | 'manufacturer_name' | 'supplier_name'>;
 
@@ -9,6 +10,15 @@ export const createSupplyVoucherWithItems = async (
 ): Promise<{ voucher: SupplyVoucher; items: InventoryItem[] }> => {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
+
+  // Ensure session is valid before critical operation
+  const sessionValid = await ensureValidSession();
+  if (!sessionValid) {
+    const error: any = new Error('Session expired or invalid');
+    error.code = 'AUTH_SESSION_EXPIRED';
+    error.hint = 'Please log in again to continue. Your work may be saved as a draft.';
+    throw error;
+  }
 
   // 1. Create the supply voucher
   const { data: voucher, error: voucherError } = await supabase
@@ -83,6 +93,15 @@ export const saveDraftVoucher = async (
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
 
+  // Ensure session is valid before draft save
+  const sessionValid = await ensureValidSession();
+  if (!sessionValid) {
+    const error: any = new Error('Session expired or invalid');
+    error.code = 'AUTH_SESSION_EXPIRED';
+    error.hint = 'Please log in again to save your work.';
+    throw error;
+  }
+
   // Note: installments are stored in separate table, not in supply_vouchers
   const payload = {
     supplier_id: voucherData.supplier_id,
@@ -120,6 +139,15 @@ export const finalizeDraftVoucher = async (
 ): Promise<{ voucher: SupplyVoucher; items: InventoryItem[] }> => {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase client not initialized");
+
+  // Ensure session is valid before finalizing
+  const sessionValid = await ensureValidSession();
+  if (!sessionValid) {
+    const error: any = new Error('Session expired or invalid');
+    error.code = 'AUTH_SESSION_EXPIRED';
+    error.hint = 'Please log in again to finalize this draft.';
+    throw error;
+  }
 
   // 1. Update status to completed and clear draft_items
   // Extract installments separately since they go to a different table

@@ -18,7 +18,19 @@ let supabaseInstance: SupabaseClient | null = null;
 
 if (supabaseUrl && supabaseKey) {
   try {
-    supabaseInstance = createClient(supabaseUrl, supabaseKey);
+    supabaseInstance = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: true,        // Persist session across page reloads
+        autoRefreshToken: true,      // Automatically refresh token before expiry
+        detectSessionInUrl: true,    // Handle OAuth redirects
+        storage: localStorage,       // Explicit storage adapter
+      },
+      global: {
+        headers: {
+          'x-application-name': 'qasarah-manager'
+        }
+      }
+    });
   } catch (error) {
     console.error("Error creating Supabase client:", error);
   }

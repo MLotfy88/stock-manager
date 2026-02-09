@@ -33,6 +33,7 @@ import BatchScanningStep from '@/components/supplies/BatchScanningStep';
 import BatchProductStep from '@/components/supplies/BatchProductStep';
 import BatchVariantStep from '@/components/supplies/BatchVariantStep';
 import { EditCartItemDialog } from '@/components/supplies/EditCartItemDialog';
+import { ErrorDialog, parseErrorDetails } from '@/components/common/ErrorDialog';
 
 // Extended type for local cart items
 interface CartItem {
@@ -147,6 +148,11 @@ const AddInventoryPage = () => {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSavedFingerprint, setLastSavedFingerprint] = useState('');
 
+  // --- Error Dialog State ---
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [currentError, setCurrentError] = useState<any>(null);
+  const [errorRetryAction, setErrorRetryAction] = useState<(() => void) | undefined>();
+
   // Debounce key data for auto-save
   const debouncedCart = useDebounce(cartItems, 2000); // Wait 2s after changes
   const debouncedHeader = useDebounce({ supplierId, storeId, stockType, paymentMethod, voucherNumber }, 2000);
@@ -229,7 +235,20 @@ const AddInventoryPage = () => {
           console.warn("Draft not found, resetting ID");
           setDraftId(null);
         } else {
+          // Show detailed error for non-trivial failures
           console.error("Auto-save failed:", error.message || JSON.stringify(error));
+          const parsedError = parseErrorDetails(
+            error,
+            'Auto-save Draft',
+            t('auto_save_failed') || 'Failed to automatically save draft'
+          );
+          setCurrentError(parsedError);
+          setErrorDialogOpen(true);
+          setErrorRetryAction(() => () => {
+            setErrorDialogOpen(false);
+            // Trigger auto-save again by updating fingerprint
+            setLastSavedFingerprint('');
+          });
         }
       } finally {
         setIsAutoSaving(false);
@@ -756,15 +775,18 @@ const AddInventoryPage = () => {
       navigate('/supplies');
     } catch (error: any) {
       console.error(error);
-      if (error.code === '23505' && error.message?.includes('supply_vouchers_voucher_number_key')) {
-        toast({
-          title: t('error') || 'Error',
-          description: t('duplicate_voucher_number') || 'Voucher number already exists. Please use a unique number.',
-          variant: 'destructive'
-        });
-      } else {
-        toast({ title: t('error'), description: t('error_saving_invoice'), variant: 'destructive' });
-      }
+      // Show detailed error dialog
+      const parsedError = parseErrorDetails(
+        error,
+        'Save Invoice',
+        t('error_saving_invoice') || 'Failed to save invoice'
+      );
+      setCurrentError(parsedError);
+      setErrorDialogOpen(true);
+      setErrorRetryAction(() => () => {
+        setErrorDialogOpen(false);
+        handleSaveInvoice(new Event('submit') as any);
+      });
     } finally {
       setIsSaving(false); // Unlock save operations
     }
@@ -1191,6 +1213,14 @@ const AddInventoryPage = () => {
         variantName={batchVariant}
         onAddToCart={handleBatchReview}
         onBack={() => handleBatchWizardBack('review')}
+      />
+
+      {/* Error Dialog for detailed error reporting */}
+      <ErrorDialog
+        error={currentError}
+        isOpen={errorDialogOpen}
+        onClose={() => setErrorDialogOpen(false)}
+        onRetry={errorRetryAction}
       />
     </div>
   );

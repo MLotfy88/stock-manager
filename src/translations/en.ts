@@ -462,4 +462,19 @@ export default {
   class: 'Class',
   no_results_found: 'No results found',
   refresh: 'Refresh',
+
+  // Error Dialog
+  copied: 'Copied',
+  error_details_copied: 'Error details copied to clipboard',
+  technical_details: 'Technical Details',
+  copy_error: 'Copy Error',
+  additional_info: 'Additional Information',
+  auto_save_failed: 'Auto-save failed',
+  session_expired: 'Session Expired',
+  please_login_again: 'Please log in again to continue',
+  retry: 'Retry',
+  close: 'Close',
+  please_wait: 'Please wait',
+  duplicate_voucher_number: 'Voucher number already exists',
+  showing_items: 'Showing items',
 };

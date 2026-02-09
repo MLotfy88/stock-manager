@@ -462,4 +462,19 @@ export default {
   class: 'التصنيف',
   no_results_found: 'لا توجد نتائج',
   refresh: 'تحديث',
+
+  // Error Dialog
+  copied: 'تم النسخ',
+  error_details_copied: 'تم نسخ تفاصيل الخطأ إلى الحافظة',
+  technical_details: 'التفاصيل الفنية',
+  copy_error: 'نسخ الخطأ',
+  additional_info: 'معلومات إضافية',
+  auto_save_failed: 'فشل الحفظ التلقائي',
+  session_expired: 'انتهت الجلسة',
+  please_login_again: 'يرجى تسجيل الدخول مرة أخرى للمتابعة',
+  retry: 'إعادة المحاولة',
+  close: 'إغلاق',
+  please_wait: 'يرجى الانتظار',
+  duplicate_voucher_number: 'رقم الفاتورة موجود بالفعل',
+  showing_items: 'عرض الأصناف',
 };
