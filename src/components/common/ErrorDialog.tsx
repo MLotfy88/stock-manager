@@ -208,6 +208,7 @@ export function parseErrorDetails(
 
         // Common Supabase error codes with helpful messages
         const errorHints: Record<string, string> = {
+            '21000': 'Duplicate items with same GTIN in invoice. This has been fixed automatically - please try saving again.',
             '23505': 'Duplicate entry. This voucher number or item already exists in the database.',
             '23503': 'Referenced data not found. Check if supplier, product, or store still exists.',
             '42501': 'Permission denied. Your session may have expired or you lack necessary permissions.',

@@ -46,10 +46,25 @@ export const updateLastScanned = async (gtin: string) => {
 };
 
 export const batchSaveGTINMappings = async (mappings: Omit<GTINMapping, 'created_at' | 'last_scanned_at'>[]) => {
+  // FIX: Remove duplicates by GTIN (keep last occurrence)
+  // This prevents PostgreSQL error 21000: "ON CONFLICT DO UPDATE command cannot affect row a second time"
+  const uniqueMappings = new Map<string, Omit<GTINMapping, 'created_at' | 'last_scanned_at'>>();
+  
+  // Iterate through mappings, later items will overwrite earlier ones with same GTIN
+  mappings.forEach(mapping => {
+    uniqueMappings.set(mapping.gtin, mapping);
+  });
+
+  // Convert Map values back to array
+  const deduplicatedMappings = Array.from(uniqueMappings.values());
+
+  // Only proceed if we have mappings to save
+  if (deduplicatedMappings.length === 0) return;
+
   const { error } = await supabase
     .from('gtin_variant_mapping')
     .upsert(
-      mappings.map(m => ({
+      deduplicatedMappings.map(m => ({
         ...m,
         last_scanned_at: new Date().toISOString()
       }))
@@ -57,3 +72,4 @@ export const batchSaveGTINMappings = async (mappings: Omit<GTINMapping, 'created
 
   if (error) throw error;
 };
+

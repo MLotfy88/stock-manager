@@ -1,3 +1,19 @@
+# Checkpoint: Fixed Duplicate GTIN Mapping Error (21000)
+
+## تاريخ: 2026-02-11
+
+## ملخص التغييرات (Summary of Changes)
+تم إصلاح مشكلة فشل حفظ الفواتير التي تحتوي على أصناف متعددة بنفس الـ GTIN (مثل المنتجات الطبية التي تختلف فقط في LOT أو Expiry Date).
+
+### المشكلة الأصلية
+كان نظام الحفظ يحاول إرسال كافة الـ GTIN Mappings الموجودة في الفاتورة إلى قاعدة البيانات في عملية واحدة (`upsert`). عند وجود GTIN مكرر، كان PostgreSQL يرجع الخطأ `21000`: `ON CONFLICT DO UPDATE command cannot affect row a second time`.
+
+### الحل المُنفذ
+1. **Deduplication**: تعديل دالة `batchSaveGTINMappings` في `src/data/operations/gtinMappingOperations.ts` لتقوم بتنقية الـ mappings وإرسال GTIN واحد فريد فقط (الأخير في القائمة) لقاعدة البيانات.
+2. **Error Intelligence**: إضافة رسالة توضيحية لخطأ `21000` في مكون `ErrorDialog.tsx` لإرشاد المستخدم في حال تكرار الخطأ مستقبلاً.
+
+---
+
 # Checkpoint: Advanced Error Handling & Save Reliability
 
 ## تاريخ: 2026-02-09

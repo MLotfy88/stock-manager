@@ -109,6 +109,9 @@
 ### Critical
 - None currently ✅
 
+### Fixed (2026-02-11)
+- [x] **Duplicate GTIN Mapping (Error 21000)**: Fixed save failure when multiple items share same GTIN in one invoice.
+
 ### Fixed (2026-02-09)
 - [x] **Invoice Save Failures**: Fixed session expiry causing save failures during long sessions
 - [x] **Silent Errors**: Fixed errors only appearing in console.log (invisible on mobile)

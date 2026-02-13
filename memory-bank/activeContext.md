@@ -2,6 +2,11 @@
 
 ## Current Focus: Save Reliability & Error Handling
 
+### Recent Major Update (2026-02-11)
+
+- **إصلاح خطأ Duplicate GTIN Mapping (Error 21000):** تم حل مشكلة فشل حفظ الفواتير عند وجود أصناف مكررة بـ GTIN واحد عن طريق إضافة منطق deduplication في دالة `batchSaveGTINMappings`.
+- **تحسين Error Intelligence:** إضافة كود الخطأ 21000 إلى `ErrorDialog` مع رسالة إرشادية للمستخدم.
+
 ### Recent Major Update (2026-02-09)
 
 Implemented comprehensive mobile responsiveness across all remaining application pages, including complex reports, invoicing workflows, and calendars.
