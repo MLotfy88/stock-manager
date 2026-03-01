@@ -183,7 +183,7 @@ const AddInventoryPage = () => {
       // Generate fingerprint to avoid re-saving identical state
       const currentFingerprint = JSON.stringify({
         items: cartItems,
-        header: { supplierId, storeId, stockType, paymentMethod, voucherNumber: voucherNumber?.trim() }
+        header: { supplierId, storeId, stockType, paymentMethod, paymentStatus, paidAmount, voucherNumber: voucherNumber?.trim(), headerLocation, invoiceImageUrls }
       });
 
       if (currentFingerprint === lastSavedFingerprint) return;
@@ -198,22 +198,33 @@ const AddInventoryPage = () => {
           notes: 'Auto-saved draft',
           voucher_number: voucherNumber.trim() ? voucherNumber.trim() : null,
           payment_method: paymentMethod,
-          payment_status: 'pending',
+          payment_status: paymentStatus,
           total_amount: totalCartValue,
           paid_amount: paidAmount,
           invoice_image_urls: invoiceImageUrls
         };
 
-        const savedDraft = await saveDraftVoucher(voucherData as any, cartItems.map(item => ({
-          product_definition_id: item.productDefinitionId,
-          variant: item.variant,
-          barcode: item.barcode || null,
-          quantity: item.quantity,
-          purchase_price: item.purchasePrice,
-          batch_number: item.batchNumber,
-          expiry_date: normalizeDateForDB(item.expiryDate), // FIX: Use normalized date
-          location: item.location || headerLocation || null, // FIX: Save location (per-item or global header)
-        })));
+        // Build draft_items with ALL item data + meta header info (storeId, headerLocation)
+        const draftItemsPayload = [
+          // Meta entry: store header fields not in supply_vouchers table
+          { _meta: true, storeId, headerLocation, manufacturerId },
+          // Actual cart items with all fields
+          ...cartItems.map(item => ({
+            product_definition_id: item.productDefinitionId,
+            product_name: item.productName,
+            variant: item.variant,
+            barcode: item.barcode || null,
+            gtin: item.gtin || null,
+            quantity: item.quantity,
+            purchase_price: item.purchasePrice,
+            batch_number: item.batchNumber,
+            expiry_date: normalizeDateForDB(item.expiryDate),
+            manufacturer_id: item.manufacturerId || null,
+            location: item.location || headerLocation || null,
+          }))
+        ];
+
+        const savedDraft = await saveDraftVoucher(voucherData as any, draftItemsPayload);
 
         setDraftId(savedDraft.id);
         setLastSavedFingerprint(currentFingerprint);
@@ -279,31 +290,46 @@ const AddInventoryPage = () => {
     const { data: draft, error } = await supabase.from('supply_vouchers').select('*').eq('id', id).single();
     if (!draft || error) return;
 
-    // Load Header
+    // Load Header - ALL fields
     setDraftId(draft.id);
     setSupplierId(draft.supplier_id || '');
     setStockType(draft.stock_type as any);
     setVoucherNumber(draft.voucher_number || '');
     setPaymentMethod(draft.payment_method as any);
+    setPaymentStatus(draft.payment_status as any || 'pending');
+    setPaidAmount(draft.paid_amount || 0);
+    setInvoiceImageUrls(draft.invoice_image_urls || []);
 
-    // Load Items (stored in JSON column 'draft_items'?)
+    // Load Items (stored in JSON column 'draft_items')
     if (draft.draft_items && Array.isArray(draft.draft_items)) {
-      // Map back to CartItem
-      const loadedItems = draft.draft_items.map((item: any, idx: number) => ({
+      // Extract meta entry (header fields stored in draft_items)
+      const metaEntry = draft.draft_items.find((item: any) => item._meta === true);
+      const actualItems = draft.draft_items.filter((item: any) => !item._meta);
+
+      // Restore header fields from meta
+      if (metaEntry) {
+        if (metaEntry.storeId) setStoreId(metaEntry.storeId);
+        if (metaEntry.headerLocation) setHeaderLocation(metaEntry.headerLocation);
+        if (metaEntry.manufacturerId) setManufacturerId(metaEntry.manufacturerId);
+      }
+
+      // Map back to CartItem with ALL fields
+      const loadedItems = actualItems.map((item: any, idx: number) => ({
         id: `draft_${idx}`,
         productDefinitionId: item.product_definition_id,
-        productName: item.product_name || 'Loading...', // Ideally fetch names
+        productName: item.product_name || 'Loading...',
         variant: item.variant,
         barcode: item.barcode || '',
+        gtin: item.gtin || undefined,
         batchNumber: item.batch_number || '',
         expiryDate: item.expiry_date ? new Date(item.expiry_date) : undefined,
         quantity: item.quantity,
-        purchasePrice: item.purchase_price
+        purchasePrice: item.purchase_price,
+        manufacturerId: item.manufacturer_id || undefined,
+        location: item.location || undefined,
       }));
 
-      // Optimization: Fetch product names if missing
-      // For now, trust what's in draft or just show loading.
-      // To do it right, we'd look up names from cache.
+      // Enrich with product names from cache
       const enrichedItems = loadedItems.map((item: any) => {
         const def = productDefsCache.find(d => d.id === item.productDefinitionId);
         return { ...item, productName: def ? def.name : item.productName };
