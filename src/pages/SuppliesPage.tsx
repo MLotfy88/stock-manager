@@ -143,7 +143,7 @@ const SuppliesPage = () => {
   );
 
   const filteredDrafts = drafts.filter(v =>
-    (v as any).supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    ((v as any).supplier?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   const MobileVoucherCard = ({ voucher, isDraft = false }: { voucher: SupplyVoucher, isDraft?: boolean }) => (

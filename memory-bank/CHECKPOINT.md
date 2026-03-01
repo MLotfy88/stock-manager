@@ -1,3 +1,13 @@
+# Checkpoint: Payment Method Enum & Draft Filter Fix
+
+## تاريخ: 2026-03-01
+
+## ملخص التغييرات
+1. **إضافة `consignment` إلى `payment_method` enum:** أنشأ migration `20260301_add_consignment_payment_method.sql` لإضافة القيمة المفقودة.
+2. **إصلاح عرض المسودات في `SuppliesPage.tsx`:** كان فلتر البحث يخفي المسودات التي ليس لها مورد مرتبط، لأن `undefined.includes('')` يرجع `false`. تم إضافة fallback `|| ''`.
+
+---
+
 # Checkpoint: Fixed Duplicate GTIN Mapping Error (21000)
 
 ## تاريخ: 2026-02-11

@@ -109,6 +109,10 @@
 ### Critical
 - None currently ✅
 
+### Fixed (2026-03-01)
+- [x] **Missing `consignment` enum value**: Added migration to include `consignment` in `payment_method` DB enum.
+- [x] **Drafts not showing in SuppliesPage**: Fixed filter that hid drafts when supplier name was null.
+
 ### Fixed (2026-02-11)
 - [x] **Duplicate GTIN Mapping (Error 21000)**: Fixed save failure when multiple items share same GTIN in one invoice.
 
