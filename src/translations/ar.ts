@@ -82,6 +82,10 @@ export default {
   analysis: 'التحليل',
   settings: 'الإعدادات',
   monitoring_and_planning: 'المراقبة والتخطيط',
+  financials: 'المالية',
+  supplies_list: 'الفواتير',
+  debt_management: 'إدارة المديونيات',
+  debt_calendar: 'تقويم المديونيات',
 
   // Navigation
   replacement_voucher_nav: 'محضر استبدال',
