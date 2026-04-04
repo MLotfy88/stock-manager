@@ -8,7 +8,7 @@ import { ParsedGS1Data } from '../hooks/useBarcodeScanner';
 import { SmartHybridPicker } from './SmartHybridPicker';
 import { db, LocalInventoryEntry } from '../data/localDb';
 import { getSupabaseClient } from '@/lib/supabaseClient';
-import { Search, Check, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Search, Check, ChevronRight, ChevronLeft, PackageX } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface QuickEntryFormProps {
@@ -20,6 +20,9 @@ interface QuickEntryFormProps {
 }
 
 export type WizardStep = 'context' | 'product' | 'variant' | 'review';
+
+// All 4 steps in fixed order
+const STEPS: WizardStep[] = ['context', 'product', 'variant', 'review'];
 
 export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
   isOpen,
@@ -34,6 +37,7 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
   const [manufacturers, setManufacturers] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [productDefsCache, setProductDefsCache] = useState<any[]>([]); // Full product definitions with variants
   const [availableVariants, setAvailableVariants] = useState<any[]>([]);
 
   // Selection state
@@ -64,10 +68,12 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
       setProductId('');
       setProductName('');
       setSelectedVariant('');
+      setAvailableVariants([]);
       setQty(1);
       setPrice(0);
       setLot('');
       setExpiry('');
+      setSearchQuery('');
     }
   }, [isOpen, scannedData]);
 
@@ -76,13 +82,19 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
       // Try to load from cache table first (Offline support)
       const cachedMfgs = await db.cache.get('manufacturers');
       const cachedSups = await db.cache.get('suppliers');
+      const cachedProducts = await db.cache.get('product_definitions');
 
       if (cachedMfgs) setManufacturers(cachedMfgs.data);
       if (cachedSups) setSuppliers(cachedSups.data);
+      if (cachedProducts) setProductDefsCache(cachedProducts.data);
 
       // Fetch fresh if online
       const { data: mfgs } = await supabase.from('manufacturers').select('id, name');
       const { data: sups } = await supabase.from('suppliers').select('id, name');
+      // Fetch ALL product definitions WITH their variants (JSONB column)
+      const { data: prods } = await supabase.from('product_definitions')
+        .select('id, name, variants, variant_label')
+        .order('name', { ascending: true });
 
       if (mfgs) {
         setManufacturers(mfgs);
@@ -91,6 +103,10 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
       if (sups) {
         setSuppliers(sups);
         db.cache.put({ id: 'suppliers', data: sups, updatedAt: Date.now() });
+      }
+      if (prods) {
+        setProductDefsCache(prods);
+        db.cache.put({ id: 'product_definitions', data: prods, updatedAt: Date.now() });
       }
 
       // Memory: Default to last used if not set
@@ -130,7 +146,7 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
       setProductName(exactMatch.productName);
       setSelectedVariant(exactMatch.variant);
       setPrice(exactMatch.purchasePrice || 0);
-      return; // Found everything locally
+      return;
     }
 
     // 3. Medium Priority: GTIN Match in Local DB (Different Batch, Same Product/Context)
@@ -159,85 +175,83 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
       const supabase = getSupabaseClient();
       const { data } = await supabase
         .from('product_definitions')
-        .select('name, manufacturer_id')
+        .select('name')
         .eq('id', scannedData.product_id)
         .single();
         
       if (data) {
         setProductName(data.name);
-        if (data.manufacturer_id) setMfgId(data.manufacturer_id);
       }
     }
   };
 
-  // Step Nav
+  // ============================================================
+  // FIXED STEP NAVIGATION: Always 4 steps, always manual
+  // ============================================================
   const nextStep = () => {
-    if (step === 'context' && mfgId && supplierId) setStep('product');
-    else if (step === 'product' && productId) {
-      // Check if product has variants
-      loadVariants(productId).then(hasVariants => {
-        if (hasVariants) setStep('variant');
-        else setStep('review');
-      });
+    const currentIndex = STEPS.indexOf(step);
+    if (currentIndex < STEPS.length - 1) {
+      // Validate current step before moving
+      if (step === 'context' && (!mfgId || !supplierId)) {
+        toast.error('يرجى اختيار الشركة المصنعة والمورد أولاً');
+        return;
+      }
+      if (step === 'product' && !productId) {
+        toast.error('يرجى اختيار المنتج أولاً');
+        return;
+      }
+      setStep(STEPS[currentIndex + 1]);
     }
-    else if (step === 'variant') setStep('review');
   };
 
   const prevStep = () => {
-    if (step === 'review') {
-        loadVariants(productId).then(hasVariants => {
-            setStep(hasVariants ? 'variant' : 'product');
-        });
+    const currentIndex = STEPS.indexOf(step);
+    if (currentIndex > 0) {
+      setStep(STEPS[currentIndex - 1]);
     }
-    else if (step === 'variant') setStep('product');
-    else if (step === 'product') setStep('context');
   };
 
-  const loadVariants = async (pId: string): Promise<boolean> => {
-    const { data } = await supabase.from('product_variants').select('id, name').eq('product_definition_id', pId);
-    if (data && data.length > 0) {
-      setAvailableVariants(data);
+  // Load variants from the cached product definitions (JSONB column)
+  const loadVariantsFromCache = (pId: string) => {
+    const productDef = productDefsCache.find(p => p.id === pId);
+    if (productDef && productDef.variants && Array.isArray(productDef.variants) && productDef.variants.length > 0) {
+      setAvailableVariants(productDef.variants);
       return true;
     }
     setAvailableVariants([]);
     return false;
   };
 
-  const handleProductSearch = async (query?: string) => {
-    const supabase = getSupabaseClient();
-    let rpc = supabase.from('product_definitions')
-      .select('id, name'); // Removed manufacturer_id as it doesn't exist on this table
-
-    if (query) {
-      rpc = rpc.ilike('name', `%${query}%`);
+  // When productId changes, update variants from cache
+  useEffect(() => {
+    if (productId && productDefsCache.length > 0) {
+      loadVariantsFromCache(productId);
     }
-    
-    const { data, error } = await rpc.limit(20);
-    if (error) {
-      console.error('Search error:', error);
+  }, [productId, productDefsCache]);
+
+  // Product search: filter from cached product definitions (instant, offline-capable)
+  const handleProductSearch = (query?: string) => {
+    if (!query) {
+      setProducts(productDefsCache.slice(0, 30));
       return;
     }
-    if (data) setProducts(data);
+    const q = query.toLowerCase();
+    const filtered = productDefsCache.filter(p => p.name.toLowerCase().includes(q));
+    setProducts(filtered.slice(0, 30));
   };
 
   // Trigger search when entering product step
   useEffect(() => {
     if (step === 'product') {
-        handleProductSearch(searchQuery);
+      handleProductSearch(searchQuery || undefined);
     }
-  }, [step, mfgId]);
+  }, [step, productDefsCache]);
 
-  const handleProductSelection = async (p: any) => {
+  const handleProductSelection = (p: any) => {
     setProductId(p.id);
     setProductName(p.name);
-    
-    // Direct check for variants to avoid state race condition
-    const hasVariants = await loadVariants(p.id);
-    if (hasVariants) {
-      setStep('variant');
-    } else {
-      setStep('review');
-    }
+    setSelectedVariant(''); // Reset variant when product changes
+    // Do NOT auto-navigate; user will press "التالي" manually
   };
 
   const handleSave = () => {
@@ -264,6 +278,8 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
     onClose();
   };
 
+  const hasVariants = availableVariants.length > 0;
+
   return (
     <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md p-0 overflow-hidden bg-background border-none shadow-2xl rounded-2xl">
@@ -271,12 +287,19 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center justify-between">
               <span>{step === 'context' ? 'الجهة الموردة' : step === 'product' ? 'اختيار المنتج' : step === 'variant' ? 'اختيار المتغير' : 'مراجعة البيانات'}</span>
-              <span className="text-sm opacity-70 font-normal">Step {step === 'context' ? 1 : step === 'product' ? 2 : step === 'variant' ? 3 : 4}/4</span>
+              <span className="text-sm opacity-70 font-normal">الخطوة {STEPS.indexOf(step) + 1} من 4</span>
             </DialogTitle>
           </DialogHeader>
+          {/* Step Progress Indicator */}
+          <div className="flex gap-1 mt-3">
+            {STEPS.map((s, i) => (
+              <div key={s} className={`flex-1 h-1.5 rounded-full transition-all ${STEPS.indexOf(step) >= i ? 'bg-primary-foreground' : 'bg-primary-foreground/30'}`} />
+            ))}
+          </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 min-h-[250px]">
+          {/* ===== STEP 1: Context (Manufacturer & Supplier) ===== */}
           {step === 'context' && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -304,12 +327,13 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
             </div>
           )}
 
+          {/* ===== STEP 2: Product Selection ===== */}
           {step === 'product' && (
             <div className="space-y-4">
                {productName && (
                   <div className="bg-primary/10 p-3 rounded-lg flex items-center justify-between border border-primary/20">
                      <span className="font-bold text-primary">{productName}</span>
-                     <Button variant="ghost" size="sm" onClick={() => {setProductId(''); setProductName('');}}>تغيير</Button>
+                     <Button variant="ghost" size="sm" onClick={() => {setProductId(''); setProductName(''); setSelectedVariant(''); setAvailableVariants([]);}}>تغيير</Button>
                   </div>
                )}
                {!productId && (
@@ -318,11 +342,9 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
                         <Input 
                             placeholder="ابحث عن منتج..." 
                             value={searchQuery} 
-                            onChange={e => setSearchQuery(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleProductSearch(searchQuery)}
+                            onChange={e => { setSearchQuery(e.target.value); handleProductSearch(e.target.value); }}
                             className="h-11"
                         />
-                        <Button onClick={() => handleProductSearch(searchQuery)} className="h-11 px-3"><Search className="h-4 w-4" /></Button>
                     </div>
                     <div className="max-h-60 overflow-y-auto space-y-1 border rounded-lg p-1">
                         {products.map(p => (
@@ -342,8 +364,10 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
             </div>
           )}
 
+          {/* ===== STEP 3: Variant Selection (ALWAYS SHOWN) ===== */}
           {step === 'variant' && (
-            <div className="flex justify-center py-2">
+            <div className="py-2">
+              {hasVariants ? (
                 <SmartHybridPicker
                     availableVariants={availableVariants}
                     selectedVariant={selectedVariant}
@@ -351,11 +375,19 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
                     primaryLabel="المقاس / القطر"
                     secondaryLabel="الطول / الحجم"
                     separator="x"
-                    mode={productName.includes('Ballon') ? 'balloon' : productName.includes('Guide') ? 'guide' : 'general'}
+                    mode={productName.toLowerCase().includes('ballon') ? 'balloon' : productName.toLowerCase().includes('guide') ? 'guide' : 'general'}
                 />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                  <PackageX className="h-16 w-16 mb-4 opacity-30" />
+                  <p className="text-lg font-bold">لا توجد متغيرات لهذا الصنف</p>
+                  <p className="text-sm opacity-70 mt-1">يمكنك الانتقال للخطوة التالية مباشرة</p>
+                </div>
+              )}
             </div>
           )}
 
+          {/* ===== STEP 4: Review & Save ===== */}
           {step === 'review' && (
             <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded-lg border border-dashed text-sm">
