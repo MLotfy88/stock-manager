@@ -55,6 +55,9 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
     if (isOpen) {
       loadInitialData();
       checkExistingEntry();
+      // Ensure LOT/Expiry are synced with current scan immediately on open
+      setLot(scannedData.lotNumber || '');
+      setExpiry(scannedData.expiryDate || '');
     } else {
       // Reset for next scan
       setStep('context');
@@ -63,8 +66,8 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
       setSelectedVariant('');
       setQty(1);
       setPrice(0);
-      setLot(scannedData.lotNumber || '');
-      setExpiry(scannedData.expiryDate || '');
+      setLot('');
+      setExpiry('');
     }
   }, [isOpen, scannedData]);
 
@@ -100,6 +103,7 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
   };
 
   const checkExistingEntry = async () => {
+    // 1. If explicit edit from list
     if (initialValues) {
       setMfgId(initialValues.manufacturerId || '');
       setSupplierId(initialValues.supplierId);
@@ -113,28 +117,56 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
       return;
     }
 
-    // Look for same barcode in local DB to pre-fill
-    // We prioritize the same GTIN first
-    const existing = await db.inventory_entries
+    // 2. High Priority: Exact Barcode Match in Local DB (Same Batch/Expiry)
+    const exactMatch = await db.inventory_entries
       .where('barcode')
       .equals(scannedData.rawValue)
       .last();
 
-    if (existing) {
-      setMfgId(existing.manufacturerId || '');
-      setSupplierId(existing.supplierId);
-      setProductId(existing.productDefinitionId);
-      setProductName(existing.productName);
-      setSelectedVariant(existing.variant);
-      setPrice(existing.purchasePrice || 0);
-      // We don't pre-fill Qty, usually you want to enter a new qty
-    } else if (scannedData.product_id) {
-      // If GS1 mapping found a product
+    if (exactMatch) {
+      setMfgId(exactMatch.manufacturerId || '');
+      setSupplierId(exactMatch.supplierId);
+      setProductId(exactMatch.productDefinitionId);
+      setProductName(exactMatch.productName);
+      setSelectedVariant(exactMatch.variant);
+      setPrice(exactMatch.purchasePrice || 0);
+      return; // Found everything locally
+    }
+
+    // 3. Medium Priority: GTIN Match in Local DB (Different Batch, Same Product/Context)
+    if (scannedData.gtin) {
+      const gtinMatch = await db.inventory_entries
+        .where('gtin')
+        .equals(scannedData.gtin)
+        .last();
+
+      if (gtinMatch) {
+        setMfgId(gtinMatch.manufacturerId || '');
+        setSupplierId(gtinMatch.supplierId);
+        setProductId(gtinMatch.productDefinitionId);
+        setProductName(gtinMatch.productName);
+        setSelectedVariant(gtinMatch.variant);
+        setPrice(gtinMatch.purchasePrice || 0);
+        return;
+      }
+    }
+
+    // 4. Low Priority: Supabase Mapping (Already stored in central DB)
+    if (scannedData.product_id) {
       setProductId(scannedData.product_id);
       setSelectedVariant(scannedData.variant_name || '');
-      // Try to fetch product name
-      const { data } = await supabase.from('product_definitions').select('name').eq('id', scannedData.product_id).single();
-      if (data) setProductName(data.name);
+      
+      const supabase = getSupabaseClient();
+      const { data } = await supabase
+        .from('product_definitions')
+        .select('name, manufacturer_id')
+        .eq('id', scannedData.product_id)
+        .single();
+        
+      if (data) {
+        setProductName(data.name);
+        if (data.manufacturer_id) setMfgId(data.manufacturer_id);
+      }
     }
   };
 
