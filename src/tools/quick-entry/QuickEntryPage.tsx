@@ -59,9 +59,9 @@ const QuickEntryPage: React.FC = () => {
                 <div className="w-10" /> {/* Spacer */}
             </div>
 
-            <div className="container max-w-4xl px-4 py-6 space-y-8">
+            <div className="container max-w-4xl px-0 py-6 space-y-8">
                 {/* Scanner Section */}
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-black aspect-square md:aspect-video border-4 border-muted/20">
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-black aspect-[3/2] md:aspect-video border-4 border-muted/20 mx-2">
                     {!isScannerActive && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-black/60 z-10 transition-all px-8 text-center">
                             <Camera className="h-16 w-16 mb-4 opacity-50 text-primary" />
@@ -77,23 +77,24 @@ const QuickEntryPage: React.FC = () => {
                     <video 
                         ref={videoRef} 
                         playsInline 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover scale-[1.1]"
                     />
 
                     {/* Scan Indicator Overlay */}
                     {isScannerActive && (
                         <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
-                            <div className="w-72 h-72 md:w-96 md:h-64 border-2 border-primary/50 rounded-3xl relative overflow-hidden bg-white/5 backdrop-blur-[1px] shadow-[0_0_50px_rgba(var(--primary),0.3)]">
+                            {/* MUCH WIDER Box for GS1 medical barcodes */}
+                            <div className="w-[92%] h-40 md:w-[80%] md:h-64 border-2 border-primary/50 rounded-2xl relative overflow-hidden bg-white/5 backdrop-blur-[1px] shadow-[0_0_50px_rgba(var(--primary),0.3)]">
                                 <div className="absolute top-0 left-0 w-full h-[3px] bg-primary shadow-[0_0_20px_rgba(var(--primary),1)] animate-scan" />
                                 
-                                {/* Corner Accents */}
-                                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-2xl" />
-                                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-2xl" />
-                                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-2xl" />
-                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-2xl" />
+                                {/* Corner Accents - Larger for wider view */}
+                                <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-primary rounded-tl-xl" />
+                                <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-primary rounded-tr-xl" />
+                                <div className="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-primary rounded-bl-xl" />
+                                <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-primary rounded-tr-xl" />
                             </div>
-                            <div className="absolute bottom-10 text-white font-bold text-sm bg-primary/40 backdrop-blur-md px-6 py-2 rounded-full flex items-center gap-2 border border-white/20">
-                                <ScanLine className="h-4 w-4 animate-pulse" /> وجه الكاميرا نحو الباركود
+                            <div className="absolute bottom-4 text-white font-bold text-[10px] md:text-sm bg-primary/60 backdrop-blur-md px-4 py-1 rounded-full flex items-center gap-2 border border-white/20">
+                                <ScanLine className="h-3 w-3 animate-pulse" /> وجه الكاميرا نحو الباركود العريض
                             </div>
                         </div>
                     )}

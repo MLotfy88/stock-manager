@@ -206,16 +206,13 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
   const handleProductSearch = async (query?: string) => {
     const supabase = getSupabaseClient();
     let rpc = supabase.from('product_definitions')
-      .select('id, name, manufacturer_id');
+      .select('id, name'); // Removed manufacturer_id as it doesn't exist on this table
 
     if (query) {
       rpc = rpc.ilike('name', `%${query}%`);
-    } else if (mfgId) {
-      // If no query, but manufacturer is selected, show their products
-      rpc = rpc.eq('manufacturer_id', mfgId);
     }
     
-    const { data, error } = await rpc.limit(15);
+    const { data, error } = await rpc.limit(20);
     if (error) {
       console.error('Search error:', error);
       return;
@@ -233,8 +230,8 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
   const handleProductSelection = (p: any) => {
     setProductId(p.id);
     setProductName(p.name);
-    if (p.manufacturer_id) setMfgId(p.manufacturer_id);
-    nextStep(); // Suggest next step automatically
+    // Note: manufacturer_id is not stored in product_definitions directly
+    nextStep(); 
   };
 
   const handleSave = () => {
