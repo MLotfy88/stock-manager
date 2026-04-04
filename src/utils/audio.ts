@@ -1,4 +1,4 @@
-export const playSuccessSound = () => {
+export const playSuccessSound = (volume: number = 0.2) => {
     try {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContext) return;
@@ -19,8 +19,8 @@ export const playSuccessSound = () => {
 
             // Very short burst: Attack → Sustain → Quick decay
             gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.2, startTime + 0.005); // Fast attack (5ms)
-            gain.gain.setValueAtTime(0.2, startTime + 0.06); // Hold (60ms total)
+            gain.gain.linearRampToValueAtTime(volume, startTime + 0.005); // Fast attack (5ms)
+            gain.gain.setValueAtTime(volume, startTime + 0.06); // Hold (60ms total)
             gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08); // Quick fade (20ms)
 
             osc.start(startTime);

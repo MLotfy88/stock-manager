@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Camera, X, Check, PackageOpen, ScanLine, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { playSuccessSound } from '@/utils/audio';
 
 const QuickEntryPage: React.FC = () => {
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ const QuickEntryPage: React.FC = () => {
 
     const { videoRef, isScannerActive, startScanner, stopScanner, error, isSupported } = useBarcodeScanner({
         onScanSuccess: (data) => {
+            playSuccessSound(0.5); // Play louder beep
             setScannedData(data);
             setIsFormOpen(true);
         },
@@ -59,11 +61,13 @@ const QuickEntryPage: React.FC = () => {
 
             <div className="container max-w-4xl px-4 py-6 space-y-8">
                 {/* Scanner Section */}
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-black aspect-video md:aspect-[21/9]">
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-black aspect-square md:aspect-video border-4 border-muted/20">
                     {!isScannerActive && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-black/60 z-10 transition-all">
-                            <Camera className="h-12 w-12 mb-4 opacity-50" />
-                            <Button onClick={startScanner} className="bg-primary hover:bg-primary/90">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-black/60 z-10 transition-all px-8 text-center">
+                            <Camera className="h-16 w-16 mb-4 opacity-50 text-primary" />
+                            <h3 className="text-xl font-bold mb-2">الكاميرا متوقفة</h3>
+                            <p className="text-sm opacity-70 mb-6">اضغط على الزر أدناه لتفعيل ماسح الباركود وبدء جرد الأصناف</p>
+                            <Button onClick={startScanner} className="bg-primary hover:bg-primary/90 h-14 px-8 text-lg font-bold rounded-xl shadow-xl">
                                 تشغيل الكاميرا للمسح
                             </Button>
                             {error && <p className="mt-4 text-red-400 text-sm">{error}</p>}
@@ -78,12 +82,18 @@ const QuickEntryPage: React.FC = () => {
 
                     {/* Scan Indicator Overlay */}
                     {isScannerActive && (
-                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                            <div className="w-64 h-32 border-2 border-white/30 rounded-xl relative overflow-hidden bg-white/5 backdrop-blur-[1px]">
-                                <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/80 shadow-[0_0_15px_rgba(var(--primary),0.8)] animate-scan" />
+                        <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
+                            <div className="w-72 h-72 md:w-96 md:h-64 border-2 border-primary/50 rounded-3xl relative overflow-hidden bg-white/5 backdrop-blur-[1px] shadow-[0_0_50px_rgba(var(--primary),0.3)]">
+                                <div className="absolute top-0 left-0 w-full h-[3px] bg-primary shadow-[0_0_20px_rgba(var(--primary),1)] animate-scan" />
+                                
+                                {/* Corner Accents */}
+                                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-2xl" />
+                                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-2xl" />
+                                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-2xl" />
+                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-2xl" />
                             </div>
-                            <div className="absolute bottom-4 text-white/50 text-[10px] bg-black/40 px-3 py-1 rounded-full flex items-center gap-2">
-                                <ScanLine className="h-3 w-3" /> جاري البحث عن باركود...
+                            <div className="absolute bottom-10 text-white font-bold text-sm bg-primary/40 backdrop-blur-md px-6 py-2 rounded-full flex items-center gap-2 border border-white/20">
+                                <ScanLine className="h-4 w-4 animate-pulse" /> وجه الكاميرا نحو الباركود
                             </div>
                         </div>
                     )}

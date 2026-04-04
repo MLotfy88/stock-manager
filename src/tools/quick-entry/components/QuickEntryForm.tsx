@@ -203,13 +203,38 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
     return false;
   };
 
-  const handleProductSearch = async () => {
-    if (!searchQuery) return;
-    const { data } = await supabase.from('product_definitions')
-      .select('id, name, manufacturer_id')
-      .ilike('name', `%${searchQuery}%`)
-      .limit(10);
+  const handleProductSearch = async (query?: string) => {
+    const supabase = getSupabaseClient();
+    let rpc = supabase.from('product_definitions')
+      .select('id, name, manufacturer_id');
+
+    if (query) {
+      rpc = rpc.ilike('name', `%${query}%`);
+    } else if (mfgId) {
+      // If no query, but manufacturer is selected, show their products
+      rpc = rpc.eq('manufacturer_id', mfgId);
+    }
+    
+    const { data, error } = await rpc.limit(15);
+    if (error) {
+      console.error('Search error:', error);
+      return;
+    }
     if (data) setProducts(data);
+  };
+
+  // Trigger search when entering product step
+  useEffect(() => {
+    if (step === 'product') {
+        handleProductSearch(searchQuery);
+    }
+  }, [step, mfgId]);
+
+  const handleProductSelection = (p: any) => {
+    setProductId(p.id);
+    setProductName(p.name);
+    if (p.manufacturer_id) setMfgId(p.manufacturer_id);
+    nextStep(); // Suggest next step automatically
   };
 
   const handleSave = () => {
@@ -291,10 +316,10 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
                             placeholder="ابحث عن منتج..." 
                             value={searchQuery} 
                             onChange={e => setSearchQuery(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleProductSearch()}
+                            onKeyDown={e => e.key === 'Enter' && handleProductSearch(searchQuery)}
                             className="h-11"
                         />
-                        <Button onClick={handleProductSearch} className="h-11 px-3"><Search className="h-4 w-4" /></Button>
+                        <Button onClick={() => handleProductSearch(searchQuery)} className="h-11 px-3"><Search className="h-4 w-4" /></Button>
                     </div>
                     <div className="max-h-60 overflow-y-auto space-y-1 border rounded-lg p-1">
                         {products.map(p => (
@@ -302,7 +327,7 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
                                 key={p.id} 
                                 variant="ghost" 
                                 className="w-full justify-start text-right h-auto py-3 px-4 border-b last:border-0"
-                                onClick={() => {setProductId(p.id); setProductName(p.name); if(p.manufacturer_id) setMfgId(p.manufacturer_id);}}
+                                onClick={() => handleProductSelection(p)}
                             >
                                 {p.name}
                             </Button>
