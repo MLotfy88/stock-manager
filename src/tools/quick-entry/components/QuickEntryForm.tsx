@@ -227,11 +227,17 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
     }
   }, [step, mfgId]);
 
-  const handleProductSelection = (p: any) => {
+  const handleProductSelection = async (p: any) => {
     setProductId(p.id);
     setProductName(p.name);
-    // Note: manufacturer_id is not stored in product_definitions directly
-    nextStep(); 
+    
+    // Direct check for variants to avoid state race condition
+    const hasVariants = await loadVariants(p.id);
+    if (hasVariants) {
+      setStep('variant');
+    } else {
+      setStep('review');
+    }
   };
 
   const handleSave = () => {
