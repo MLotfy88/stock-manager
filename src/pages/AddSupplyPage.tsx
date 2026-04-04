@@ -625,10 +625,21 @@ const AddInventoryPage = () => {
       let expiryDate: Date | undefined;
       if (pattern.expiry) {
         try {
-          const year = parseInt('20' + pattern.expiry.substring(0, 2));
-          const month = parseInt(pattern.expiry.substring(2, 4));
-          const day = parseInt(pattern.expiry.substring(4, 6));
-          expiryDate = new Date(year, month - 1, day);
+          if (pattern.expiry.includes('-')) {
+            // ISO format (YYYY-MM-DD) - already converted by GS1 parser
+            const [y, m, d] = pattern.expiry.split('-').map(Number);
+            expiryDate = new Date(y, m - 1, d);
+          } else if (pattern.expiry.length === 6) {
+            // Raw GS1 format (YYMMDD) - fallback
+            const year = parseInt('20' + pattern.expiry.substring(0, 2));
+            const month = parseInt(pattern.expiry.substring(2, 4));
+            const day = parseInt(pattern.expiry.substring(4, 6));
+            expiryDate = new Date(year, month - 1, day);
+          }
+          // Validate the date
+          if (expiryDate && isNaN(expiryDate.getTime())) {
+            expiryDate = undefined;
+          }
         } catch {
           expiryDate = undefined;
         }

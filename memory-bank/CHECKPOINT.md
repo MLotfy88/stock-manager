@@ -3,8 +3,10 @@
 ## تاريخ: 2026-03-01
 
 ## ملخص التغييرات
-1. **إضافة `consignment` إلى `payment_method` enum:** أنشأ migration `20260301_add_consignment_payment_method.sql` لإضافة القيمة المفقودة.
-2. **إصلاح عرض المسودات في `SuppliesPage.tsx`:** كان فلتر البحث يخفي المسودات التي ليس لها مورد مرتبط، لأن `undefined.includes('')` يرجع `false`. تم إضافة fallback `|| ''`.
+1. **إصلاح ضياع بيانات الفاتورة في المسودات (Drafts):** تم تعديل `AddSupplyPage.tsx` لحفظ واستعادة كافة البيانات التي كانت تُفقد عند حفظ المسودات، مثل: (المورد - `store_id` - الموقع `headerLocation` - روابط الصور `invoice_image_urls` - بيانات الدفع المكتملة - وجميع حقول الأصناف بما فيها الـ GTIN والمُصنّع).
+2. **إضافة `consignment` إلى `payment_method` enum:** أنشأ migration `20260301_add_consignment_payment_method.sql` لإضافة القيمة المفقودة.
+3. **إصلاح عرض المسودات في `SuppliesPage.tsx`:** كان فلتر البحث يخفي المسودات التي ليس لها مورد مرتبط، لأن `undefined.includes('')` يرجع `false`. تم إضافة fallback `|| ''`.
+4. **ترجمة القائمة الجانبية:** إضافة ترجمات `supplies_list`, `financials`, `debt_management`, `debt_calendar`.
 
 ---
 

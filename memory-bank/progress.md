@@ -110,6 +110,7 @@
 - None currently ✅
 
 ### Fixed (2026-03-01)
+- [x] **Incomplete Draft Saving**: Fixed `AddSupplyPage.tsx` to properly save and restore all draft fields (Store ID, Payment Status, Images, GTIN, Manufacturer).
 - [x] **Missing `consignment` enum value**: Added migration to include `consignment` in `payment_method` DB enum.
 - [x] **Drafts not showing in SuppliesPage**: Fixed filter that hid drafts when supplier name was null.
 
