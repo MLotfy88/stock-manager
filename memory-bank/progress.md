@@ -109,6 +109,12 @@
 ### Critical
 - None currently ✅
 
+### Fixed (2026-04-05)
+- [x] **Quick Data Entry Tool**: A separate local-first tool for high-speed scanning, multi-step entry, and Excel export. Located in `src/tools/quick-entry/`.
+
+### Fixed (2026-04-04)
+- [x] **Wrong Expiry Dates in Batch Mode**: `handleBatchReview` was parsing ISO dates (`YYYY-MM-DD`) as raw GS1 (`YYMMDD`), causing completely wrong dates to be saved. Now auto-detects format.
+
 ### Fixed (2026-03-01)
 - [x] **Incomplete Draft Saving**: Fixed `AddSupplyPage.tsx` to properly save and restore all draft fields (Store ID, Payment Status, Images, GTIN, Manufacturer).
 - [x] **Missing `consignment` enum value**: Added migration to include `consignment` in `payment_method` DB enum.

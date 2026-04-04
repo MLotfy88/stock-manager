@@ -33,6 +33,8 @@
 │   │   ├── ReorderPointReportPage.tsx # صفحة تقرير حد الطلب
 │   │   ├── ConsumptionReportPage.tsx  # صفحة تقرير الاستهلاك
 │   │   └── ... (بقية الصفحات)
+│   ├── tools/
+│   │   └── quick-entry/               # أداة الجرد السريع (offline-first)
 │   ├── translations/
 │   │   ├── ar.ts        # ملفات الترجمة
 │   │   └── en.ts

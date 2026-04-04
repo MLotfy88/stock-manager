@@ -24,6 +24,12 @@ export const useNavigationItems = () => {
   // Store Manager View (Non-Admin)
   if (role !== 'admin') {
     return [
+      {
+        type: 'link',
+        label: t('quick_entry_nav') || 'أداة الجرد السريع',
+        icon: <Package className="h-5 w-5" />,
+        href: '/quick-entry',
+      },
 
       {
         type: 'link',
@@ -73,6 +79,7 @@ export const useNavigationItems = () => {
       subItems: [
         { type: 'link', label: t('transfer_inventory_nav'), href: '/transfer-inventory' },
         { type: 'link', label: t('reorder_point_manager_nav'), href: '/reorder-point-manager' },
+        { type: 'link', label: t('quick_entry_nav') || 'أداة الجرد السريع', href: '/quick-entry' },
       ]
     },
     {

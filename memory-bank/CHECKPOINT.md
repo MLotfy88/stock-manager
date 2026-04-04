@@ -1,3 +1,26 @@
+# Checkpoint: Quick Data Entry Tool (Offline-First)
+
+## تاريخ: 2026-04-05
+
+## ملخص التغييرات
+1. **إنشاء أداة الجرد السريع:** في مجلد `src/tools/quick-entry/`.
+2. **المميزات الرئيسية:**
+    - قاعدة بيانات محلية (IndexedDB/Dexie).
+    - مسح باركود ذكي (Stay-open camera + Auto-pause).
+    - نظام Wizard رباعي الخطوات مع Hybrid Variant Picker.
+    - تصدير إكسيل (XLSX) للقراءات الفردية مرتبة زمنياً.
+
+---
+
+# Checkpoint: Fix Expiry Date Parsing in Batch Mode
+
+## تاريخ: 2026-04-04
+
+## ملخص التغييرات
+1. **إصلاح تحليل تاريخ الصلاحية في وضع الـ Batch:** في `AddSupplyPage.tsx` (handleBatchReview)، كان الكود يعامل `pattern.expiry` على أنه بصيغة `YYMMDD` بينما هو بالفعل بصيغة ISO `YYYY-MM-DD` (لأن GS1 parser يحوله مسبقاً). هذا كان يسبب حفظ تواريخ خاطئة تماماً (مثلاً 2020 بدل 2027). الإصلاح: الكود الآن يفحص الصيغة أولاً ويدعم الصيغتين.
+
+---
+
 # Checkpoint: Payment Method Enum & Draft Filter Fix
 
 ## تاريخ: 2026-03-01

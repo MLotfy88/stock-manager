@@ -44,6 +44,7 @@ const ReturnsManagementPage = lazy(() => import('./pages/ReturnsManagementPage')
 const PackagesPage = lazy(() => import('./pages/PackagesPage'));
 const DebtManagementPage = lazy(() => import('./pages/DebtManagementPage'));
 const DebtCalendarPage = lazy(() => import('./pages/DebtCalendarPage'));
+const QuickEntryPage = lazy(() => import('./tools/quick-entry/QuickEntryPage'));
 
 const PageTracker = () => {
   usePageTracking();
@@ -124,10 +125,12 @@ const AppRoutes = () => {
           <Route path="/packages" element={<PackagesPage />} />
           <Route path="/debt-management" element={<DebtManagementPage />} />
           <Route path="/debt-calendar" element={<DebtCalendarPage />} />
+          <Route path="/quick-entry" element={<QuickEntryPage />} />
         </Route>
       ) : (
         <Route element={<UserLayout />}>
           <Route path="/" element={<UserDashboardPage />} />
+          <Route path="/quick-entry" element={<QuickEntryPage />} />
           <Route path="/supplies" element={<SuppliesPage />} />
           <Route path="/transfer-inventory" element={<TransferInventoryPage />} />
           <Route path="/consumption" element={<ConsumptionPage />} />
