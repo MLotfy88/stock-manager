@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ParsedGS1Data } from '../hooks/useBarcodeScanner';
-import { SmartHybridPicker } from './SmartHybridPicker';
+import { StentMatrixPicker } from '@/components/supplies/StentMatrixPicker';
+import { CatheterCurvePicker } from '@/components/supplies/CatheterCurvePicker';
 import { db, LocalInventoryEntry } from '../data/localDb';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import { Search, Check, ChevronRight, ChevronLeft, PackageX } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProductDefinition } from '@/types';
 
 interface QuickEntryFormProps {
   isOpen: boolean;
@@ -278,11 +280,21 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
     onClose();
   };
 
-  const hasVariants = availableVariants.length > 0;
+  // Get the full ProductDefinition object for the selected product
+  const selectedProduct: ProductDefinition | undefined = useMemo(() => {
+    if (!productId) return undefined;
+    return productDefsCache.find((p: any) => p.id === productId) as ProductDefinition | undefined;
+  }, [productId, productDefsCache]);
+
+  const hasVariants = selectedProduct?.variants && selectedProduct.variants.length > 0;
+  const pickerPreference = selectedProduct?.visual_picker_preference || 'auto';
+  const isMatrix = pickerPreference === 'matrix';
+  const isCurve = pickerPreference === 'curve';
+  const isList = pickerPreference === 'list' || (!isMatrix && !isCurve);
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md p-0 overflow-hidden bg-background border-none shadow-2xl rounded-2xl">
+      <DialogContent className="max-w-lg p-0 overflow-hidden bg-background border-none shadow-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
         <div className="bg-primary p-6 text-primary-foreground">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center justify-between">
@@ -367,16 +379,59 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
           {/* ===== STEP 3: Variant Selection (ALWAYS SHOWN) ===== */}
           {step === 'variant' && (
             <div className="py-2">
-              {hasVariants ? (
-                <SmartHybridPicker
-                    availableVariants={availableVariants}
-                    selectedVariant={selectedVariant}
-                    onSelect={setSelectedVariant}
-                    primaryLabel="المقاس / القطر"
-                    secondaryLabel="الطول / الحجم"
-                    separator="x"
-                    mode={productName.toLowerCase().includes('ballon') ? 'balloon' : productName.toLowerCase().includes('guide') ? 'guide' : 'general'}
-                />
+              {hasVariants && selectedProduct ? (
+                <div className="space-y-4">
+                  {/* Product Info Banner */}
+                  <div className="bg-muted/30 p-3 rounded-lg text-center">
+                    <div className="text-sm text-muted-foreground">المنتج المختار</div>
+                    <div className="text-lg font-bold text-primary">{selectedProduct.name}</div>
+                    <div className="text-xs mt-1">{selectedProduct.variant_label || 'المتغير'}</div>
+                  </div>
+
+                  {/* Variant Picker - Same logic as BatchVariantStep */}
+                  <div className="min-h-[200px]">
+                    {isMatrix && (
+                      <StentMatrixPicker
+                        availableVariants={selectedProduct.variants || []}
+                        selectedVariant={selectedVariant}
+                        onSelect={setSelectedVariant}
+                      />
+                    )}
+
+                    {isCurve && (
+                      <CatheterCurvePicker
+                        availableVariants={selectedProduct.variants || []}
+                        selectedCurve={selectedVariant}
+                        onSelect={setSelectedVariant}
+                      />
+                    )}
+
+                    {isList && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {selectedProduct.variants.map((v: any, idx: number) => {
+                          const vName = typeof v === 'string' ? v : (v.name || JSON.stringify(v));
+                          return (
+                            <Button
+                              key={idx}
+                              variant={selectedVariant === vName ? 'default' : 'outline'}
+                              className={`h-14 text-base whitespace-normal ${selectedVariant === vName ? 'border-2 border-primary font-bold' : ''}`}
+                              onClick={() => setSelectedVariant(vName)}
+                            >
+                              {vName}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selection Summary */}
+                  {selectedVariant && (
+                    <div className="text-center text-sm font-bold bg-primary/10 text-primary px-4 py-2 rounded-full">
+                      تم اختيار: {selectedVariant}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                   <PackageX className="h-16 w-16 mb-4 opacity-30" />
