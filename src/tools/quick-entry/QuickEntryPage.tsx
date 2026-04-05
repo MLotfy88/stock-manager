@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useBarcodeScanner, ParsedGS1Data } from './hooks/useBarcodeScanner';
 import { QuickEntryForm } from './components/QuickEntryForm';
 import { QuickEntryCart } from './components/QuickEntryCart';
+import { VoucherSyncDialog } from './components/VoucherSyncDialog';
+import { InventoryAuditDialog } from './components/InventoryAuditDialog';
 import { db, LocalInventoryEntry } from './data/localDb';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Button } from '@/components/ui/button';
 import { Camera, X, Check, PackageOpen, ScanLine, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -29,6 +32,12 @@ const QuickEntryPage: React.FC = () => {
         startScanner();
         return () => stopScanner();
     }, []);
+
+    const [isVoucherSyncOpen, setIsVoucherSyncOpen] = useState(false);
+    const [isAuditSyncOpen, setIsAuditSyncOpen] = useState(false);
+
+    // Fetch entries for the sync dialogs
+    const entries = useLiveQuery(() => db.inventory_entries.orderBy('timestamp').toArray()) || [];
 
     const handleSave = async (entry: LocalInventoryEntry) => {
         try {
@@ -114,18 +123,22 @@ const QuickEntryPage: React.FC = () => {
                 </div>
 
                 {/* Entries List Section */}
-                <QuickEntryCart onEdit={(entry) => {
-                    setEditingEntry(entry);
-                    const pseudoScannedData: ParsedGS1Data = {
-                        rawValue: entry.barcode,
-                        gtin: entry.gtin,
-                        lotNumber: entry.lotNumber,
-                        expiryDate: entry.expiryDate,
-                        formattedValue: entry.barcode
-                    };
-                    setScannedData(pseudoScannedData);
-                    setIsFormOpen(true);
-                }} />
+                <QuickEntryCart 
+                    onEdit={(entry) => {
+                        setEditingEntry(entry);
+                        const pseudoScannedData: ParsedGS1Data = {
+                            rawValue: entry.barcode,
+                            gtin: entry.gtin,
+                            lotNumber: entry.lotNumber,
+                            expiryDate: entry.expiryDate,
+                            formattedValue: entry.barcode
+                        };
+                        setScannedData(pseudoScannedData);
+                        setIsFormOpen(true);
+                    }}
+                    onSyncVoucher={() => setIsVoucherSyncOpen(true)}
+                    onSyncAudit={() => setIsAuditSyncOpen(true)}
+                />
             </div>
 
             {/* Quick Entry Dialog */}
@@ -154,6 +167,22 @@ const QuickEntryPage: React.FC = () => {
                     }}
                 />
             )}
+
+            {/* Sync Dialogs */}
+            <VoucherSyncDialog
+                isOpen={isVoucherSyncOpen}
+                onClose={() => setIsVoucherSyncOpen(false)}
+                entries={entries}
+                onSuccess={async () => {
+                    await db.inventory_entries.clear();
+                }}
+            />
+
+            <InventoryAuditDialog
+                isOpen={isAuditSyncOpen}
+                onClose={() => setIsAuditSyncOpen(false)}
+                entries={entries}
+            />
 
             {/* Global Styles for Scan Animation */}
             <style dangerouslySetInnerHTML={{ __html: `

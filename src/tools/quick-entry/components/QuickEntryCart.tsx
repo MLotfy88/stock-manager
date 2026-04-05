@@ -3,15 +3,18 @@ import { db, LocalInventoryEntry } from '../data/localDb';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit2, Download, Package, Calendar, Tag, Trash } from 'lucide-react';
+import { Trash2, Edit2, Download, Package, Calendar, Tag, Trash, Combine, UploadCloud, FileSpreadsheet, Send } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 
 interface QuickEntryCartProps {
     onEdit: (entry: LocalInventoryEntry) => void;
+    onSyncVoucher: () => void;
+    onSyncAudit: () => void;
 }
 
-export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit }) => {
+export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit, onSyncVoucher, onSyncAudit }) => {
     // Watch DB for changes
     const entries = useLiveQuery(() => db.inventory_entries.orderBy('timestamp').toArray());
 
@@ -35,16 +38,16 @@ export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit }) => {
 
         try {
             const dataToExport = entries.map(e => ({
-                'الباركود': e.barcode,
-                'اسم المنتج': e.productName,
-                'المتغير': e.variant,
-                'رقم اللوط': e.lotNumber,
-                'تاريخ الصلاحية': e.expiryDate,
-                'الكمية': e.quantity,
-                'سعر الشراء': e.purchasePrice,
-                'الشركة المصنعة': e.manufacturerName,
-                'المورد': e.supplierName,
-                'الوقت': new Date(e.timestamp).toLocaleString('ar-EG')
+                'barcode': e.barcode,
+                'product_id': e.productDefinitionId,
+                'product_name': e.productName,
+                'variant': e.variant,
+                'lot_number': e.lotNumber,
+                'expiry_date': e.expiryDate,
+                'quantity': e.quantity,
+                'purchase_price': e.purchasePrice || null,
+                'manufacturer_id': e.manufacturerId,
+                'supplier_id': e.supplierId,
             }));
 
             const ws = XLSX.utils.json_to_sheet(dataToExport);
@@ -76,11 +79,30 @@ export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit }) => {
                     القراءات المحفوظة ({entries.length})
                 </h3>
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white flex-1 sm:flex-none">
+                                <Send className="mr-2 h-4 w-4" /> ترحيل البيانات
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 mt-2">
+                            <DropdownMenuLabel>خيارات الترحيل المتقدمة</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={onSyncVoucher} className="font-bold cursor-pointer">
+                                <UploadCloud className="mr-2 h-4 w-4 text-blue-500" /> تضمين في فاتورة مشتريات
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={onSyncAudit} className="font-bold cursor-pointer">
+                                <Combine className="mr-2 h-4 w-4 text-emerald-500" /> تنفيذ كعملية جرد مخزون
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleExport} className="cursor-pointer">
+                                <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" /> تصدير ملف إكسيل
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <Button variant="destructive" size="sm" onClick={handleClearAll} className="h-10 flex-1 sm:flex-none">
                         <Trash className="mr-2 h-4 w-4" /> مسح الكل
-                    </Button>
-                    <Button onClick={handleExport} className="h-10 bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none py-0 px-2 sm:px-4">
-                        <Download className="mr-2 h-4 w-4" /> تصدير إكسيل
                     </Button>
                 </div>
             </div>
