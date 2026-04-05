@@ -85,59 +85,60 @@ export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit }) => {
                 </div>
             </div>
 
-            <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
-                <div className="max-h-[600px] overflow-auto">
-                <Table>
-                    <TableHeader className="bg-muted/50 sticky top-0 z-10">
-                        <TableRow>
-                            <TableHead className="w-12 text-center">#</TableHead>
-                            <TableHead>المنتج / المتغير</TableHead>
-                            <TableHead>اللوط / الصلاحية</TableHead>
-                            <TableHead className="text-center">الكمية</TableHead>
-                            <TableHead className="text-center">السعر</TableHead>
-                            <TableHead className="w-[100px] text-center">إجراءات</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {entries.map((entry, index) => (
-                            <TableRow key={entry.id} className="hover:bg-muted/30">
-                                <TableCell className="text-center font-mono opacity-50">{index + 1}</TableCell>
-                                <TableCell>
-                                    <div className="font-bold">{entry.productName}</div>
-                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <Tag className="h-3 w-3" /> {entry.variant || 'بدون متغير'}
-                                    </div>
-                                    <div className="text-[10px] text-muted-foreground font-mono mt-1 opacity-50">{entry.barcode}</div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="font-mono text-sm">{entry.lotNumber}</div>
-                                    <div className="flex items-center gap-1 text-xs text-destructive font-bold">
-                                        <Calendar className="h-3 w-3" /> {entry.expiryDate}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                    <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">
-                                        {entry.quantity}
-                                    </span>
-                                </TableCell>
-                                <TableCell className="text-center font-mono">
-                                    {entry.purchasePrice ? `${entry.purchasePrice} EGP` : '-'}
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex justify-center gap-1">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(entry)}>
-                                            <Edit2 className="h-3 w-3 text-blue-600" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(entry.id)}>
-                                            <Trash2 className="h-3 w-3 text-red-600" />
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {entries.map((entry, index) => (
+                    <div key={entry.id} className="bg-card border rounded-xl p-4 shadow-sm relative space-y-3 transition-all hover:shadow-md">
+                        {/* Card Header (Actions & Index) */}
+                        <div className="flex justify-between items-start">
+                            <div className="flex bg-muted text-muted-foreground w-8 h-8 rounded-full items-center justify-center font-bold text-xs">{index + 1}</div>
+                            <div className="flex gap-1 bg-muted/30 p-1 rounded-lg">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-blue-100 hover:text-blue-600" onClick={() => onEdit(entry)}>
+                                    <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-100 hover:text-red-600" onClick={() => handleDelete(entry.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Product Info */}
+                        <div>
+                            <div className="font-bold text-lg leading-tight">{entry.productName}</div>
+                            <div className="text-sm text-primary flex items-center gap-1 font-bold mt-1.5">
+                                <Tag className="h-3.5 w-3.5" /> {entry.variant || 'بدون متغير'}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground font-mono mt-1 opacity-60 break-all">{entry.barcode}</div>
+                        </div>
+
+                        {/* LOT / Expiry */}
+                        <div className="grid grid-cols-2 gap-2 bg-muted/20 p-2.5 rounded-lg border border-dashed text-sm">
+                            <div>
+                                <span className="text-[10px] text-muted-foreground block uppercase">اللوط (LOT)</span>
+                                <span className="font-mono font-bold truncate block">{entry.lotNumber || '-'}</span>
+                            </div>
+                            <div>
+                                <span className="text-[10px] text-muted-foreground block uppercase">الصلاحية</span>
+                                <span className="font-mono font-bold text-destructive flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />{entry.expiryDate || '-'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Price & Qty */}
+                        <div className="flex justify-between items-end pt-2 border-t">
+                            <div>
+                                <span className="text-[10px] text-muted-foreground block uppercase">السعر</span>
+                                <span className="font-mono font-bold text-base">{entry.purchasePrice ? `${entry.purchasePrice} EGP` : '-'}</span>
+                            </div>
+                            <div className="text-center">
+                                <span className="text-[10px] text-muted-foreground block uppercase mb-1">الكمية</span>
+                                <span className="bg-primary/20 text-primary px-4 py-1 rounded-full font-black text-lg">
+                                    {entry.quantity}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

@@ -294,7 +294,7 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-3xl w-[95vw] sm:w-full p-0 bg-background border-none shadow-2xl rounded-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl rounded-2xl bg-background">
         <div className="bg-primary p-6 text-primary-foreground">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center justify-between">
