@@ -59,9 +59,9 @@ const QuickEntryPage: React.FC = () => {
                 <div className="w-10" /> {/* Spacer */}
             </div>
 
-            <div className="container max-w-4xl px-0 py-6 space-y-8">
+            <div className="container max-w-4xl px-4 py-6 space-y-8">
                 {/* Scanner Section */}
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-black aspect-[3/2] md:aspect-video border-4 border-muted/20 mx-2">
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-black aspect-[4/3] md:aspect-video border-2 md:border-4 border-muted/20">
                     {!isScannerActive && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-black/60 z-10 transition-all px-8 text-center">
                             <Camera className="h-16 w-16 mb-4 opacity-50 text-primary" />
