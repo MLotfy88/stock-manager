@@ -70,16 +70,16 @@ export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit }) => {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <h3 className="text-xl font-bold flex items-center gap-2">
                     <Tag className="h-5 w-5 text-primary" />
                     القراءات المحفوظة ({entries.length})
                 </h3>
-                <div className="flex gap-2">
-                    <Button variant="destructive" size="sm" onClick={handleClearAll} className="h-10">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <Button variant="destructive" size="sm" onClick={handleClearAll} className="h-10 flex-1 sm:flex-none">
                         <Trash className="mr-2 h-4 w-4" /> مسح الكل
                     </Button>
-                    <Button onClick={handleExport} className="h-10 bg-green-600 hover:bg-green-700 text-white">
+                    <Button onClick={handleExport} className="h-10 bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none py-0 px-2 sm:px-4">
                         <Download className="mr-2 h-4 w-4" /> تصدير إكسيل
                     </Button>
                 </div>
