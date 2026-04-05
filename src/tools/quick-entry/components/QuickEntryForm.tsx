@@ -95,7 +95,7 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
       const { data: sups } = await supabase.from('suppliers').select('id, name');
       // Fetch ALL product definitions WITH their variants (JSONB column)
       const { data: prods } = await supabase.from('product_definitions')
-        .select('id, name, variants, variant_label')
+        .select('id, name, variants, variant_label, visual_picker_preference')
         .order('name', { ascending: true });
 
       if (mfgs) {
