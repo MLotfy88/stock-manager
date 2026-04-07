@@ -221,7 +221,33 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
       const barcodes = await barcodeDetector.current.detect(video);
 
       if (barcodes.length > 0) {
-        const rawValue = barcodes[0].rawValue;
+        // Handle split barcodes (like some medical labels with 2 consecutive GS1-128 codes)
+        // Sort semantically so the fragment containing AI (01) comes first, fallback to Top-to-Bottom
+        const sortedBarcodes = [...barcodes].sort((a: any, b: any) => {
+           const aVal = a.rawValue || '';
+           const bVal = b.rawValue || '';
+           const aHas01 = aVal.includes(']C101') || (aVal.startsWith('01') && aVal.length >= 16);
+           const bHas01 = bVal.includes(']C101') || (bVal.startsWith('01') && bVal.length >= 16);
+           if (aHas01 && !bHas01) return -1;
+           if (!aHas01 && bHas01) return 1;
+           
+           const y1 = a.boundingBox?.top || a.boundingBox?.y || 0;
+           const y2 = b.boundingBox?.top || b.boundingBox?.y || 0;
+           return y1 - y2;
+        });
+
+        const cleanFragment = (val: string) => {
+            let v = val.trim();
+            if (v.startsWith(']C1')) v = v.substring(3);
+            else if (v.startsWith(']C')) v = v.substring(2);
+            else if (v.startsWith('C1')) v = v.substring(2);
+            else if (v.startsWith(']')) v = v.substring(1);
+            return v;
+        };
+
+        const mergedRawValue = sortedBarcodes.map(b => cleanFragment(b.rawValue)).join('');
+        const rawValue = mergedRawValue; // Use the combined full barcode
+
         const now = Date.now();
         const timeSinceLastScan = now - lastScanTime.current;
         const isSameBarcode = rawValue === lastScannedValue.current;
@@ -231,7 +257,7 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
         lastScanTime.current = now;
         lastScannedValue.current = rawValue;
 
-        const format = barcodes[0].format;
+        const format = sortedBarcodes[0].format;
         const isGS1Capable = ['code_128', 'data_matrix', 'qr_code', 'aztec'].includes(format);
         const parsedData = isGS1Capable ? extractGS1DataForSupply(rawValue) : null;
 
