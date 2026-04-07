@@ -277,8 +277,8 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { min: 1280, ideal: 1920, max: 2560 },
+            height: { min: 720, ideal: 1080, max: 1440 },
             // @ts-ignore
             advanced: [{ focusMode: 'continuous' } as any]
           },
@@ -286,14 +286,35 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
-          const track = stream.getVideoTracks()[0];
-          const capabilities = track.getCapabilities();
-          // @ts-ignore
-          if (capabilities.focusMode) {
-            try {
-              // @ts-ignore
-              await track.applyConstraints({ advanced: [{ focusMode: 'continuous' } as any] });
-            } catch (e) {}
+          
+          try {
+            const track = stream.getVideoTracks()[0];
+            const capabilities = track.getCapabilities() as any;
+            
+            // Collect advanced constraints we want to apply
+            const newConstraints: any = {};
+            
+            // 1. Enforce Continuous Focus natively
+            if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+              newConstraints.focusMode = 'continuous';
+            }
+            
+            // 2. Apply optical/digital Zoom to magnify small barcodes without bringing phone too close (which breaks macro focus)
+            if (capabilities.zoom) {
+              // Try to apply a moderate 2x or 1.5x zoom
+              const minZ = capabilities.zoom.min || 1;
+              const maxZ = capabilities.zoom.max || 1;
+              const targetZ = Math.max(minZ, Math.min(maxZ, 2.0)); // Cap at 2.0x to preserve quality
+              if (targetZ > minZ) {
+                newConstraints.zoom = targetZ;
+              }
+            }
+
+            if (Object.keys(newConstraints).length > 0) {
+              await track.applyConstraints({ advanced: [newConstraints] });
+            }
+          } catch (e) {
+            console.log("Could not apply advanced camera tracking features", e);
           }
         }
       } catch (err: any) {
@@ -317,7 +338,8 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
     const scanLoop = async () => {
       if (!isRunning || !isScannerActive || Capacitor.isNativePlatform()) return;
       await captureAndDecode();
-      timeoutId = setTimeout(scanLoop, 50);
+      // Wait 150ms (approx 6-7 fps) to avoid locking up main thread on 1080p frames
+      timeoutId = setTimeout(scanLoop, 150);
     };
 
     if (isScannerActive && !Capacitor.isNativePlatform()) scanLoop();
