@@ -215,20 +215,10 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
 
     try {
       const video = videoRef.current;
-      const canvas = document.createElement('canvas'); 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const roiWidth = video.videoWidth * 0.7;
-      const roiHeight = video.videoHeight * 0.5;
-      const roiX = (video.videoWidth - roiWidth) / 2;
-      const roiY = (video.videoHeight - roiHeight) / 2;
-
-      canvas.width = roiWidth;
-      canvas.height = roiHeight;
-      ctx.drawImage(video, roiX, roiY, roiWidth, roiHeight, 0, 0, roiWidth, roiHeight);
-
-      const barcodes = await barcodeDetector.current.detect(canvas);
+      // Pass the HTMLVideoElement directly to the native BarcodeDetector. 
+      // Avoid cropping (ROI) because GS1-128 barcodes can be very wide, 
+      // and cropping forces the user to move the camera far back to fit the box.
+      const barcodes = await barcodeDetector.current.detect(video);
 
       if (barcodes.length > 0) {
         const rawValue = barcodes[0].rawValue;
@@ -291,7 +281,6 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
             const track = stream.getVideoTracks()[0];
             const capabilities = track.getCapabilities() as any;
             
-            // Collect advanced constraints we want to apply
             const newConstraints: any = {};
             
             // 1. Enforce Continuous Focus natively
@@ -299,17 +288,6 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
               newConstraints.focusMode = 'continuous';
             }
             
-            // 2. Apply optical/digital Zoom to magnify small barcodes without bringing phone too close (which breaks macro focus)
-            if (capabilities.zoom) {
-              // Try to apply a moderate 2x or 1.5x zoom
-              const minZ = capabilities.zoom.min || 1;
-              const maxZ = capabilities.zoom.max || 1;
-              const targetZ = Math.max(minZ, Math.min(maxZ, 2.0)); // Cap at 2.0x to preserve quality
-              if (targetZ > minZ) {
-                newConstraints.zoom = targetZ;
-              }
-            }
-
             if (Object.keys(newConstraints).length > 0) {
               await track.applyConstraints({ advanced: [newConstraints] });
             }
