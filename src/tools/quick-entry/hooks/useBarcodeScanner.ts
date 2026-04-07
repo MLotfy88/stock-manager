@@ -251,8 +251,9 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
         };
 
         const gtin = parsedData?.gtin || (['ean_13', 'upc_a', 'upc_e', 'ean_8'].includes(format) ? rawValue : (rawValue.length === 14 ? rawValue : null));
-
+        
         if (gtin) {
+          finalData.gtin = gtin; // Ensure GTIN is present in finalData
           const mapping = await getGTINMapping(gtin);
           if (mapping) {
             finalData.product_id = mapping.product_definition_id;

@@ -39,6 +39,7 @@ export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit, onSyncVo
         try {
             const dataToExport = entries.map(e => ({
                 'barcode': e.barcode,
+                'gtin': e.gtin || null,
                 'product_id': e.productDefinitionId,
                 'product_name': e.productName,
                 'variant': e.variant,
@@ -107,8 +108,9 @@ export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit, onSyncVo
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {entries.map((entry, index) => (
+            <div className="max-h-[45vh] lg:max-h-[55vh] overflow-y-auto pr-1 pb-4 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {entries.map((entry, index) => (
                     <div key={entry.id} className="bg-card border rounded-xl p-4 shadow-sm relative space-y-3 transition-all hover:shadow-md">
                         {/* Card Header (Actions & Index) */}
                         <div className="flex justify-between items-start">
@@ -130,6 +132,7 @@ export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit, onSyncVo
                                 <Tag className="h-3.5 w-3.5" /> {entry.variant || 'بدون متغير'}
                             </div>
                             <div className="text-[10px] text-muted-foreground font-mono mt-1 opacity-60 break-all">{entry.barcode}</div>
+                            {entry.gtin && <div className="text-[10px] text-blue-600/70 dark:text-blue-400/70 font-mono mt-0.5">GTIN: {entry.gtin}</div>}
                         </div>
 
                         {/* LOT / Expiry */}
@@ -161,6 +164,13 @@ export const QuickEntryCart: React.FC<QuickEntryCartProps> = ({ onEdit, onSyncVo
                         </div>
                     </div>
                 ))}
+                
+                {entries.length === 0 && (
+                    <div className="col-span-full py-12 text-center text-muted-foreground bg-muted/10 rounded-xl border border-dashed">
+                        لا توجد أصناف ممسوحة بعد. قم بتشغيل الكاميرا ومسح باركود لإضافته هنا.
+                    </div>
+                )}
+                </div>
             </div>
         </div>
     );
