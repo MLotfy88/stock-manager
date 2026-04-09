@@ -190,6 +190,12 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
   const lastScanTime = useRef<number>(0); 
   const lastScannedValue = useRef<string>(''); 
 
+  const splitBarcodeAccumulator = useRef<{
+     fragments: Set<string>;
+     timeoutId: NodeJS.Timeout | null;
+     primaryFormat: string | null;
+  }>({ fragments: new Set(), timeoutId: null, primaryFormat: null });
+
   const callbackRef = useRef(props);
   useEffect(() => {
     callbackRef.current = props;
@@ -221,19 +227,20 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
       const barcodes = await barcodeDetector.current.detect(video);
 
       if (barcodes.length > 0) {
-        // Handle split barcodes (like some medical labels with 2 consecutive GS1-128 codes)
-        // Sort semantically so the fragment containing AI (01) comes first, fallback to Top-to-Bottom
-        const sortedBarcodes = [...barcodes].sort((a: any, b: any) => {
-           const aVal = a.rawValue || '';
-           const bVal = b.rawValue || '';
-           const aHas01 = aVal.includes(']C101') || (aVal.startsWith('01') && aVal.length >= 16);
-           const bHas01 = bVal.includes(']C101') || (bVal.startsWith('01') && bVal.length >= 16);
-           if (aHas01 && !bHas01) return -1;
-           if (!aHas01 && bHas01) return 1;
-           
-           const y1 = a.boundingBox?.top || a.boundingBox?.y || 0;
-           const y2 = b.boundingBox?.top || b.boundingBox?.y || 0;
-           return y1 - y2;
+        const acc = splitBarcodeAccumulator.current;
+        
+        for (const b of barcodes) {
+           acc.fragments.add(b.rawValue);
+           if (!acc.primaryFormat) acc.primaryFormat = b.format; 
+        }
+
+        const allFragments = Array.from(acc.fragments);
+        const sortedRaw = allFragments.sort((a, b) => {
+            const aHas01 = a.includes(']C101') || (a.startsWith('01') && a.length >= 16);
+            const bHas01 = b.includes(']C101') || (b.startsWith('01') && b.length >= 16);
+            if (aHas01 && !bHas01) return -1;
+            if (!aHas01 && bHas01) return 1;
+            return 0; 
         });
 
         const cleanFragment = (val: string) => {
@@ -245,40 +252,68 @@ export const useBarcodeScanner = (props: UseBarcodeScannerProps) => {
             return v;
         };
 
-        const mergedRawValue = sortedBarcodes.map(b => cleanFragment(b.rawValue)).join('');
-        const rawValue = mergedRawValue; // Use the combined full barcode
+        const mergedRawValue = sortedRaw.map(cleanFragment).join('');
+        const rawValue = mergedRawValue; 
+        const format = acc.primaryFormat || 'code_128';
 
-        const now = Date.now();
-        const timeSinceLastScan = now - lastScanTime.current;
-        const isSameBarcode = rawValue === lastScannedValue.current;
-
-        if (isSameBarcode && timeSinceLastScan < 1000) return;
-
-        lastScanTime.current = now;
-        lastScannedValue.current = rawValue;
-
-        const format = sortedBarcodes[0].format;
         const isGS1Capable = ['code_128', 'data_matrix', 'qr_code', 'aztec'].includes(format);
         const parsedData = isGS1Capable ? extractGS1DataForSupply(rawValue) : null;
 
-        let finalData: ParsedGS1Data = parsedData || {
-          rawValue,
-          formattedValue: rawValue
+        const hasGTIN = Boolean(parsedData?.gtin || (['ean_13', 'upc_a', 'upc_e', 'ean_8'].includes(format) ? rawValue : (rawValue.length === 14 ? rawValue : null)));
+        const hasExpiry = Boolean(parsedData?.expiryDate);
+        const hasLot = Boolean(parsedData?.lotNumber);
+        
+        const emitSuccess = async () => {
+            if (acc.timeoutId) {
+                clearTimeout(acc.timeoutId);
+                acc.timeoutId = null;
+            }
+            acc.fragments.clear();
+            acc.primaryFormat = null;
+            
+            const now = Date.now();
+            const timeSinceLastScan = now - lastScanTime.current;
+            const isSameBarcode = rawValue === lastScannedValue.current;
+
+            if (isSameBarcode && timeSinceLastScan < 1000) return;
+
+            lastScanTime.current = now;
+            lastScannedValue.current = rawValue;
+
+            let finalData: ParsedGS1Data = parsedData || {
+              rawValue,
+              formattedValue: rawValue
+            };
+
+            const gtin = parsedData?.gtin || (['ean_13', 'upc_a', 'upc_e', 'ean_8'].includes(format) ? rawValue : (rawValue.length === 14 ? rawValue : null));
+            if (gtin) {
+              finalData.gtin = gtin; 
+              const mapping = await getGTINMapping(gtin);
+              if (mapping) {
+                finalData.product_id = mapping.product_definition_id;
+                finalData.variant_name = mapping.variant_name;
+                updateLastScanned(gtin).catch(console.error);
+              }
+            }
+            callbackRef.current.onScanSuccess(finalData);
         };
 
-        const gtin = parsedData?.gtin || (['ean_13', 'upc_a', 'upc_e', 'ean_8'].includes(format) ? rawValue : (rawValue.length === 14 ? rawValue : null));
-        
-        if (gtin) {
-          finalData.gtin = gtin; // Ensure GTIN is present in finalData
-          const mapping = await getGTINMapping(gtin);
-          if (mapping) {
-            finalData.product_id = mapping.product_definition_id;
-            finalData.variant_name = mapping.variant_name;
-            updateLastScanned(gtin).catch(console.error);
-          }
-        }
+        const isSuspiciouslyIncomplete = format === 'code_128' && hasGTIN && (!hasExpiry && !hasLot);
+        // Wait! What if it only has LOT but no GTIN?
+        const isOnlySecondary = format === 'code_128' && !hasGTIN && (hasExpiry || hasLot);
 
-        callbackRef.current.onScanSuccess(finalData);
+        if (isSuspiciouslyIncomplete || isOnlySecondary) {
+            // It might be a split barcode where we only saw one half.
+            // Give it 600ms to see if the second half comes into view.
+            if (acc.timeoutId) clearTimeout(acc.timeoutId);
+            acc.timeoutId = setTimeout(() => {
+                emitSuccess(); // emit whatever we have if time runs out
+            }, 600);
+            return; // Wait for next frame
+        } else {
+            // It has BOTH (complete GS1-128), OR it's not code_128
+            await emitSuccess();
+        }
       }
     } catch (err) {
       callbackRef.current.onScanFailure?.(err as Error);
