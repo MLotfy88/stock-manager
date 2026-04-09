@@ -314,6 +314,37 @@ export const QuickEntryForm: React.FC<QuickEntryFormProps> = ({
           {/* ===== STEP 1: Context (Manufacturer & Supplier) ===== */}
           {step === 'context' && (
             <div className="space-y-4">
+              
+              {/* Scanned Data Verification Box */}
+              {scannedData && (
+                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800/30 text-sm space-y-2 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-2 h-full bg-blue-500"></div>
+                    <div className="text-blue-700 dark:text-blue-300 text-xs font-bold mb-2">تم التقاط الباركود بنجاح - بيانات إرشادية:</div>
+                    
+                    <div className="grid grid-cols-2 gap-2 font-mono text-left" dir="ltr">
+                        {scannedData.gtin && (
+                            <div className="bg-white dark:bg-black/20 p-2 rounded border">
+                                <span className="text-[10px] text-muted-foreground block font-sans">GTIN (01)</span>
+                                <span className="font-bold">{scannedData.gtin}</span>
+                            </div>
+                        )}
+                        {lot && (
+                            <div className="bg-white dark:bg-black/20 p-2 rounded border">
+                                <span className="text-[10px] text-muted-foreground block font-sans">LOT (10)</span>
+                                <span className="font-bold">{lot}</span>
+                            </div>
+                        )}
+                        {expiry && (
+                            <div className="bg-white dark:bg-black/20 p-2 rounded border col-span-2">
+                                <span className="text-[10px] text-muted-foreground block font-sans">EXPIRY (17)</span>
+                                <span className="font-bold text-destructive">{expiry}</span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="text-[10px] opacity-50 break-all font-mono text-left" dir="ltr">{scannedData.rawValue}</div>
+                 </div>
+              )}
+
               <div className="space-y-2">
                 <Label>الشركة المصنعة</Label>
                 <Select value={mfgId} onValueChange={setMfgId}>
